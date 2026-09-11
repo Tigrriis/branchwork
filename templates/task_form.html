@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New task' if is_new else 'Edit task' }} · {{ SITE_NAME }}{% endblock %}
+{% block main_class %}page page--narrow{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__head">
+    <h1>{{ 'New task' if is_new else 'Edit task' }}</h1>
+    <span class="muted">{{ project.name }} · {{ branch.name }}</span>
+  </div>
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label class="field__label" for="title">Title</label>
+      <input class="input" type="text" id="title" name="title" maxlength="120" required autofocus value="{{ task.title or '' }}">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field__label" for="branch_id">Branch</label>
+        <select class="input" id="branch_id" name="branch_id">
+          {% for b in project.branches %}
+          <option value="{{ b.id }}" {% if branch.id == b.id %}selected{% endif %}>{{ b.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="tier">Tier</label>
+        <input class="input" type="number" id="tier" name="tier" min="1" max="50" value="{{ task.tier }}">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field__label" for="points_max">Points <span class="muted">(1 = a plain checkbox)</span></label>
+        <input class="input" type="number" id="points_max" name="points_max" min="1" max="20" value="{{ task.points_max }}">
+      </div>
+      <div class="field">
+        <label class="field__label" for="points_done">Points done</label>
+        <input class="input" type="number" id="points_done" name="points_done" min="0" max="20" value="{{ task.points_done }}">
+      </div>
+    </div>
+    <div class="field">
+      <span class="field__label">Icon</span>
+      <div class="icon-picker">
+        {% for name in ICON_NAMES %}
+        <label class="icon-pick" title="{{ name }}">
+          <input type="radio" name="icon" value="{{ name }}" {% if task.icon == name %}checked{% endif %}>
+          <span class="icon-pick__tile">{{ icon(name, 24) }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="field">
+      <label class="field__label" for="notes">Notes <span class="muted">(optional)</span></label>
+      <textarea class="input" id="notes" name="notes" rows="3">{{ task.notes or '' }}</textarea>
+    </div>
+    <div class="form__actions">
+      <button class="btn btn--primary" type="submit">{{ 'Add task' if is_new else 'Save' }}</button>
+      <a class="btn btn--ghost" href="{{ url_for('projects.tree', project_id=project.id) }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% if not is_new %}
+<form method="post" action="{{ url_for('projects.delete_task', task_id=task.id) }}" class="inline-form" data-confirm="Delete this task?">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn btn--danger" type="submit">Delete task</button>
+</form>
+{% endif %}
+{% endblock %}

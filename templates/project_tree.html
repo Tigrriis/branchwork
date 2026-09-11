@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} · {{ SITE_NAME }}{% endblock %}
+{% block body_class %}body--tree{% endblock %}
+{% block main_class %}page page--wide{% endblock %}
+
+{% block topnav %}
+  <div class="segmented">
+    <a class="segmented__item is-active" href="{{ url_for('projects.tree', project_id=project.id) }}">Tree</a>
+    <a class="segmented__item" href="{{ url_for('projects.task_list', project_id=project.id) }}">List</a>
+  </div>
+{% endblock %}
+{% block topactions %}
+  {% if project.branches %}
+  <a class="btn btn--primary btn--sm" href="{{ url_for('projects.new_task', branch_id=project.branches[0].id) }}">+ New task</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="tree-head">
+  <div class="tree-head__title">
+    <h1>{{ project.name }}</h1>
+    {% if project.code %}<span class="muted">Project {{ project.code }}</span>{% endif %}
+    <a class="link-quiet" href="{{ url_for('projects.edit_project', project_id=project.id) }}">Edit</a>
+  </div>
+  <div class="tree-head__stats" id="tree-stats">
+    <span class="legend"><span class="legend__swatch legend__swatch--full"></span>Complete <span class="legend__n" data-count="full">{{ project.count_state('full') }}</span></span>
+    <span class="legend"><span class="legend__swatch legend__swatch--part"></span>In progress <span class="legend__n" data-count="part">{{ project.count_state('part') }}</span></span>
+    <span class="legend"><span class="legend__swatch legend__swatch--empty"></span>Not started <span class="legend__n" data-count="empty">{{ project.count_state('empty') }}</span></span>
+    <span class="points">
+      <strong><span data-points-done>{{ project.points_done }}</span> / <span data-points-max>{{ project.points_max }}</span> points</strong>
+      <span class="bar bar--wide"><span class="bar__fill" data-points-bar style="width: {{ project.percent }}%"></span></span>
+    </span>
+  </div>
+</div>
+
+<div id="tree" class="tree" data-project="{{ project.id }}">
+  {% include "_tree.html" %}
+</div>
+<p class="hint muted">Click a tile to add a point. Shift-click (or right-click) to take one away.</p>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New branch' if is_new else 'Edit branch' }} · {{ SITE_NAME }}{% endblock %}
+{% block main_class %}page page--narrow{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__head">
+    <h1>{{ 'New branch' if is_new else 'Edit branch' }}</h1>
+    <span class="muted">{{ project.name }}</span>
+  </div>
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label class="field__label" for="name">Name</label>
+      <input class="input" type="text" id="name" name="name" maxlength="80" required autofocus value="{{ branch.name or '' }}" placeholder="Design, Approvals, Construction…">
+    </div>
+    <div class="field">
+      <span class="field__label">Colour</span>
+      <div class="hue-picker">
+        {% for key, label in HUES.items() %}
+        <label class="hue-pick hue-pick--{{ key }}">
+          <input type="radio" name="hue" value="{{ key }}" {% if branch.hue == key %}checked{% endif %}>
+          <span class="hue-pick__swatch"></span>
+          <span class="hue-pick__label">{{ label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="field">
+      <label class="field__label" for="requires_branch_id">Opens after <span class="muted">(optional)</span></label>
+      <select class="input" id="requires_branch_id" name="requires_branch_id">
+        <option value="">Always open</option>
+        {% for other in project.branches if other.id != branch.id %}
+        <option value="{{ other.id }}" {% if branch.requires_branch_id == other.id %}selected{% endif %}>{{ other.name }} is complete</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form__actions">
+      <button class="btn btn--primary" type="submit">{{ 'Add branch' if is_new else 'Save' }}</button>
+      <a class="btn btn--ghost" href="{{ url_for('projects.tree', project_id=project.id) }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% if not is_new %}
+<form method="post" action="{{ url_for('projects.delete_branch', branch_id=branch.id) }}" class="inline-form" data-confirm="Delete this branch and its {{ branch.tasks|length }} task(s)?">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn btn--danger" type="submit">Delete branch</button>
+</form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New project' if is_new else 'Edit project' }} · {{ SITE_NAME }}{% endblock %}
+{% block main_class %}page page--narrow{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__head"><h1>{{ 'New project' if is_new else 'Edit project' }}</h1></div>
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label class="field__label" for="name">Name</label>
+      <input class="input" type="text" id="name" name="name" maxlength="120" required autofocus value="{{ project.name or '' }}">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field__label" for="code">Code <span class="muted">(optional)</span></label>
+        <input class="input" type="text" id="code" name="code" maxlength="40" value="{{ project.code or '' }}" placeholder="2026-014">
+      </div>
+      <div class="field">
+        <label class="field__label" for="gate_points">Points to open the next tier</label>
+        <input class="input" type="number" id="gate_points" name="gate_points" min="1" max="99" value="{{ project.gate_points }}">
+      </div>
+    </div>
+    <div class="field">
+      <label class="field__label" for="description">Description <span class="muted">(optional)</span></label>
+      <textarea class="input" id="description" name="description" rows="3">{{ project.description or '' }}</textarea>
+    </div>
+    <div class="form__actions">
+      <button class="btn btn--primary" type="submit">{{ 'Create project' if is_new else 'Save' }}</button>
+      <a class="btn btn--ghost" href="{{ url_for('projects.tree', project_id=project.id) if not is_new else url_for('projects.index') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% if not is_new %}
+<form method="post" action="{{ url_for('projects.delete_project', project_id=project.id) }}" class="inline-form" data-confirm="Delete this project and every branch and task in it?">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn btn--danger" type="submit">Delete project</button>
+</form>
+{% endif %}
+{% endblock %}

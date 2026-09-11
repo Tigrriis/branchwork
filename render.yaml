@@ -1,0 +1,27 @@
+databases:
+  - name: branchwork-db
+    plan: free
+    databaseName: branchwork
+    user: branchwork
+
+services:
+  - type: web
+    name: branchwork
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bootstrap_db.py && gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.4"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SESSION_COOKIE_SECURE
+        value: "1"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: branchwork-db
+          property: connectionString
+      - key: SITE_NAME
+        value: Branchwork

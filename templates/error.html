@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} · {{ SITE_NAME }}{% endblock %}
+{% block main_class %}page page--centre{% endblock %}
+{% block content %}
+<div class="auth-card">
+  <h1>{{ code }}</h1>
+  <p class="muted">{{ message }}</p>
+  <a class="btn btn--ghost" href="{{ url_for('projects.index') }}">Back to projects</a>
+</div>
+{% endblock %}

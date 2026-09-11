@@ -1,0 +1,41 @@
+/* Branchwork theme tokens. Lifted from the chosen design board (design/Main.dc.html):
+   dark ground, one sans, three fill states, muted per-branch tints. */
+:root {
+  --font: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+
+  --bg: #15181d;
+  --card: #1b1f25;
+  --card2: #232830;
+  --fg: #eceae2;
+  --fg2: #d6d4cc;
+  --muted: #8b909a;
+  --line: #2a2f38;
+  --line2: #3a404b;
+
+  --full: #3fcf63;
+  --part: #f0932b;
+  --empty: #3a404b;
+  --accent: #3fcf63;
+  --on-accent: #101215;
+  --link: #8fb8ff;
+  --danger: #f0684e;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 14px;
+}
+
+/* Branch tints: .col--<hue> sets the column ground, edge and name colour. */
+.col--green  { --tint-bg: #182a1f; --tint-edge: #2f5a3c; --tint-fg: #7ee39a; --tint-wm: #3fcf63; }
+.col--blue   { --tint-bg: #18243a; --tint-edge: #2f4a7a; --tint-fg: #8fb8ff; --tint-wm: #5b8def; }
+.col--red    { --tint-bg: #2e1d1a; --tint-edge: #6b3a31; --tint-fg: #ff9a86; --tint-wm: #f0684e; }
+.col--amber  { --tint-bg: #2c2416; --tint-edge: #6b5426; --tint-fg: #f3c46b; --tint-wm: #e0a53a; }
+.col--violet { --tint-bg: #241d33; --tint-edge: #4d3d78; --tint-fg: #c3a8ff; --tint-wm: #9b7cf0; }
+.col--teal   { --tint-bg: #16292b; --tint-edge: #2b5b5e; --tint-fg: #7fe0d8; --tint-wm: #3cc5b8; }
+
+.hue--green  { --hue: #3fcf63; }
+.hue--blue   { --hue: #5b8def; }
+.hue--red    { --hue: #f0684e; }
+.hue--amber  { --hue: #e0a53a; }
+.hue--violet { --hue: #9b7cf0; }
+.hue--teal   { --hue: #3cc5b8; }

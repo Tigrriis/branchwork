@@ -1,0 +1,282 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Tree view",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 820,
+      "page": "page-1"
+    },
+    {
+      "file": "Login.dc.html",
+      "title": "Sign in",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 820,
+      "page": "page-1"
+    },
+    {
+      "file": "Blueprint.dc.html",
+      "title": "A · Blueprint",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 820,
+      "page": "page-2"
+    },
+    {
+      "file": "Constellation.dc.html",
+      "title": "B · Constellation",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 820,
+      "page": "page-2"
+    },
+    {
+      "file": "Ledger.dc.html",
+      "title": "C · Ledger",
+      "x": 0,
+      "y": 1080,
+      "w": 1440,
+      "h": 820,
+      "page": "page-2"
+    },
+    {
+      "file": "Studio.dc.html",
+      "title": "D · Studio",
+      "x": 1560,
+      "y": 1080,
+      "w": 1440,
+      "h": 820,
+      "page": "page-2"
+    },
+    {
+      "file": "Tiered.dc.html",
+      "title": "E · Tiered",
+      "x": 0,
+      "y": 2160,
+      "w": 1440,
+      "h": 820,
+      "page": "page-2"
+    },
+    {
+      "file": "Inked.dc.html",
+      "title": "F · Inked",
+      "x": 1560,
+      "y": 2160,
+      "w": 1440,
+      "h": 820,
+      "page": "page-2"
+    },
+    {
+      "file": "Cel.dc.html",
+      "title": "G · Cel",
+      "x": 3120,
+      "y": 2160,
+      "w": 1440,
+      "h": 820,
+      "page": "page-2"
+    },
+    {
+      "file": "Plate.dc.html",
+      "title": "H · Plate",
+      "x": 0,
+      "y": 3240,
+      "w": 1440,
+      "h": 820,
+      "page": "page-2"
+    },
+    {
+      "file": "Grit.dc.html",
+      "title": "I · Grit",
+      "x": 1560,
+      "y": 3240,
+      "w": 1440,
+      "h": 820,
+      "page": "page-2"
+    },
+    {
+      "file": "Tint.dc.html",
+      "title": "J · Tint",
+      "x": 0,
+      "y": 4320,
+      "w": 1440,
+      "h": 820,
+      "page": "page-2"
+    },
+    {
+      "file": "Panel.dc.html",
+      "title": "K · Panel",
+      "x": 1560,
+      "y": 4320,
+      "w": 1440,
+      "h": 820,
+      "page": "page-2"
+    },
+    {
+      "file": "Vault.dc.html",
+      "title": "L · Vault",
+      "x": 3120,
+      "y": 4320,
+      "w": 1440,
+      "h": 820,
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "final",
+      "x": -420,
+      "y": 0,
+      "w": 360,
+      "page": "page-1",
+      "text": "Chosen direction: dark theme, between J · Tint and K · Panel.\n\nTint’s calm structure (rounded columns, one sans, dashed rules and a plain reason line for locked tiers, legend + points bar in the header) on Panel’s dark ground with muted per-tree tints. Complete = green, in progress = orange, not started = grey.\n\nThese tokens are the app’s theme.css. Explorations A–L are on the second page."
+    },
+    {
+      "id": "brief",
+      "x": -420,
+      "y": 0,
+      "w": 360,
+      "text": "Branchwork: four directions for the skill-tree task view.\n\nSame project, same tree, same data on every board so only the visual language differs. Root task at top, three branches, tasks cascading down each branch. States shown: done, in progress (amber / red), not started, and locked (blocked by an unfinished parent).\n\nPick one and the login screen, task drawer and empty states get built in that direction.",
+      "page": "page-2"
+    },
+    {
+      "id": "a-note",
+      "x": 0,
+      "y": -150,
+      "w": 520,
+      "text": "A · Blueprint. Drafting sheet on grid paper, cyan ink, mono labels, dashed outlines for work in hand.\nFor: an engineer’s planning tool that feels like a drawing set. Progress reads as a segmented ink bar.\nTrade-off: dark and technical; less warm for non-engineering users.",
+      "page": "page-2"
+    },
+    {
+      "id": "b-note",
+      "x": 1560,
+      "y": -150,
+      "w": 520,
+      "text": "B · Constellation. Game skill tree: lit paths, glowing orbs, locked branches, a level-up ring.\nFor: motivation. Completed paths visibly light up and the next unlock is always named.\nTrade-off: the strongest personality, so the least neutral; can feel playful for client-facing use.",
+      "page": "page-2"
+    },
+    {
+      "id": "c-note",
+      "x": 0,
+      "y": 930,
+      "w": 520,
+      "text": "C · Ledger. Paper and ink, serif headings, hairline connectors, a printed checklist that branches.\nFor: calm and readable; prints beautifully. Red ink marks what is in hand.\nTrade-off: least “visual progress” pop; relies on typography rather than colour.",
+      "page": "page-2"
+    },
+    {
+      "id": "d-note",
+      "x": 1560,
+      "y": 930,
+      "w": 520,
+      "text": "D · Studio. Light product UI: soft cards, one green accent, progress bars in every branch head.\nFor: the safest, most familiar SaaS feel; easiest to extend with drawers, filters and settings.\nTrade-off: the most generic of the four.",
+      "page": "page-2"
+    },
+    {
+      "id": "row3",
+      "x": -420,
+      "y": 2160,
+      "w": 360,
+      "text": "Row 3: three takes on a tiered skill tree, professional to stylised.\n\nStructure borrowed from that genre: each branch is a vertical tree, skills sit in tiers, every task carries point pips (subtasks or effort), and the next tier only opens once the tier above has 3 points. Same project data as rows 1 and 2, so E, F and G compare directly with A to D.",
+      "page": "page-2"
+    },
+    {
+      "id": "e-note",
+      "x": 0,
+      "y": 2010,
+      "w": 520,
+      "text": "E · Tiered. The tiered structure and point pips in a sober, light product UI.\nFor: teams who want the game mechanics (tiers, gates, points) without the game look.\nTrade-off: gates and pips carry the whole idea; if you strip them it becomes Studio.",
+      "page": "page-2"
+    },
+    {
+      "id": "f-note",
+      "x": 1560,
+      "y": 2010,
+      "w": 520,
+      "text": "F · Inked. Charcoal, chamfered panels, off-white ink outlines, one hot orange, condensed display type.\nFor: a game-adjacent feel that still reads as a serious tool; completed tiles fill solid.\nTrade-off: dark-only; the orange has to stay the one accent or it turns garish.",
+      "page": "page-2"
+    },
+    {
+      "id": "g-note",
+      "x": 3120,
+      "y": 2010,
+      "w": 520,
+      "text": "G · Cel. Full cel-shaded comic treatment: thick ink outlines, halftone, skewed slabs, hard offset shadows, hazard-stripe gates.\nFor: maximum motivation and personality; unlocking a tier feels like an event.\nTrade-off: loud. Hard to keep readable with many tasks and not for client-facing use.",
+      "page": "page-2"
+    },
+    {
+      "id": "row4",
+      "x": -420,
+      "y": 3240,
+      "w": 360,
+      "text": "Row 4: two takes modelled more closely on looter-shooter skill screens.\n\nSquare skill tiles with a points counter in the corner, a header plate per tree, tier lines that state the unlock requirement, and (in I) a character-style project card with points available. Icons and panels are drawn fresh; the structure is the homage.",
+      "page": "page-2"
+    },
+    {
+      "id": "h-note",
+      "x": 0,
+      "y": 3090,
+      "w": 520,
+      "text": "H · Plate (middle). Dark plate UI, cut-corner panels, amber accent, square icon tiles with a corner points box, hairline tier rules. Anton headings.\nFor: unmistakably that genre, but calm enough for daily use; icons carry recognition at a glance.\nTrade-off: needs an icon per task type in the real app (a picker or auto-assign).",
+      "page": "page-2"
+    },
+    {
+      "id": "i-note",
+      "x": 1560,
+      "y": 3090,
+      "w": 520,
+      "text": "I · Grit (stylised). Scratched black ground, bevelled double-frame tiles, glowing amber for done and ice-blue for in progress, yellow header plates, and a project card rail with points available and next unlock.\nFor: the full screen-in-a-game feel; the rail turns the project into a character sheet.\nTrade-off: the rail costs width, so tiles are 96px and long labels wrap tight.",
+      "page": "page-2"
+    },
+    {
+      "id": "row5",
+      "x": -420,
+      "y": 4320,
+      "w": 360,
+      "text": "Row 5: three levels built on the three-column skill screen from the reference.\n\nWhat carries over: one tinted column per tree (green, blue, red), icon tiles with a points plate underneath coloured by fill (green complete, orange partial, grey empty), tree names along the bottom, and tiers that are not yet available dimmed inside the column. Tiles, icons and panels are drawn fresh.",
+      "page": "page-2"
+    },
+    {
+      "id": "j-note",
+      "x": 0,
+      "y": 4170,
+      "w": 520,
+      "text": "J · Tint (professional). Light UI; each tree is a softly tinted rounded column with a faint watermark, white icon tiles, colour-coded points plates, a dashed rule and a plain reason line where a tier is locked.\nFor: the reference’s reading order in a calm product skin.\nTrade-off: the tints are subtle, so the three trees rely on the footer label to tell apart.",
+      "page": "page-2"
+    },
+    {
+      "id": "k-note",
+      "x": 1560,
+      "y": 4170,
+      "w": 520,
+      "text": "K · Panel (middle). Dark, cut-corner columns in deep green / blue / red with a black outline, dark tiles with a black inner ring, chunky points plates, big condensed tree names at the foot, locked tiers greyed and desaturated.\nFor: closest to the reference’s feel while staying legible with labels.\nTrade-off: dark-only; three saturated hues plus two state colours is a lot of colour to manage.",
+      "page": "page-2"
+    },
+    {
+      "id": "l-note",
+      "x": 3120,
+      "y": 4170,
+      "w": 520,
+      "text": "L · Vault (stylised). Saturated tinted columns with hard black frames and offset shadows, halftone and scratch overlays, glowing tile borders, footer names lit in their tree colour, locked tiers sunk into a dark band.\nFor: the loudest, most game-like take of the set.\nTrade-off: the glow and textures fight small labels; best with fewer, chunkier tasks per tier.",
+      "page": "page-2"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  },
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Branchwork"
+    },
+    {
+      "id": "page-2",
+      "name": "Explorations"
+    }
+  ]
+}

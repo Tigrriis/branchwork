@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Projects · {{ SITE_NAME }}{% endblock %}
+{% block topactions %}
+  <a class="btn btn--primary btn--sm" href="{{ url_for('projects.new_project') }}">+ New project</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Projects</h1>
+</div>
+
+{% if projects %}
+<div class="project-grid">
+  {% for p in projects %}
+  <a class="project-card" href="{{ url_for('projects.tree', project_id=p.id) }}">
+    <div class="project-card__top">
+      <span class="project-card__name">{{ p.name }}</span>
+      {% if p.code %}<span class="muted">{{ p.code }}</span>{% endif %}
+    </div>
+    <div class="hue-strip">
+      {% for b in p.branches %}<span class="hue-strip__seg hue-strip__seg--{{ b.hue }}" title="{{ b.name }}"></span>{% endfor %}
+    </div>
+    <div class="bar"><span class="bar__fill" style="width: {{ p.percent }}%"></span></div>
+    <div class="project-card__meta">
+      <span>{{ p.points_done }} / {{ p.points_max }} points</span>
+      <span>{{ p.branches|length }} branch{{ 'es' if p.branches|length != 1 else '' }} · {{ p.tasks|length }} tasks</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">
+  <p>No projects yet.</p>
+  <a class="btn btn--primary" href="{{ url_for('projects.new_project') }}">Create your first project</a>
+</div>
+{% endif %}
+{% endblock %}

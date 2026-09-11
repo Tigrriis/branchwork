@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Account · {{ SITE_NAME }}{% endblock %}
+{% block main_class %}page page--narrow{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__head"><h1>Account</h1><span class="muted">{{ current_user.email }}</span></div>
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label class="field__label" for="display_name">Name</label>
+      <input class="input" type="text" id="display_name" name="display_name" maxlength="80" value="{{ current_user.display_name or '' }}">
+    </div>
+    <fieldset class="fieldset">
+      <legend>Change password</legend>
+      <div class="field">
+        <label class="field__label" for="current_password">Current password</label>
+        <input class="input" type="password" id="current_password" name="current_password" autocomplete="current-password">
+      </div>
+      <div class="field">
+        <label class="field__label" for="new_password">New password <span class="muted">(leave blank to keep)</span></label>
+        <input class="input" type="password" id="new_password" name="new_password" autocomplete="new-password">
+      </div>
+    </fieldset>
+    <div class="form__actions">
+      <button class="btn btn--primary" type="submit">Save</button>
+    </div>
+  </form>
+</div>
+<form method="post" action="{{ url_for('auth.logout') }}" class="inline-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn btn--ghost" type="submit">Sign out</button>
+</form>
+{% endblock %}
