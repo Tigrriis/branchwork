@@ -1,0 +1,46 @@
+{# The project's idea list. Rendered under the tree, and again by
+   POST /ideas/<id>/promote when one of them leaves for the tree. #}
+{% if ideas %}
+<div class="ideas__list">
+  {% for item in ideas %}
+  <article class="idea" draggable="true" data-idea="{{ item.id }}" tabindex="0">
+    <span class="idea__grip" aria-hidden="true">
+      <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor"><circle cx="3" cy="3" r="1.4"/><circle cx="9" cy="3" r="1.4"/><circle cx="3" cy="8" r="1.4"/><circle cx="9" cy="8" r="1.4"/><circle cx="3" cy="13" r="1.4"/><circle cx="9" cy="13" r="1.4"/></svg>
+    </span>
+    <span class="idea__text">{{ item.text }}</span>
+    <span class="idea__actions">
+      {% if project.branches %}
+      <button type="button" class="icon-btn" data-idea-place title="Add to the tree without dragging">→</button>
+      {% endif %}
+      <form method="post" action="{{ url_for('projects.finish_idea', item_id=item.id) }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="icon-btn" type="submit" title="Done, without making it a task">✓</button>
+      </form>
+      <form method="post" action="{{ url_for('projects.delete_idea', item_id=item.id) }}" class="inline-form" data-confirm="Delete this idea?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="icon-btn" type="submit" title="Delete">×</button>
+      </form>
+    </span>
+    {% if project.branches %}
+    {# Keyboard and touch route to the same endpoint the drop uses. #}
+    <span class="idea__place" hidden>
+      <select class="input input--xs" data-idea-target aria-label="Where to put it">
+        {% for b in project.branches %}
+          {% for row in b.tiers() %}
+          <option value="{{ b.id }}:{{ row.tier }}">{{ b.name }} › Tier {{ row.tier }}</option>
+          {% endfor %}
+          <option value="{{ b.id }}:{{ b.next_tier }}">{{ b.name }} › New tier {{ b.next_tier }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" class="btn btn--sm" data-idea-confirm>Add</button>
+    </span>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<p class="muted small ideas__empty">
+  Nothing here. Capture half-formed thoughts for this project, then drag one onto a tier
+  when you know where it belongs.
+</p>
+{% endif %}

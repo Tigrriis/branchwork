@@ -18,7 +18,7 @@
         {{ row.reason }}
       </div>
       {% endif %}
-      <div class="tier__row">
+      <div class="tier__row" data-branch="{{ branch.id }}" data-tier="{{ row.tier }}">
         {% for task in row.tasks %}
         <div class="tile tile--{{ task.state }} {% if row.open %}tile--live{% endif %}" data-task="{{ task.id }}" title="{{ task.title }}{% if task.notes %} — {{ task.notes }}{% endif %}">
           <button type="button" class="tile__box" {% if not row.open %}disabled{% endif %} aria-label="{{ task.title }}: {{ task.points_done }} of {{ task.points_max }} points">
@@ -35,7 +35,8 @@
       </div>
     </div>
     {% endfor %}
-    <a class="tier-add" href="{{ url_for('projects.new_task', branch_id=branch.id, tier=branch.next_tier) }}">
+    <a class="tier-add" href="{{ url_for('projects.new_task', branch_id=branch.id, tier=branch.next_tier) }}"
+       data-branch="{{ branch.id }}" data-tier="{{ branch.next_tier }}">
       + {{ 'Add the first task' if not branch.tasks else 'New tier' }}
     </a>
   </div>

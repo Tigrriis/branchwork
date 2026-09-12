@@ -19,6 +19,10 @@ projects and forgets to move them along:
   or drop. Each card edits the project's objective and next action.
 * **Inbox** captures ideas that belong to no project yet; file them into a
   project (they become tasks), park them until a date, or finish them.
+* **Ideas** are the same thing scoped to one project, listed under its tree.
+  They carry no points and count towards nothing until you drag one onto a
+  tier, which is the moment it becomes a task. Dragging is the quick path;
+  every idea also has a picker for touch and keyboard.
 * **Activity** is recorded on every points change, task, phase move and
   review, and `flask sync-git` adds one event per commit for projects with a
   repository folder set. That feeds "last touched" and the 12-week strips.

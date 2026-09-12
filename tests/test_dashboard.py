@@ -352,3 +352,106 @@ def test_account_rejects_a_nonsense_cap(client, db):
         client.post("/account", data={"display_name": "", "wip_building_limit": value})
         db.session.refresh(user)
         assert user.wip_building_limit == expected, value
+
+
+# ── Per-project ideas ───────────────────────────────────────────────────────
+
+def _promote(client, item_id, branch_id, tier):
+    return client.post(f"/ideas/{item_id}/promote", json={"branch_id": branch_id, "tier": tier})
+
+
+def test_project_ideas_stay_out_of_the_loose_inbox(client, db):
+    user = make_user()
+    login(client)
+    p = make_project(user); p.name, p.phase = "Fit-out", "building"
+    db.session.commit()
+    client.post(f"/projects/{p.id}/ideas", data={"text": "Ask about the fire damper"})
+    client.post("/inbox", data={"text": "Unrelated loose thought"})
+
+    idea = InboxItem.query.filter_by(text="Ask about the fire damper").one()
+    assert idea.project_id == p.id and idea.status == "open" and not idea.is_loose
+
+    # Today shows the loose one only; the tree page shows the project one only.
+    today = client.get("/").data.decode()
+    assert "Unrelated loose thought" in today and "Ask about the fire damper" not in today
+    tree = client.get(f"/projects/{p.id}").data.decode()
+    assert "Ask about the fire damper" in tree and "Unrelated loose thought" not in tree
+
+
+def test_dropping_an_idea_on_a_tier_makes_it_a_task(client, db):
+    user = make_user()
+    login(client)
+    p = make_project(user)
+    branch = make_branch(p, "Design")
+    make_task(branch, "Existing", tier=1)
+    client.post(f"/projects/{p.id}/ideas", data={"text": "Check the ceiling heights\nwith the architect"})
+    idea = InboxItem.query.one()
+
+    r = _promote(client, idea.id, branch.id, 1)
+    assert r.status_code == 200
+    body = r.get_json()
+    assert body["branch"] == "Design" and body["tier"] == 1
+    assert body["title"] == "Check the ceiling heights"
+    # Both fragments come back, since the idea leaves one list for the other.
+    assert "Check the ceiling heights" in body["tree"]
+    assert "Check the ceiling heights" not in body["ideas"]
+    assert body["points_max"] == 2                      # header has to move too
+
+    db.session.refresh(idea)
+    assert idea.status == "filed" and idea.task_id is not None
+    task = db.session.get(Task, idea.task_id)
+    assert task.branch_id == branch.id and task.tier == 1 and task.points_max == 1
+    # The rest of a multi-line idea is kept as the task's notes.
+    assert task.notes.endswith("with the architect")
+    assert any(e.kind == "task" and "From ideas" in (e.note or "") for e in p.events)
+
+
+def test_an_idea_can_open_a_new_tier(client, db):
+    user = make_user()
+    login(client)
+    p = make_project(user)
+    branch = make_branch(p)
+    make_task(branch, "First", tier=1)
+    client.post(f"/projects/{p.id}/ideas", data={"text": "Later thing"})
+    idea = InboxItem.query.one()
+    _promote(client, idea.id, branch.id, 2)
+    db.session.refresh(branch)
+    assert sorted(t.tier for t in branch.tasks) == [1, 2]
+
+
+def test_an_idea_cannot_be_promoted_twice(client, db):
+    user = make_user()
+    login(client)
+    p = make_project(user)
+    branch = make_branch(p)
+    client.post(f"/projects/{p.id}/ideas", data={"text": "Once only"})
+    idea = InboxItem.query.one()
+    assert _promote(client, idea.id, branch.id, 1).status_code == 200
+    r = _promote(client, idea.id, branch.id, 1)
+    assert r.status_code == 409
+    assert Task.query.count() == 1
+
+
+def test_promote_is_owner_only(client, db):
+    owner = make_user("owner@example.com")
+    p = make_project(owner)
+    branch = make_branch(p)
+    db.session.add(InboxItem(user=owner, project=p, text="Theirs")); db.session.commit()
+    idea = InboxItem.query.one()
+    make_user("intruder@example.com")
+    login(client, email="intruder@example.com")
+    assert _promote(client, idea.id, branch.id, 1).status_code == 404
+    assert Task.query.count() == 0
+
+
+def test_finishing_an_idea_leaves_the_tree_alone(client, db):
+    user = make_user()
+    login(client)
+    p = make_project(user)
+    make_branch(p)
+    client.post(f"/projects/{p.id}/ideas", data={"text": "Never mind"})
+    idea = InboxItem.query.one()
+    client.post(f"/ideas/{idea.id}/done")
+    db.session.refresh(idea)
+    assert idea.status == "done" and Task.query.count() == 0
+    assert "Never mind" not in client.get(f"/projects/{p.id}").data.decode()

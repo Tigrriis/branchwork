@@ -52,4 +52,24 @@
   {% include "_tree.html" %}
 </div>
 <p class="hint muted">Click a tile to add a point. Shift-click (or right-click) to take one away.</p>
+
+<section class="ideas" id="ideas">
+  <div class="ideas__head">
+    <h2 class="section__title">Ideas</h2>
+    <span class="muted small">Loose thoughts for this project. They carry no points and count towards nothing until you drag one onto a tier.</span>
+  </div>
+  <form method="post" action="{{ url_for('projects.add_idea', project_id=project.id) }}" class="ideas__add">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input class="input input--sm" type="text" name="text" maxlength="2000" required
+           placeholder="Something to do here eventually…">
+    <button class="btn btn--sm" type="submit">Add</button>
+  </form>
+  <div id="ideas-list">
+    {% include "_ideas.html" %}
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>window.BRANCHWORK_PROJECT = {{ project.id }};</script>
 {% endblock %}

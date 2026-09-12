@@ -9,6 +9,8 @@ tree page calls with fetch() and which answers with the re-rendered tree
 fragment. One template renders the tree in both cases, so the page never has
 to reproduce the gate logic in JavaScript.
 """
+from datetime import datetime, timezone
+
 from flask import (
     Blueprint, abort, current_app, flash, jsonify, redirect, render_template,
     request, url_for,
@@ -17,7 +19,7 @@ from flask_login import current_user, login_required
 
 from extensions import db
 from icons import DEFAULT_ICON, ICONS
-from models import CADENCES, HUES, PHASES, Branch, Project, Task
+from models import CADENCES, HUES, PHASES, Branch, InboxItem, Project, Task
 from starters import DEFAULT_STARTER, STARTERS, apply_starter
 
 projects_bp = Blueprint("projects", __name__)
@@ -44,6 +46,23 @@ def _task(task_id: int) -> Task:
     if task is None or task.branch.project.owner_id != current_user.id:
         abort(404)
     return task
+
+
+def _idea(item_id: int) -> InboxItem:
+    """An inbox item this user owns. Ownership is on the item, not the project:
+    an idea can sit in the loose inbox with no project at all."""
+    item = db.session.get(InboxItem, item_id)
+    if item is None or item.user_id != current_user.id:
+        abort(404)
+    return item
+
+
+def _project_ideas(project: Project) -> list[InboxItem]:
+    """Open ideas parked under this project's tree, oldest first."""
+    items = [i for i in current_user.inbox_items
+             if i.project_id == project.id and i.status == "open"]
+    items.sort(key=lambda i: i.id)
+    return items
 
 
 def _int(value, default: int, lo: int, hi: int) -> int:
@@ -103,7 +122,8 @@ def new_project():
 @login_required
 def tree(project_id: int):
     project = _project(project_id)
-    return render_template("project_tree.html", project=project)
+    return render_template("project_tree.html", project=project,
+                           ideas=_project_ideas(project))
 
 
 @projects_bp.route("/projects/<int:project_id>/tree")
@@ -343,3 +363,91 @@ def task_points(task_id: int):
         "percent": project.percent,
         "counts": {s: project.count_state(s) for s in ("full", "part", "empty")},
     })
+
+
+# ── Project ideas ───────────────────────────────────────────────────────────
+# A per-project inbox for thoughts that are not tasks yet: no tier, no points,
+# no bearing on progress. Dragging one onto a tier is what turns it into a
+# task, which is the moment you decide where it actually belongs.
+
+@projects_bp.route("/projects/<int:project_id>/ideas", methods=["POST"])
+@login_required
+def add_idea(project_id: int):
+    project = _project(project_id)
+    text = (request.form.get("text") or "").strip()
+    if not text:
+        flash("Write the idea down first.", "error")
+    elif len([i for i in current_user.inbox_items if i.status != "done"]) >= current_app.config["MAX_INBOX_ITEMS"]:
+        flash("The inbox is full. Clear some out before adding more.", "error")
+    else:
+        db.session.add(InboxItem(user=current_user, project=project, text=text[:2000]))
+        db.session.commit()
+    return redirect(url_for("projects.tree", project_id=project.id))
+
+
+@projects_bp.route("/ideas/<int:item_id>/promote", methods=["POST"])
+@login_required
+def promote_idea(item_id: int):
+    """Turn an idea into a task on a branch and tier — the drop handler.
+
+    Body: JSON ``{"branch_id": n, "tier": n}``. Answers with both re-rendered
+    fragments, since the idea leaves one list and appears in the other.
+    """
+    item = _idea(item_id)
+    payload = request.get_json(silent=True) or {}
+    branch = db.session.get(Branch, payload.get("branch_id") or 0)
+    if branch is None or branch.project.owner_id != current_user.id:
+        return jsonify({"error": "no_branch", "message": "That branch is gone."}), 404
+    project = branch.project
+    if item.status != "open":
+        return jsonify({"error": "not_open", "message": "That idea is no longer in the inbox."}), 409
+    if len(branch.tasks) >= current_app.config["MAX_TASKS_PER_BRANCH"]:
+        return jsonify({"error": "full", "message": "That branch is full."}), 409
+
+    tier = _int(payload.get("tier"), branch.next_tier, 1, 50)
+    title = item.text.strip().splitlines()[0][:120]
+    task = Task(branch=branch, tier=tier, title=title, icon=DEFAULT_ICON,
+                points_max=1, points_done=0,
+                notes=item.text if len(item.text) > len(title) else None,
+                position=len([t for t in branch.tasks if t.tier == tier]))
+    db.session.add(task)
+    db.session.flush()
+    # Both, so the item reads as filed and still points at where it went.
+    item.project, item.task_id = project, task.id
+    project.record("task", task=task, note=f"From ideas: {title}")
+    db.session.commit()
+    return jsonify({
+        "tree": render_template("_tree.html", project=project),
+        "ideas": render_template("_ideas.html", project=project, ideas=_project_ideas(project)),
+        "title": title,
+        "branch": branch.name,
+        "tier": tier,
+        # A new task adds to the denominator and the "not started" count, so
+        # the header has to move too.
+        "points_done": project.points_done,
+        "points_max": project.points_max,
+        "percent": project.percent,
+        "counts": {s: project.count_state(s) for s in ("full", "part", "empty")},
+    })
+
+
+@projects_bp.route("/ideas/<int:item_id>/done", methods=["POST"])
+@login_required
+def finish_idea(item_id: int):
+    item = _idea(item_id)
+    project_id = item.project_id
+    item.done_at = datetime.now(timezone.utc)
+    db.session.commit()
+    return redirect(url_for("projects.tree", project_id=project_id) if project_id
+                    else url_for("dashboard.today"))
+
+
+@projects_bp.route("/ideas/<int:item_id>/delete", methods=["POST"])
+@login_required
+def delete_idea(item_id: int):
+    item = _idea(item_id)
+    project_id = item.project_id
+    db.session.delete(item)
+    db.session.commit()
+    return redirect(url_for("projects.tree", project_id=project_id) if project_id
+                    else url_for("dashboard.today"))

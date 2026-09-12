@@ -61,9 +61,12 @@ def today():
     no_action = [p for p in projects if p.is_active and not p.next_action]
     on_track = sorted((p for p in projects if p.is_active and not p.is_due and p.next_action),
                       key=lambda p: p.days_since_touch, reverse=True)
-    inbox = [i for i in current_user.inbox_items if i.status == "open"]
+    # Only loose ideas belong here; ones attached to a project live under that
+    # project's tree instead.
+    inbox = [i for i in current_user.inbox_items if i.is_loose]
     inbox.sort(key=lambda i: (not i.resurfaced, i.created_at or datetime.min.replace(tzinfo=timezone.utc)))
-    parked_items = [i for i in current_user.inbox_items if i.status == "parked"]
+    parked_items = [i for i in current_user.inbox_items
+                    if i.status == "parked" and i.project_id is None]
     return render_template(
         "today.html", due=due, resurfaced=resurfaced, no_action=no_action,
         on_track=on_track, inbox=inbox, parked_items=parked_items,
