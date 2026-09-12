@@ -1,2 +1,6 @@
 -r requirements.txt
 pytest>=8.0
+
+# Only for design/gen_icons.py, which regenerates the favicon files.
+# The app never imports it; the generated icons are committed.
+Pillow>=11.0

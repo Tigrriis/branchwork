@@ -1,0 +1,8 @@
+<!-- The same three bars as logo.svg, redrawn for small sizes: thicker, with
+     tighter margins, because the logo's thin bars turn to mush at 16px. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Branchwork">
+  <title>Branchwork</title>
+  <rect x="2" y="3" width="8" height="26" rx="2.5" fill="#3fcf63"/>
+  <rect x="12" y="3" width="8" height="26" rx="2.5" fill="#5b8def"/>
+  <rect x="22" y="3" width="8" height="26" rx="2.5" fill="#f0684e"/>
+</svg>

@@ -24,6 +24,7 @@ button { font: inherit; }
 }
 .topbar__left, .topbar__right { display: flex; align-items: center; gap: 20px; }
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 16px; color: var(--fg); text-decoration: none; }
+.brand__mark { display: block; }   /* kill the inline-image baseline gap */
 .avatar {
   display: flex; align-items: center; justify-content: center;
   width: 32px; height: 32px; border-radius: 999px; background: var(--card2); color: var(--muted);
