@@ -610,3 +610,122 @@ def test_focus_is_independent_of_phase(client, db):
     html = client.get("/").data.decode()
     assert "Parked but flagged" not in _lane(html, "focus")
     assert _count(html, "focus") == 0 and _count(html, "back") == 0
+
+
+# ── Custom project templates ────────────────────────────────────────────────
+
+def test_copying_a_builtin_gives_an_editable_template(client, db):
+    from models import Template
+    user = make_user()
+    login(client)
+    client.post("/settings/templates/new", data={"copy": "engineering"})
+    t = Template.query.one()
+    assert t.name == "Engineering job" and t.user_id == user.id
+    assert [(b.name, b.hue, b.waits) for b in t.branches] == [
+        ("Design", "green", False), ("Approvals", "blue", False), ("Construction", "red", True)]
+    # It shows on the new-project form, marked as the user's own.
+    html = client.get("/projects/new").data.decode()
+    assert f'value="custom:{t.id}"' in html and "yours" in html
+
+
+def test_copying_carries_seeded_tasks_with_their_points(client, db):
+    from models import Template
+    make_user()
+    login(client)
+    client.post("/settings/templates/new", data={"copy": "business"})
+    t = Template.query.one()
+    sales = t.branches[0]
+    assert sales.name == "Sales & marketing"
+    assert sales.tasks() == [("Map how work is won today", 3)]
+
+
+def test_a_copy_gets_a_distinct_name(client, db):
+    from models import Template
+    make_user()
+    login(client)
+    client.post("/settings/templates/new", data={"copy": "software"})
+    client.post("/settings/templates/new", data={"copy": "software"})
+    assert sorted(t.name for t in Template.query.all()) == ["Software", "Software 2"]
+
+
+def test_editing_a_template_renames_reorders_and_deletes(client, db):
+    from models import Template, TemplateBranch
+    make_user()
+    login(client)
+    client.post("/settings/templates/new", data={"copy": "engineering"})
+    t = Template.query.one()
+
+    # Three rows posted: rename the first, blank the second (delete), keep the
+    # third, and add a fourth. Only row 3 is ticked as waiting.
+    client.post(f"/settings/templates/{t.id}", data={
+        "name": "Arete job", "hint": "How we actually run one",
+        "branch_name": ["Concept", "", "Construction", "Handover"],
+        "branch_hue": ["violet", "blue", "red", "teal"],
+        "branch_waits_3": "1",
+        "branch_tasks": ["Site visit | 2\nBrief signed", "", "", ""],
+    })
+    db.session.expire_all()
+    t = Template.query.one()
+    assert t.name == "Arete job" and t.hint == "How we actually run one"
+    assert [(b.name, b.hue, b.waits, b.position) for b in t.branches] == [
+        ("Concept", "violet", False, 0),
+        ("Construction", "red", False, 1),
+        ("Handover", "teal", True, 2)]
+    assert t.branches[0].tasks() == [("Site visit", 2), ("Brief signed", 1)]
+    assert TemplateBranch.query.count() == 3
+
+
+def test_a_custom_template_builds_a_project(client, db):
+    from models import Template
+    user = make_user()
+    login(client)
+    client.post("/settings/templates/new", data={"copy": "lifecycle"})
+    t = Template.query.one()
+    client.post(f"/settings/templates/{t.id}", data={
+        "name": "Two step",
+        "branch_name": ["Plan", "Do"],
+        "branch_hue": ["blue", "green"],
+        "branch_waits_1": "1",
+        "branch_tasks": ["Write it down | 3", "Ship it"],
+    })
+    client.post("/projects/new", data={"name": "Real one", "starter": f"custom:{t.id}",
+                                       "cadence_days": "14", "phase": "building",
+                                       "gate_points": "3", "focused": "1"})
+    p = [x for x in user.projects if x.name == "Real one"][0]
+    assert [b.name for b in p.branches] == ["Plan", "Do"]
+    assert p.branches[1].requires is p.branches[0]
+    assert p.branches[1].is_locked          # chained, and Plan is unfinished
+    assert [(t2.title, t2.points_max, t2.tier) for t2 in p.branches[0].tasks] == [("Write it down", 3, 1)]
+
+
+def test_templates_are_private(client, db):
+    from models import Template
+    owner = make_user("owner@example.com")
+    login(client, email="owner@example.com")
+    client.post("/settings/templates/new", data={"copy": "software"})
+    t = Template.query.one()
+    client.post("/logout")
+
+    other = make_user("other@example.com")
+    login(client, email="other@example.com")
+    assert client.get(f"/settings/templates/{t.id}").status_code == 404
+    assert client.post(f"/settings/templates/{t.id}/delete").status_code == 404
+    assert f"custom:{t.id}" not in client.get("/projects/new").data.decode()
+    # ...and naming it on a project create simply yields no branches.
+    client.post("/projects/new", data={"name": "Sneaky", "starter": f"custom:{t.id}",
+                                       "cadence_days": "14", "phase": "idea", "gate_points": "3"})
+    assert other.projects[0].branches == []
+
+
+def test_deleting_a_template_leaves_its_projects_alone(client, db):
+    from models import Template
+    user = make_user()
+    login(client)
+    client.post("/settings/templates/new", data={"copy": "engineering"})
+    t = Template.query.one()
+    client.post("/projects/new", data={"name": "Built from it", "starter": f"custom:{t.id}",
+                                       "cadence_days": "14", "phase": "idea", "gate_points": "3"})
+    client.post(f"/settings/templates/{t.id}/delete")
+    db.session.expire_all()
+    assert Template.query.count() == 0
+    assert len([b.name for b in user.projects[0].branches]) == 3

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ template.name }} · {{ SITE_NAME }}{% endblock %}
+{% block main_class %}page page--narrow{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__head">
+    <h1>Edit template</h1>
+    <a class="link-quiet" href="{{ url_for('starters.template_list') }}">← All templates</a>
+  </div>
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label class="field__label" for="name">Name</label>
+      <input class="input" type="text" id="name" name="name" maxlength="80" required
+             value="{{ template.name }}">
+    </div>
+    <div class="field">
+      <label class="field__label" for="hint">Description <span class="muted">(optional)</span></label>
+      <input class="input" type="text" id="hint" name="hint" maxlength="300"
+             value="{{ template.hint or '' }}"
+             placeholder="Shown under the name on the new-project form">
+    </div>
+
+    <fieldset class="fieldset">
+      <legend>Branches</legend>
+      <p class="muted small">One column each, in this order. Clear a name to delete that branch.
+        Blank rows at the end are how you add new ones.</p>
+
+      {% set rows = template.branches|list %}
+      {% for i in range(rows|length + 3) %}
+      {% set b = rows[i] if i < rows|length else none %}
+      <div class="tbranch">
+        <input class="input input--sm tbranch__name" type="text" name="branch_name" maxlength="80"
+               value="{{ b.name if b else '' }}" placeholder="Branch name" aria-label="Branch name">
+        <select class="input input--sm tbranch__hue" name="branch_hue" aria-label="Colour">
+          {% for key, label in HUES.items() %}
+          <option value="{{ key }}" {% if b and b.hue == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <label class="check tbranch__waits">
+          <input type="checkbox" name="branch_waits_{{ i }}" value="1"
+                 {% if b and b.waits %}checked{% endif %}>
+          Waits on the one above
+        </label>
+        <textarea class="input tbranch__tasks" name="branch_tasks" rows="2"
+                  placeholder="Starting tasks, one per line. Add “ | 3” to make one worth 3 points."
+                  aria-label="Starting tasks">{{ b.tasks_text or '' if b else '' }}</textarea>
+      </div>
+      {% endfor %}
+    </fieldset>
+
+    <div class="form__actions">
+      <button class="btn btn--primary" type="submit">Save template</button>
+      <a class="btn btn--ghost" href="{{ url_for('starters.template_list') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

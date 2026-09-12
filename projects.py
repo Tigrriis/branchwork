@@ -20,7 +20,7 @@ from flask_login import current_user, login_required
 from extensions import db
 from icons import DEFAULT_ICON, ICONS
 from models import CADENCES, HUES, PHASES, Branch, InboxItem, Project, Task
-from starters import DEFAULT_STARTER, STARTERS, apply_starter
+from starters import DEFAULT_STARTER, apply_starter, choices_for
 
 projects_bp = Blueprint("projects", __name__)
 
@@ -118,7 +118,7 @@ def new_project():
         flash("Project created." + (" Add a branch to start the tree." if not project.branches else ""), "success")
         return redirect(url_for("projects.tree", project_id=project.id))
     return render_template("project_form.html", project=project, is_new=True,
-                           starters=STARTERS, default_starter=DEFAULT_STARTER)
+                           starters=choices_for(current_user), default_starter=DEFAULT_STARTER)
 
 
 @projects_bp.route("/projects/<int:project_id>")

@@ -32,6 +32,13 @@ projects and forgets to move them along:
   review, and `flask sync-git` adds one event per commit for projects with a
   repository folder set. That feeds "last touched" and the 12-week strips.
 
+**Templates** decide the branches a new project starts with. Five are built
+in (Blank, Lifecycle, Engineering job, Software, Running business) and you
+can copy any of them under Account → Project templates to get an editable
+version: rename branches, change colours, set which ones wait on the one
+before, and give each a few starting tasks (one per line, ` | 3` for the
+points). Yours appear on the new-project form beside the built-ins.
+
 Two rules give the tree its shape:
 
 * **Tier gates.** Tier N opens once tier N-1 holds at least the project's

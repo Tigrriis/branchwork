@@ -40,6 +40,14 @@
     </div>
   </form>
 </div>
+<div class="card settings-link">
+  <div>
+    <strong>Project templates</strong>
+    <div class="muted small">The branches a new project starts with. Copy a built-in and change it,
+      or build your own.</div>
+  </div>
+  <a class="btn btn--ghost btn--sm" href="{{ url_for('starters.template_list') }}">Manage</a>
+</div>
 <form method="post" action="{{ url_for('auth.logout') }}" class="inline-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <button class="btn btn--ghost" type="submit">Sign out</button>

@@ -55,13 +55,17 @@
     <div class="field">
       <span class="field__label">Start from</span>
       <div class="starter-picker">
-        {% for key, spec in starters.items() %}
+        {% for spec in starters %}
         <label class="starter">
-          <input type="radio" name="starter" value="{{ key }}" {% if key == default_starter %}checked{% endif %}>
-          <span class="starter__body"><span class="starter__name">{{ spec.label }}</span><span class="muted small">{{ spec.hint }}</span></span>
+          <input type="radio" name="starter" value="{{ spec.key }}" {% if spec.key == default_starter %}checked{% endif %}>
+          <span class="starter__body">
+            <span class="starter__name">{{ spec.label }}{% if spec.custom %}<span class="tag">yours</span>{% endif %}</span>
+            <span class="muted small">{{ spec.hint }}</span>
+          </span>
         </label>
         {% endfor %}
       </div>
+      <a class="link-quiet" href="{{ url_for('starters.template_list') }}">Make your own templates →</a>
     </div>
     {% endif %}
     <div class="field">

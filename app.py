@@ -29,6 +29,7 @@ from extensions import csrf, db, login_manager, migrate
 from icons import ICONS, icon_svg
 from models import CADENCES, HUES, PHASES
 from projects import projects_bp
+from starters import starters_bp
 
 
 def create_app(overrides: dict | None = None) -> Flask:
@@ -49,6 +50,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(demo_bp)
     app.register_blueprint(gitsync_bp)
+    app.register_blueprint(starters_bp)
 
     _register_asset_versioning(app)
     _register_template_helpers(app)

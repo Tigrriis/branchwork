@@ -477,3 +477,28 @@ body.is-dragging-project .lane.is-drop {
   display: inline-block; width: 7px; height: 7px; margin-right: 6px;
   border-radius: 999px; background: var(--accent); vertical-align: middle;
 }
+
+/* ── Custom project templates ─────────────────────────────────────────── */
+.settings-link { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; padding: 18px; }
+.tmpl-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 12px 14px; margin-bottom: 8px; border-radius: var(--radius);
+  background: var(--card); border: 1px solid var(--line);
+}
+.tmpl-row--quiet { background: transparent; border-style: dashed; }
+.tmpl-row__main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tmpl-row__name { font-weight: 800; color: var(--fg); text-decoration: none; }
+.tmpl-row__actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.tmpl-row__actions .inline-form { margin: 0; }
+.tag {
+  margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+  background: var(--accent); color: var(--on-accent); font-size: 10px; font-weight: 800;
+  letter-spacing: 0.04em; text-transform: uppercase; vertical-align: middle;
+}
+.tbranch {
+  display: grid; gap: 8px; margin-bottom: 10px; padding: 10px;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line);
+}
+.tbranch__waits { grid-column: 1 / -1; font-size: 12px; }
+.tbranch__tasks { grid-column: 1 / -1; height: auto; font-size: 12px; }

@@ -403,6 +403,71 @@ class Task(db.Model):
         self.set_points((self.points_done or 0) + delta)
 
 
+class Template(db.Model):
+    """A user's own starter: the branches a new project begins with.
+
+    The built-ins in ``starters.py`` are code; these are data, owned by one
+    user, and the two are offered side by side on the new-project form. A
+    built-in can be duplicated into one of these to be edited.
+    """
+    __tablename__ = "templates"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    name = db.Column(db.String(80), nullable=False)
+    hint = db.Column(db.String(300), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
+
+    user = db.relationship("User", backref=db.backref("templates", cascade="all, delete-orphan"))
+    branches = db.relationship(
+        "TemplateBranch", backref="template", order_by="TemplateBranch.position",
+        cascade="all, delete-orphan")
+
+    @property
+    def key(self) -> str:
+        """How the new-project form names it, distinct from a built-in key."""
+        return f"custom:{self.id}"
+
+    @property
+    def summary(self) -> str:
+        return " → ".join(b.name for b in self.branches) if self.branches else "No branches yet"
+
+
+class TemplateBranch(db.Model):
+    __tablename__ = "template_branches"
+
+    id = db.Column(db.Integer, primary_key=True)
+    template_id = db.Column(db.Integer, db.ForeignKey("templates.id"), nullable=False, index=True)
+    name = db.Column(db.String(80), nullable=False)
+    hue = db.Column(db.String(20), nullable=False, default="green", server_default="green")
+    position = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    # Whether this branch waits on the one before it, which is what turns a
+    # list of branches into a sequence of phases.
+    waits = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    # Starting tasks, one per line, "Title" or "Title | 3" for the points.
+    # Kept as the text the form shows rather than a third table: the editor is
+    # a textarea, so storing anything else would only be a round trip.
+    tasks_text = db.Column(db.Text, nullable=True)
+
+    def tasks(self) -> list[tuple[str, int]]:
+        """Parsed (title, points). Junk lines are skipped, not an error."""
+        out: list[tuple[str, int]] = []
+        for line in (self.tasks_text or "").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            title, _, raw = line.partition("|")
+            title = title.strip()[:120]
+            if not title:
+                continue
+            try:
+                points = max(1, min(int(raw.strip()), 20))
+            except ValueError:
+                points = 1
+            out.append((title, points))
+        return out
+
+
 class ActivityEvent(db.Model):
     """One thing that happened to a project: the tempo is read from these."""
     __tablename__ = "activity_events"
