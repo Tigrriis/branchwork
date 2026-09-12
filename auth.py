@@ -5,7 +5,9 @@ password-reset flow yet because the app sends no email; see README.
 """
 from urllib.parse import urlparse
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import (
+    Blueprint, current_app, flash, redirect, render_template, request, url_for,
+)
 from flask_login import current_user, login_required, login_user, logout_user
 
 from extensions import db
@@ -14,6 +16,14 @@ from models import User
 auth_bp = Blueprint("auth", __name__)
 
 MIN_PASSWORD_LEN = 8
+
+
+def _int(value, default: int, lo: int, hi: int) -> int:
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(lo, min(n, hi))
 
 
 def _safe_next(target: str | None) -> bool:
@@ -44,7 +54,8 @@ def register():
         elif User.query.filter_by(email=email).first():
             flash("That email is already registered. Sign in instead.", "error")
         else:
-            user = User(email=email, display_name=display_name or None)
+            user = User(email=email, display_name=display_name or None,
+                        wip_building_limit=current_app.config["DEFAULT_WIP_BUILDING_LIMIT"])
             user.set_password(password)
             db.session.add(user)
             db.session.commit()
@@ -82,6 +93,9 @@ def account():
     if request.method == "POST":
         display_name = (request.form.get("display_name") or "").strip()[:80]
         current_user.display_name = display_name or None
+        current_user.wip_building_limit = _int(
+            request.form.get("wip_building_limit"), current_user.wip_building_limit,
+            0, current_app.config["MAX_WIP_BUILDING_LIMIT"])
 
         current_pw = request.form.get("current_password") or ""
         new_pw = request.form.get("new_password") or ""

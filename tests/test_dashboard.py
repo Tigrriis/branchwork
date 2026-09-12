@@ -75,9 +75,10 @@ def test_today_lists_due_and_missing_action(client, db):
     assert "Fresh one" in html
 
 
-def test_wip_limit_on_building(client, db, app):
-    app.config["WIP_BUILDING_LIMIT"] = 2
+def test_wip_limit_on_building(client, db):
     user = make_user()
+    user.wip_building_limit = 2
+    db.session.commit()
     login(client)
     for i in range(2):
         p = make_project(user); p.phase = "building"
@@ -290,3 +291,64 @@ def test_starters_are_internally_consistent():
             for title, icon, points in tasks:
                 assert icon in ICONS, f"{key}: unknown icon {icon!r}"
                 assert 1 <= points <= 20 and title
+
+
+def test_wip_cap_is_a_per_user_setting(client, db):
+    user = make_user()
+    login(client)
+    assert user.wip_building_limit == 3          # the default for a new account
+
+    # Raising it on the account page lets a fourth project into Building.
+    for _ in range(3):
+        p = make_project(user); p.phase = "building"
+    db.session.commit()
+    fourth = make_project(user)
+    r = client.post(f"/projects/{fourth.id}/phase", data={"phase": "building"}, follow_redirects=True)
+    assert b"Building is full" in r.data
+
+    client.post("/account", data={"display_name": "", "wip_building_limit": "5"})
+    db.session.refresh(user)
+    assert user.wip_building_limit == 5
+    client.post(f"/projects/{fourth.id}/phase", data={"phase": "building"})
+    db.session.refresh(fourth)
+    assert fourth.phase == "building"
+
+
+def test_wip_cap_of_zero_turns_it_off(client, db):
+    user = make_user()
+    login(client)
+    client.post("/account", data={"display_name": "", "wip_building_limit": "0"})
+    db.session.refresh(user)
+    assert user.wip_building_limit == 0
+    for _ in range(6):
+        p = make_project(user)
+        client.post(f"/projects/{p.id}/phase", data={"phase": "building"})
+    db.session.expire_all()
+    assert sum(1 for p in user.projects if p.phase == "building") == 6
+    # The board says so rather than showing a "6 / 0" counter.
+    html = client.get("/board").data.decode()
+    assert "No cap on Building" in html and "6 / 0" not in html
+
+
+def test_lowering_the_cap_does_not_evict_projects(client, db):
+    user = make_user()
+    login(client)
+    for _ in range(3):
+        p = make_project(user); p.phase = "building"
+    db.session.commit()
+    client.post("/account", data={"display_name": "", "wip_building_limit": "1"})
+    db.session.expire_all()
+    assert sum(1 for p in user.projects if p.phase == "building") == 3
+    # ...but nothing new gets in until it is back under the cap.
+    extra = make_project(user)
+    r = client.post(f"/projects/{extra.id}/phase", data={"phase": "building"}, follow_redirects=True)
+    assert b"Building is full" in r.data
+
+
+def test_account_rejects_a_nonsense_cap(client, db):
+    user = make_user()
+    login(client)
+    for value, expected in (("-4", 0), ("999", 20), ("banana", 20)):
+        client.post("/account", data={"display_name": "", "wip_building_limit": value})
+        db.session.refresh(user)
+        assert user.wip_building_limit == expected, value

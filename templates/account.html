@@ -12,6 +12,19 @@
       <input class="input" type="text" id="display_name" name="display_name" maxlength="80" value="{{ current_user.display_name or '' }}">
     </div>
     <fieldset class="fieldset">
+      <legend>Work in progress</legend>
+      <div class="field">
+        <label class="field__label" for="wip_building_limit">Projects allowed in Building at once</label>
+        <input class="input" type="number" id="wip_building_limit" name="wip_building_limit"
+               min="0" max="{{ config.MAX_WIP_BUILDING_LIMIT }}" value="{{ current_user.wip_building_limit }}">
+        <span class="muted small">
+          The board refuses to move another project into Building once this many are there, so
+          something has to ship or park first. Set it to 0 to turn the cap off. Lowering it never
+          moves projects that are already in Building.
+        </span>
+      </div>
+    </fieldset>
+    <fieldset class="fieldset">
       <legend>Change password</legend>
       <div class="field">
         <label class="field__label" for="current_password">Current password</label>

@@ -41,9 +41,13 @@ class Config:
     # Each project can override it.
     DEFAULT_GATE_POINTS = 3
 
-    # Kanban-style work-in-progress cap on the Building phase. The point of
-    # the cap is to force a finish-or-park decision before a fourth build.
-    WIP_BUILDING_LIMIT = int(os.environ.get("WIP_BUILDING_LIMIT", "3"))
+    # Starting value of the work-in-progress cap on the Building phase, which
+    # forces a finish-or-park decision before a fourth build. Only the default
+    # for a new account lives here; each user then sets their own on the
+    # account page (User.wip_building_limit), so changing this does not move
+    # the cap for anyone who has already signed up.
+    DEFAULT_WIP_BUILDING_LIMIT = int(os.environ.get("WIP_BUILDING_LIMIT", "3"))
+    MAX_WIP_BUILDING_LIMIT = 20
     MAX_INBOX_ITEMS = 200
 
     MAX_PROJECTS_PER_USER = 50

@@ -83,7 +83,7 @@ def board():
     shelves = [(key, PHASES[key], [p for p in projects if p.phase == key])
                for key in ("parked", "done", "dropped")]
     return render_template("board.html", columns=columns, shelves=shelves,
-                           wip_limit=current_app.config["WIP_BUILDING_LIMIT"])
+                           wip_limit=current_user.wip_building_limit)
 
 
 def _building_count(exclude: Project) -> int:
@@ -95,10 +95,12 @@ def _set_phase(project: Project, phase: str, *, park_until: date | None = None,
     """Move a project; enforce the WIP limit; record the event. False if refused."""
     if phase not in PHASES:
         return False
-    limit = current_app.config["WIP_BUILDING_LIMIT"]
-    if phase == "building" and project.phase != "building" and _building_count(project) >= limit:
+    # 0 means the user has turned the cap off on their account page.
+    limit = current_user.wip_building_limit
+    if limit and phase == "building" and project.phase != "building" and _building_count(project) >= limit:
         names = ", ".join(p.name for p in current_user.projects if p.phase == "building")
-        flash(f"Building is full ({limit}): {names}. Ship or park one first.", "error")
+        flash(f"Building is full ({limit}): {names}. Ship or park one first, "
+              f"or raise the cap on your account page.", "error")
         return False
     old = project.phase
     project.phase = phase

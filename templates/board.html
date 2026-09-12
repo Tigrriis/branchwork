@@ -8,7 +8,15 @@
 {% block content %}
 <div class="page-head">
   <h1>Board</h1>
-  <span class="muted">Every project by phase. Building is capped at {{ wip_limit }} so something has to ship or park before a fourth starts.</span>
+  <span class="muted">
+    Every project by phase.
+    {% if wip_limit %}
+      Building is capped at {{ wip_limit }}, so something has to ship or park before another starts.
+      <a class="link-quiet" href="{{ url_for('auth.account') }}">Change the cap</a>
+    {% else %}
+      No cap on Building. <a class="link-quiet" href="{{ url_for('auth.account') }}">Set one</a>
+    {% endif %}
+  </span>
 </div>
 
 <div class="board">
@@ -17,8 +25,8 @@
   <section class="bcol bcol--{{ key }}">
     <header class="bcol__head">
       <span class="bcol__name">{{ label }}</span>
-      <span class="bcol__count {% if key == 'building' and projects|length >= wip_limit %}is-full{% endif %}">
-        {{ projects|length }}{% if key == 'building' %} / {{ wip_limit }}{% endif %}
+      <span class="bcol__count {% if key == 'building' and wip_limit and projects|length >= wip_limit %}is-full{% endif %}">
+        {{ projects|length }}{% if key == 'building' and wip_limit %} / {{ wip_limit }}{% endif %}
       </span>
     </header>
     <div class="bcol__body">

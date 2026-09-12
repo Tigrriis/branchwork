@@ -11,9 +11,12 @@ projects and forgets to move them along:
   with no next action, parked projects whose date has come, and the inbox.
 * **Board** shows every project by phase: Idea, Exploring, Building,
   Maintaining, with Parked, Done and Dropped shelves. Building is capped
-  (`WIP_BUILDING_LIMIT`, default 3) so a fourth build has to wait.
-* **Review** walks the active projects one at a time: keep, advance, park
-  or drop, and sets the next action.
+  so a fourth build has to wait. Each person sets their own cap on the
+  account page (0 turns it off); `WIP_BUILDING_LIMIT` only seeds the
+  value a brand-new account starts with.
+* **Review** puts every active project on one scrolling page so the whole
+  scope is visible at once, and takes one decision each: keep, advance, park
+  or drop. Each card edits the project's objective and next action.
 * **Inbox** captures ideas that belong to no project yet; file them into a
   project (they become tasks), park them until a date, or finish them.
 * **Activity** is recorded on every points change, task, phase move and

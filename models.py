@@ -83,6 +83,11 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     display_name = db.Column(db.String(80), nullable=True)
+    # How many projects may sit in Building at once before the board refuses
+    # to move another one in. 0 turns the cap off. Per user rather than per
+    # deployment: the cap exists to impose personal discipline, so the person
+    # it applies to is the one who gets to move it.
+    wip_building_limit = db.Column(db.Integer, nullable=False, default=3, server_default="3")
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
 
     projects = db.relationship(
