@@ -8,8 +8,8 @@ walks the active projects one by one and asks: keep, advance, park or drop.
 from datetime import date, datetime, timedelta, timezone
 
 from flask import (
-    Blueprint, abort, current_app, flash, redirect, render_template, request,
-    url_for,
+    Blueprint, abort, current_app, flash, jsonify, redirect, render_template,
+    request, url_for,
 )
 from flask_login import current_user, login_required
 
@@ -51,27 +51,75 @@ def _back():
 
 # ── Today ───────────────────────────────────────────────────────────────────
 
-@dashboard_bp.route("/")
-def today():
-    if not current_user.is_authenticated:
-        return redirect(url_for("auth.login"))
+def _focus_split(projects: list[Project]) -> tuple[list[Project], list[Project]]:
+    """(focus, backburner), each worst-neglected first.
+
+    Shelved projects are never in focus regardless of the flag: a dropped
+    project sitting at the top of the page would be nonsense.
+    """
+    live = [p for p in projects if p.is_active]
+    def order(p):
+        return (p.overdue_days if p.overdue_days is not None else -9999, p.days_since_touch)
+    focus = sorted((p for p in live if p.focused), key=order, reverse=True)
+    backburner = sorted((p for p in live if not p.focused), key=order, reverse=True)
+    return focus, backburner
+
+
+def _today_context():
     projects = list(current_user.projects)
-    due = sorted((p for p in projects if p.is_due), key=lambda p: p.overdue_days, reverse=True)
-    resurfaced = [p for p in projects if p.parked_expired]
-    no_action = [p for p in projects if p.is_active and not p.next_action]
-    on_track = sorted((p for p in projects if p.is_active and not p.is_due and p.next_action),
-                      key=lambda p: p.days_since_touch, reverse=True)
+    focus, backburner = _focus_split(projects)
     # Only loose ideas belong here; ones attached to a project live under that
     # project's tree instead.
     inbox = [i for i in current_user.inbox_items if i.is_loose]
     inbox.sort(key=lambda i: (not i.resurfaced, i.created_at or datetime.min.replace(tzinfo=timezone.utc)))
-    parked_items = [i for i in current_user.inbox_items
-                    if i.status == "parked" and i.project_id is None]
-    return render_template(
-        "today.html", due=due, resurfaced=resurfaced, no_action=no_action,
-        on_track=on_track, inbox=inbox, parked_items=parked_items,
-        active_projects=[p for p in projects if p.is_active],
-        today=date.today())
+    return {
+        "focus": focus,
+        "backburner": backburner,
+        "resurfaced": [p for p in projects if p.parked_expired],
+        # The nagging counts are about what you said you are working on. A
+        # backburner project going quiet is the point of the backburner.
+        "due": [p for p in focus if p.is_due],
+        "no_action": [p for p in focus if not p.next_action],
+        "inbox": inbox,
+        "parked_items": [i for i in current_user.inbox_items
+                         if i.status == "parked" and i.project_id is None],
+        "active_projects": [p for p in projects if p.is_active],
+        "today": date.today(),
+    }
+
+
+@dashboard_bp.route("/")
+def today():
+    if not current_user.is_authenticated:
+        return redirect(url_for("auth.login"))
+    return render_template("today.html", **_today_context())
+
+
+@dashboard_bp.route("/projects/<int:project_id>/focus", methods=["POST"])
+@login_required
+def set_focus(project_id: int):
+    """Move a project between focus and the backburner.
+
+    Answers with the re-rendered lists for a dropped card, or redirects for
+    the plain button, so both interactions go through one rule.
+    """
+    project = _project(project_id)
+    payload = request.get_json(silent=True)
+    raw = (payload or {}).get("focused", request.form.get("focused"))
+    project.focused = str(raw).lower() in ("1", "true", "yes", "on")
+    db.session.commit()
+    if payload is not None:
+        context = _today_context()
+        return jsonify({
+            "lists": render_template("_focus_lists.html", **context),
+            "name": project.name,
+            "focused": project.focused,
+            # The header sits outside the re-rendered region, so it has to be
+            # told, or it contradicts the lists underneath it.
+            "counts": {key: len(context[key])
+                       for key in ("focus", "backburner", "due", "no_action")},
+        })
+    return _back()
 
 
 # ── Board ───────────────────────────────────────────────────────────────────

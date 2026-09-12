@@ -1,7 +1,9 @@
 {# One project on the board. Pass project, and prev/next phase keys (or none). #}
 <article class="pcard {% if project.is_due %}pcard--due{% endif %}">
   <div class="pcard__top">
-    <a class="pcard__name" href="{{ url_for('projects.tree', project_id=project.id) }}">{{ project.name }}</a>
+    <a class="pcard__name" href="{{ url_for('projects.tree', project_id=project.id) }}">
+      {% if project.focused %}<span class="focus-dot" title="In focus"></span>{% endif %}{{ project.name }}
+    </a>
     <span class="pcard__age {% if project.is_due %}is-due{% endif %}" title="Cadence: {{ project.cadence_label }}">
       {% if project.days_since_touch == 0 %}today{% else %}{{ project.days_since_touch }}d{% endif %}
     </span>

@@ -1,9 +1,8 @@
 // Branchwork page script.
 //
-// Two things talk to the server and swap rendered fragments back in: clicking
-// a tile to move points, and dropping an idea onto a tier to make it a task.
-// Both let the server re-render the tree, so the gate and lock rules are
-// never reimplemented here.
+// Everything that talks to the server sends JSON and swaps a server-rendered
+// fragment back in, so the gate, lock and focus rules live in exactly one
+// place and are never reimplemented here.
 (function () {
   "use strict";
 
@@ -87,11 +86,19 @@
     }
   }
 
-  // ── Ideas: drag one onto a tier to make it a task ─────────────────────
-  var dragging = null;
+  // ── Dragging ──────────────────────────────────────────────────────────
+  // Two kinds, one set of listeners: an idea onto a tier of the tree, and a
+  // project between the focus and backburner lanes.
+  var drag = null;   // {kind, id, from}
 
-  function dropZone(node) {
-    return node && node.closest ? node.closest(".tier__row, .tier-add") : null;
+  var KINDS = {
+    idea: { handle: ".idea", zone: ".tier__row, .tier-add" },
+    project: { handle: ".prow", zone: "[data-focus-zone]" }
+  };
+
+  function zoneFor(node) {
+    if (!drag || !node || !node.closest) return null;
+    return node.closest(KINDS[drag.kind].zone);
   }
 
   function clearZones() {
@@ -99,7 +106,7 @@
       function (el) { el.classList.remove("is-drop"); });
   }
 
-  function promote(ideaId, branchId, tier) {
+  function promoteIdea(ideaId, branchId, tier) {
     if (!ideaId || !branchId) return;
     post("/ideas/" + ideaId + "/promote", { branch_id: Number(branchId), tier: Number(tier) })
       .then(function (res) {
@@ -114,28 +121,62 @@
       .catch(function () { flash("Network error. Try again.", "error"); });
   }
 
+  // The page header is outside #lanes, so the drop has to move it by hand.
+  function updateFocusCounts(counts) {
+    if (!counts) return;
+    var map = { focus: "focus", backburner: "back", due: "due", no_action: "noaction" };
+    Object.keys(map).forEach(function (key) {
+      var el = document.querySelector("[data-count-" + map[key] + "]");
+      if (el) el.textContent = counts[key];
+    });
+    [["due", "[data-chip-due]"], ["no_action", "[data-chip-noaction]"]].forEach(function (pair) {
+      var chip = document.querySelector(pair[1]);
+      if (chip) chip.classList.toggle("chip--warn", counts[pair[0]] > 0);
+    });
+  }
+
+  function setFocus(projectId, focused) {
+    post("/projects/" + projectId + "/focus", { focused: focused ? "1" : "0" })
+      .then(function (res) {
+        if (!res.ok) { flash(res.body.message || "Could not move that project.", "error"); return; }
+        var lanes = document.getElementById("lanes");
+        if (lanes) lanes.innerHTML = res.body.lists;
+        updateFocusCounts(res.body.counts);
+        flash(res.body.name + (res.body.focused ? " is in focus." : " is on the backburner."),
+              "success");
+      })
+      .catch(function () { flash("Network error. Try again.", "error"); });
+  }
+
   document.addEventListener("dragstart", function (e) {
-    var idea = e.target.closest && e.target.closest(".idea");
-    if (!idea) return;
-    dragging = idea.dataset.idea;
+    if (!e.target.closest) return;
+    var kind = Object.keys(KINDS).filter(function (k) {
+      return e.target.closest(KINDS[k].handle);
+    })[0];
+    if (!kind) return;
+    var handle = e.target.closest(KINDS[kind].handle);
+    drag = {
+      kind: kind,
+      id: handle.dataset.idea || handle.dataset.project,
+      from: handle.closest("[data-focus-zone]")
+    };
     e.dataTransfer.effectAllowed = "move";
-    // Firefox refuses to start a drag without payload on the transfer.
-    e.dataTransfer.setData("text/plain", dragging);
-    idea.classList.add("is-dragging");
-    document.body.classList.add("is-dragging-idea");
+    // Firefox refuses to start a drag with nothing on the transfer.
+    e.dataTransfer.setData("text/plain", drag.id);
+    handle.classList.add("is-dragging");
+    document.body.classList.add("is-dragging-" + kind);
   });
 
   document.addEventListener("dragend", function () {
-    dragging = null;
-    document.body.classList.remove("is-dragging-idea");
+    if (drag) document.body.classList.remove("is-dragging-" + drag.kind);
+    drag = null;
     Array.prototype.forEach.call(document.querySelectorAll(".is-dragging"),
       function (el) { el.classList.remove("is-dragging"); });
     clearZones();
   });
 
   document.addEventListener("dragover", function (e) {
-    if (!dragging) return;
-    var zone = dropZone(e.target);
+    var zone = zoneFor(e.target);
     if (!zone) return;
     e.preventDefault();                       // without this, drop never fires
     e.dataTransfer.dropEffect = "move";
@@ -143,21 +184,24 @@
   });
 
   document.addEventListener("dragleave", function (e) {
-    var zone = dropZone(e.target);
+    var zone = zoneFor(e.target);
     if (zone && !zone.contains(e.relatedTarget)) zone.classList.remove("is-drop");
   });
 
   document.addEventListener("drop", function (e) {
-    if (!dragging) return;
-    var zone = dropZone(e.target);
+    var zone = zoneFor(e.target);
     if (!zone) return;
     e.preventDefault();                       // and stop .tier-add navigating
-    var id = dragging;
+    var moving = drag;
     clearZones();
-    promote(id, zone.dataset.branch, zone.dataset.tier);
+    if (moving.kind === "idea") {
+      promoteIdea(moving.id, zone.dataset.branch, zone.dataset.tier);
+    } else if (zone !== moving.from) {        // dropping back home is a no-op
+      setFocus(moving.id, zone.dataset.focusZone === "1");
+    }
   });
 
-  // Same destination without dragging, for touch and keyboard.
+  // Same destinations without dragging, for touch and keyboard.
   document.addEventListener("click", function (e) {
     var opener = e.target.closest("[data-idea-place]");
     if (opener) {
@@ -173,7 +217,7 @@
       var idea = confirmer.closest(".idea");
       var target = idea.querySelector("[data-idea-target]");
       var parts = ((target && target.value) || "").split(":");
-      promote(idea.dataset.idea, parts[0], parts[1]);
+      promoteIdea(idea.dataset.idea, parts[0], parts[1]);
     }
   });
 

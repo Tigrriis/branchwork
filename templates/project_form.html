@@ -36,6 +36,14 @@
       </div>
     </div>
     <div class="field">
+      <label class="check">
+        <input type="checkbox" name="focused" value="1" {% if project.focused %}checked{% endif %}>
+        In focus — I am giving this time now
+      </label>
+      <span class="muted small">Separate from the phase. Unticked puts it on the backburner on Today,
+        where it stops asking for your attention.</span>
+    </div>
+    <div class="field">
       <label class="field__label" for="objective">Objective — what's the point</label>
       <input class="input" type="text" id="objective" name="objective" maxlength="300" value="{{ project.objective or '' }}" placeholder="How this fits your overall goal">
     </div>

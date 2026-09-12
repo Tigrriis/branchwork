@@ -7,8 +7,12 @@ carries points. A plain checkbox is a task worth one point.
 Above the trees sits the portfolio layer, built for someone who starts many
 projects and forgets to move them along:
 
-* **Today** lists projects past their cadence ("due for a touch"), projects
-  with no next action, parked projects whose date has come, and the inbox.
+* **Today** splits your live projects into **Focus** and **Backburner** and
+  lets you drag between them, so a weekend has a short deliberate list.
+  Focus rows are full size with their next action and tempo; backburner rows
+  recede and stop counting towards the "needs a touch" nagging. Focus is
+  independent of phase: a project can be well into Building and still not be
+  what you are touching this weekend.
 * **Board** shows every project by phase: Idea, Exploring, Building,
   Maintaining, with Parked, Done and Dropped shelves. Building is capped
   so a fourth build has to wait. Each person sets their own cap on the

@@ -87,6 +87,7 @@ def _read_project_form(project: Project) -> bool:
                                current_app.config["DEFAULT_GATE_POINTS"], 1, 99)
     cadence = _int(request.form.get("cadence_days"), 14, 0, 365)
     project.cadence_days = cadence if cadence in CADENCES else 14
+    project.focused = bool(request.form.get("focused"))
     project.objective = (request.form.get("objective") or "").strip()[:300] or None
     project.next_action = (request.form.get("next_action") or "").strip()[:200] or None
     project.repo_path = (request.form.get("repo_path") or "").strip()[:400] or None
@@ -104,8 +105,10 @@ def new_project():
         return redirect(url_for("dashboard.board"))
     # Not attached to current_user until the form is valid: appending to the
     # relationship would let an autoflush insert a half-built row.
+    # focused=True so the form renders with the box ticked: creating a project
+    # is an act of attention, and unticking it is one click.
     project = Project(owner_id=current_user.id, gate_points=current_app.config["DEFAULT_GATE_POINTS"],
-                      phase="idea", cadence_days=14)
+                      phase="idea", cadence_days=14, focused=True)
     if request.method == "POST" and _read_project_form(project):
         db.session.add(project)
         for branch in apply_starter(project, request.form.get("starter") or "blank"):

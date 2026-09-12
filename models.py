@@ -122,6 +122,12 @@ class Project(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
 
     # ── Portfolio fields ────────────────────────────────────────────────────
+    # Am I giving this time right now? Deliberately independent of ``phase``,
+    # which says how far along a project is: something can be well into
+    # Building and still not be what you are touching this weekend. Also
+    # lighter than the Parked phase, which is a dated shelf -- this is just
+    # "not now", flipped as often as you like.
+    focused = db.Column(db.Boolean, nullable=False, default=True, server_default=db.true())
     phase = db.Column(db.String(20), nullable=False, default="idea", server_default="idea")
     cadence_days = db.Column(db.Integer, nullable=False, default=14, server_default="14")
     # Why this project exists, in one line. Sits above the next action

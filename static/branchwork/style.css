@@ -418,3 +418,62 @@ body.is-dragging-idea .tier-add.is-drop {
   background: rgba(63, 207, 99, 0.08);
 }
 body.is-dragging-idea .tile--add { opacity: 0; }   /* stop it fighting the drop zone */
+
+/* ── Today: focus vs backburner ───────────────────────────────────────── */
+.lanes { display: flex; flex-direction: column; gap: 18px; }
+.lane { border-radius: var(--radius-lg); padding: 14px 16px 16px; }
+.lane__head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.lane__head .section__title { margin: 0; }
+.lane__count {
+  padding: 1px 8px; border-radius: 999px; background: var(--card2);
+  font-size: 12px; font-weight: 800; color: var(--fg2);
+}
+.lane__empty { padding: 14px 2px; }
+
+/* The hierarchy is the point: focus is lit and solid, the backburner recedes. */
+.lane--focus { background: var(--card); border: 1px solid var(--line2); }
+.lane--focus .lane__count { background: var(--accent); color: var(--on-accent); }
+.lane--back { background: transparent; border: 1px dashed var(--line); }
+.lane--back .lane__head .section__title { color: var(--muted); }
+.lane--back .prow { opacity: 0.72; }
+.lane--back .prow:hover, .lane--back .prow:focus-within { opacity: 1; }
+
+.prow {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; margin-bottom: 8px; border-radius: var(--radius);
+  background: var(--card2); border: 1px solid var(--line2); cursor: grab;
+}
+.prow:last-child { margin-bottom: 0; }
+.prow:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.prow.is-dragging { opacity: 0.4; cursor: grabbing; }
+.prow--due { border-color: var(--part); }
+.prow--quiet { background: var(--card); padding: 9px 14px; }
+.prow__grip { color: var(--muted); flex-shrink: 0; display: flex; }
+.prow__main { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.prow__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.prow__name { font-weight: 800; color: var(--fg); text-decoration: none; }
+.prow__name:hover { text-decoration: underline; }
+.prow__age { font-size: 12px; color: var(--muted); }
+.prow__objective { font-style: italic; }
+.prow__side { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.prow__actions { display: flex; align-items: center; gap: 2px; }
+.prow__actions .inline-form { margin: 0; }
+.prow--quiet .prow__actions { opacity: 0; transition: opacity 0.15s; }
+.prow--quiet:hover .prow__actions, .prow--quiet:focus-within .prow__actions { opacity: 1; }
+/* An empty next action is a problem, so make the empty box look like one. */
+.input--wanting { border-color: var(--part); border-style: dashed; }
+
+body.is-dragging-project .lane { outline: 1px dashed var(--line2); outline-offset: 3px; }
+body.is-dragging-project .lane.is-drop {
+  outline: 2px dashed var(--accent); outline-offset: 3px;
+  background: rgba(63, 207, 99, 0.06);
+}
+
+@media (max-width: 720px) {
+  .prow { flex-wrap: wrap; }
+  .prow__side { width: 100%; justify-content: space-between; }
+}
+.focus-dot {
+  display: inline-block; width: 7px; height: 7px; margin-right: 6px;
+  border-radius: 999px; background: var(--accent); vertical-align: middle;
+}

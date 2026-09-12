@@ -1,5 +1,6 @@
 """Tempo, phases, inbox, review and git sync."""
 import os
+import re
 import subprocess
 from datetime import date, datetime, timedelta, timezone
 
@@ -70,8 +71,8 @@ def test_today_lists_due_and_missing_action(client, db):
     fresh = make_project(user); fresh.name, fresh.phase, fresh.cadence_days = "Fresh one", "exploring", 30
     db.session.commit()
     html = client.get("/").data.decode()
-    assert "Stale one" in html and "1 due for a touch" in html
-    assert "1 without a next action" in html
+    assert "Stale one" in html
+    assert _count(html, "due") == 1 and _count(html, "noaction") == 1
     assert "Fresh one" in html
 
 
@@ -485,3 +486,127 @@ def test_an_idea_travels_from_today_to_a_tier(client, db):
     assert task.branch_id == branch.id and task.tier == 1
     # Only now does it count as work on the project.
     assert any(e.kind == "task" for e in p.events)
+
+
+# ── Focus vs backburner ─────────────────────────────────────────────────────
+
+def _count(html, key):
+    """Read a header count out of its <span data-count-KEY>N</span>."""
+    m = re.search(r'data-count-%s[^>]*>\s*(\d+)' % key, html)
+    assert m, f"no data-count-{key} in the page"
+    return int(m.group(1))
+
+
+def _lane(html, name):
+    """The slice of Today between one lane heading and the next."""
+    start = html.index('data-focus-zone="%s"' % ("1" if name == "focus" else "0"))
+    rest = html[start:]
+    end = rest.find('data-focus-zone="0"') if name == "focus" else -1
+    return rest[:end] if end > 0 else rest
+
+
+def test_new_projects_start_in_focus(client, db):
+    user = make_user()
+    login(client)
+    # The form arrives with the box already ticked.
+    assert b'name="focused" value="1" checked' in client.get("/projects/new").data
+    client.post("/projects/new", data={"name": "Fresh", "starter": "blank", "cadence_days": "14",
+                                       "phase": "idea", "gate_points": "3", "focused": "1"})
+    assert user.projects[0].focused is True
+
+
+def test_unticking_focus_on_the_form_is_respected(client, db):
+    """An unchecked box sends nothing, which has to mean backburner."""
+    user = make_user()
+    login(client)
+    p = make_project(user); p.focused = True
+    db.session.commit()
+    client.post(f"/projects/{p.id}/edit", data={"name": p.name, "cadence_days": "14",
+                                                "phase": "building", "gate_points": "3"})
+    db.session.refresh(p)
+    assert p.focused is False
+
+
+def test_today_splits_focus_from_backburner(client, db):
+    user = make_user()
+    login(client)
+    a = make_project(user); a.name, a.phase, a.focused = "Doing it", "building", True
+    b = make_project(user); b.name, b.phase, b.focused = "Not now", "exploring", False
+    db.session.commit()
+
+    html = client.get("/").data.decode()
+    assert _count(html, "focus") == 1 and _count(html, "back") == 1
+    assert "Doing it" in _lane(html, "focus") and "Not now" not in _lane(html, "focus")
+    assert "Not now" in _lane(html, "back")
+
+
+def test_backburner_projects_do_not_nag(client, db):
+    """Going quiet is the whole point of the backburner, so it is not counted."""
+    user = make_user()
+    login(client)
+    quiet = make_project(user); quiet.name, quiet.phase, quiet.cadence_days = "Shelved", "building", 7
+    quiet.focused, quiet.next_action = False, None
+    _age(quiet, 90)
+    db.session.commit()
+    html = client.get("/").data.decode()
+    assert _count(html, "due") == 0 and _count(html, "noaction") == 0
+    assert "Shelved" in html                      # still visible, just not shouting
+    # The cadence itself is untouched, so Review and the board still see it.
+    assert quiet.is_due
+
+
+def test_dragging_a_project_between_lanes(client, db):
+    user = make_user()
+    login(client)
+    p = make_project(user); p.name, p.phase = "Swing", "building"
+    db.session.commit()
+
+    r = client.post(f"/projects/{p.id}/focus", json={"focused": "0"})
+    assert r.status_code == 200
+    body = r.get_json()
+    assert body["focused"] is False and body["name"] == "Swing"
+    db.session.refresh(p)
+    assert p.focused is False
+    # The response carries both lanes re-rendered, with the project in the
+    # backburner half.
+    assert "Swing" in _lane(body["lists"], "back")
+
+    r = client.post(f"/projects/{p.id}/focus", json={"focused": "1"})
+    db.session.refresh(p)
+    assert p.focused is True
+    assert "Swing" in _lane(r.get_json()["lists"], "focus")
+
+
+def test_focus_buttons_work_without_javascript(client, db):
+    user = make_user()
+    login(client)
+    p = make_project(user); p.phase = "building"
+    db.session.commit()
+    client.post(f"/projects/{p.id}/focus", data={"focused": "0"})
+    db.session.refresh(p)
+    assert p.focused is False
+    client.post(f"/projects/{p.id}/focus", data={"focused": "1"})
+    db.session.refresh(p)
+    assert p.focused is True
+
+
+def test_focus_is_owner_only(client, db):
+    owner = make_user("owner@example.com")
+    p = make_project(owner); p.focused = True
+    db.session.commit()
+    make_user("intruder@example.com")
+    login(client, email="intruder@example.com")
+    assert client.post(f"/projects/{p.id}/focus", json={"focused": "0"}).status_code == 404
+    db.session.refresh(p)
+    assert p.focused is True
+
+
+def test_focus_is_independent_of_phase(client, db):
+    """A shelved project never shows in focus, whatever the flag says."""
+    user = make_user()
+    login(client)
+    p = make_project(user); p.name, p.phase, p.focused = "Parked but flagged", "parked", True
+    db.session.commit()
+    html = client.get("/").data.decode()
+    assert "Parked but flagged" not in _lane(html, "focus")
+    assert _count(html, "focus") == 0 and _count(html, "back") == 0
