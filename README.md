@@ -77,7 +77,7 @@ Set a project's repository folder on its edit page, then run this whenever
 you like (a scheduled task works well):
 
 ```bash
-.venv\Scriptslask --app app sync-git
+.venv\Scripts\flask --app app sync-git
 ```
 
 ## Not yet
