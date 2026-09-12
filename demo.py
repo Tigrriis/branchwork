@@ -36,17 +36,25 @@ DEMO = {
 
 
 EXTRA_PROJECTS = [
-    # name, phase, cadence, next action, days since touch
-    ("Lead-lag scanner", "exploring", 14, "Backtest the FRED series against last quarter", 19),
-    ("Drainage sizing tool", "maintaining", 30, "Fix the unit-conversion bug in the report", 6),
-    ("Field notes app", "idea", 30, None, 2),
-    ("Old portfolio site", "parked", 30, "Decide whether to rebuild or retire", 60),
+    # name, phase, cadence, objective, next action, days since touch
+    ("Lead-lag scanner", "exploring", 14,
+     "Find one repeatable signal worth trading before spending more weekends on it",
+     "Backtest the FRED series against last quarter", 19),
+    ("Drainage sizing tool", "maintaining", 30,
+     "Cut an hour off every drainage job I quote",
+     "Fix the unit-conversion bug in the report", 6),
+    ("Field notes app", "idea", 30,
+     "Stop losing site observations between the van and the office", None, 2),
+    ("Old portfolio site", "parked", 30,
+     "Decide if it still earns its keep, or retire it cleanly",
+     "Decide whether to rebuild or retire", 60),
 ]
 
 
 def build_demo(user: User) -> Project:
     project = Project(owner=user, name=DEMO["name"], code=DEMO["code"], gate_points=3,
                       phase="building", cadence_days=7,
+                      objective="Deliver the fit-out on budget so the client comes back for Level 4",
                       next_action="Issue detailed drawings for tender")
     db.session.add(project)
     by_name: dict[str, Branch] = {}
@@ -69,8 +77,9 @@ def build_demo(user: User) -> Project:
     now = datetime.now(timezone.utc)
     for days_ago in (1, 3, 4, 8, 9, 15, 16, 23, 30, 31, 45, 52, 60):
         project.record("points", delta=1, note="Progress", at=now - timedelta(days=days_ago))
-    for name, phase, cadence, action, age in EXTRA_PROJECTS:
-        extra = Project(owner=user, name=name, phase=phase, cadence_days=cadence, next_action=action,
+    for name, phase, cadence, objective, action, age in EXTRA_PROJECTS:
+        extra = Project(owner=user, name=name, phase=phase, cadence_days=cadence,
+                        objective=objective, next_action=action,
                         parked_until=(now + timedelta(days=14)).date() if phase == "parked" else None)
         db.session.add(extra)
         for days_ago in (age, age + 7, age + 20):

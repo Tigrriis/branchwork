@@ -119,6 +119,10 @@ class Project(db.Model):
     # ── Portfolio fields ────────────────────────────────────────────────────
     phase = db.Column(db.String(20), nullable=False, default="idea", server_default="idea")
     cadence_days = db.Column(db.Integer, nullable=False, default=14, server_default="14")
+    # Why this project exists, in one line. Sits above the next action
+    # everywhere the two appear together: the next action says what to do,
+    # the objective says what it is in aid of.
+    objective = db.Column(db.String(300), nullable=True)
     next_action = db.Column(db.String(200), nullable=True)
     parked_until = db.Column(db.Date, nullable=True)
     # Local folder with a git history; ``flask sync-git`` turns its commits

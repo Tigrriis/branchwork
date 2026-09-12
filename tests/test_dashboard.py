@@ -149,25 +149,68 @@ def test_inbox_is_per_user(client, db):
     assert b"mine" not in client.get("/").data
 
 
-def test_review_walks_projects_and_advances(client, db):
+def test_review_shows_every_project_at_once_and_marks_decided(client, db):
     user = make_user()
     login(client)
     a = make_project(user); a.name, a.phase = "Alpha", "idea"
     b = make_project(user); b.name, b.phase = "Beta", "building"
     db.session.commit()
+
     html = client.get("/review").data.decode()
-    assert "0 of 2 reviewed" in html
-    r = client.post(f"/review/{a.id}", data={"decision": "advance", "next_action": "Write the spec", "done": ""})
-    assert r.status_code == 302 and f"done={a.id}" in r.headers["Location"]
+    assert "0 of 2 decided" in html
+    # The whole scope is on the page, not one project at a time.
+    assert "Alpha" in html and "Beta" in html
+    assert html.count('class="review-card ') == 2
+    assert "is-decided" not in html
+
+    r = client.post(f"/review/{a.id}", data={"decision": "advance",
+                                             "objective": "Prove the idea is worth building",
+                                             "next_action": "Write the spec", "done": ""})
+    # Redirects back to the same page, anchored to the card just decided.
+    assert r.status_code == 302
+    assert f"done={a.id}" in r.headers["Location"] and f"#p{a.id}" in r.headers["Location"]
     db.session.refresh(a)
     assert a.phase == "exploring" and a.next_action == "Write the spec"
+    assert a.objective == "Prove the idea is worth building"
     assert any(e.kind == "review" for e in a.events)
+
+    # Alpha stays on the page, now marked, and Beta is still there undecided.
     html = client.get(f"/review?done={a.id}").data.decode()
-    assert "1 of 2 reviewed" in html and "Beta" in html and "Alpha" not in html.split("more to go")[0].split("review-card")[-1]
+    assert "1 of 2 decided" in html
+    assert "Alpha" in html and "Beta" in html
+    assert html.count("is-decided") == 1
+
     client.post(f"/review/{b.id}", data={"decision": "drop", "done": str(a.id)})
     db.session.refresh(b)
     assert b.phase == "dropped"
-    assert b"Review complete" in client.get(f"/review?done={a.id},{b.id}").data
+    # Dropped, so no longer active: one project left under review, and it is
+    # decided, so the banner shows.
+    html = client.get(f"/review?done={a.id},{b.id}").data.decode()
+    assert "1 of 1 decided" in html
+    assert "Every project has a decision" in html
+
+
+def test_review_ignores_stale_done_ids(client, db):
+    """A done list naming projects that are gone must not skew the count."""
+    user = make_user()
+    login(client)
+    p = make_project(user); p.phase = "building"
+    db.session.commit()
+    html = client.get(f"/review?done={p.id},9999").data.decode()
+    assert "1 of 1 decided" in html
+
+
+def test_objective_saves_from_the_project_form(client, db):
+    user = make_user()
+    login(client)
+    client.post("/projects/new", data={"name": "Arete", "starter": "blank", "cadence_days": "14",
+                                       "phase": "building", "gate_points": "3",
+                                       "objective": "Fewer hours per job, same fee",
+                                       "next_action": "Time three jobs end to end"})
+    p = user.projects[0]
+    assert p.objective == "Fewer hours per job, same fee"
+    html = client.get(f"/projects/{p.id}/edit").data.decode()
+    assert "Fewer hours per job, same fee" in html
 
 
 def test_new_project_starter_creates_chained_branches(client, db):

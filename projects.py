@@ -68,6 +68,7 @@ def _read_project_form(project: Project) -> bool:
                                current_app.config["DEFAULT_GATE_POINTS"], 1, 99)
     cadence = _int(request.form.get("cadence_days"), 14, 0, 365)
     project.cadence_days = cadence if cadence in CADENCES else 14
+    project.objective = (request.form.get("objective") or "").strip()[:300] or None
     project.next_action = (request.form.get("next_action") or "").strip()[:200] or None
     project.repo_path = (request.form.get("repo_path") or "").strip()[:400] or None
     phase = request.form.get("phase") or project.phase or "idea"

@@ -36,6 +36,10 @@
       </div>
     </div>
     <div class="field">
+      <label class="field__label" for="objective">Objective — what's the point</label>
+      <input class="input" type="text" id="objective" name="objective" maxlength="300" value="{{ project.objective or '' }}" placeholder="How this fits your overall goal">
+    </div>
+    <div class="field">
       <label class="field__label" for="next_action">Next action</label>
       <input class="input" type="text" id="next_action" name="next_action" maxlength="200" value="{{ project.next_action or '' }}" placeholder="The one concrete step that moves it forward">
     </div>

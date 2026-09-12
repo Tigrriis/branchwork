@@ -216,12 +216,19 @@ def inbox_delete(item_id: int):
 @dashboard_bp.route("/review")
 @login_required
 def review():
+    """Every project under review on one scrolling page.
+
+    Deciding one does not remove it: the point of the page is to see the
+    whole scope at once, so a decided project stays put and is marked.
+    ``done`` carries which ones have been decided this pass.
+    """
     projects = [p for p in current_user.projects if p.is_active or p.parked_expired]
     projects.sort(key=lambda p: (p.overdue_days if p.overdue_days is not None else -999), reverse=True)
-    reviewed_ids = {int(x) for x in request.args.get("done", "").split(",") if x.isdigit()}
-    remaining = [p for p in projects if p.id not in reviewed_ids]
-    return render_template("review.html", projects=remaining, reviewed=len(reviewed_ids),
-                           total=len(projects), done_param=",".join(str(i) for i in sorted(reviewed_ids)),
+    ids = {p.id for p in projects}
+    reviewed_ids = {int(x) for x in request.args.get("done", "").split(",") if x.isdigit()} & ids
+    return render_template("review.html", projects=projects, reviewed_ids=reviewed_ids,
+                           reviewed=len(reviewed_ids), total=len(projects),
+                           done_param=",".join(str(i) for i in sorted(reviewed_ids)),
                            today=date.today())
 
 
@@ -230,6 +237,7 @@ def review():
 def review_decide(project_id: int):
     project = _project(project_id)
     decision = request.form.get("decision") or "keep"
+    project.objective = (request.form.get("objective") or "").strip()[:300] or None
     project.next_action = (request.form.get("next_action") or "").strip()[:200] or None
     ok = True
     if decision == "advance" and project.next_phase:
@@ -246,4 +254,6 @@ def review_decide(project_id: int):
         db.session.commit()
     done = request.form.get("done") or ""
     ids = [x for x in done.split(",") if x.isdigit()] + [str(project.id)]
-    return redirect(url_for("dashboard.review", done=",".join(ids)))
+    # Anchor back to the card just decided, so a long page does not jump to
+    # the top after every decision.
+    return redirect(url_for("dashboard.review", done=",".join(ids)) + f"#p{project.id}")
