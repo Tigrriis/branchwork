@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Weekly review · {{ SITE_NAME }}{% endblock %}
+{% block main_class %}page page--narrow{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Weekly review</h1>
+    <p class="muted">{{ reviewed }} of {{ total }} reviewed. One decision per project: keep, advance, park, or drop.</p>
+  </div>
+</div>
+
+{% if projects %}
+  {% set p = projects[0] %}
+  <div class="review-card">
+    <div class="review-card__head">
+      <div>
+        <a class="review-card__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
+        <div class="review-card__meta">
+          <span class="phase phase--{{ p.phase }}">{{ p.phase_label }}</span>
+          <span class="muted">{% if p.phase == 'parked' %}parked until {{ p.parked_until.strftime('%d %b') }}{% else %}{{ p.cadence_label|lower }}{% endif %}</span>
+          <span class="{% if p.is_due %}is-due{% else %}muted{% endif %}">
+            {% if p.days_since_touch == 0 %}touched today{% else %}last touched {{ p.days_since_touch }} days ago{% endif %}
+          </span>
+        </div>
+      </div>
+      {% with counts=p.activity_strip() %}{% include "_strip.html" %}{% endwith %}
+    </div>
+
+    <div class="review-card__progress">
+      <div class="bar"><span class="bar__fill" style="width: {{ p.percent }}%"></span></div>
+      <span class="muted small">{{ p.points_done }} / {{ p.points_max }} points · {{ p.count_state('part') }} in progress · {{ p.count_state('empty') }} not started</span>
+    </div>
+
+    {% if p.branches %}
+    <div class="review-card__branches">
+      {% for b in p.branches %}
+      <span class="phase phase--branch hue--{{ b.hue }}">{{ b.name }} {{ b.points_done }}/{{ b.points_max }}{% if b.is_locked %} · locked{% endif %}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('dashboard.review_decide', project_id=p.id) }}" class="form review-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="done" value="{{ done_param }}">
+      <div class="field">
+        <label class="field__label" for="next_action">Next action</label>
+        <input class="input" type="text" id="next_action" name="next_action" maxlength="200" value="{{ p.next_action or '' }}" placeholder="The one concrete step that moves it forward" autofocus>
+      </div>
+      <div class="field">
+        <label class="field__label" for="parked_until">If parking, until</label>
+        <input class="input input--sm" type="date" id="parked_until" name="parked_until" value="{{ (today.toordinal() + 30)|to_date }}">
+      </div>
+      <div class="review-actions">
+        {% if p.phase == 'parked' %}
+          <button class="btn btn--primary" name="decision" value="unpark">Pick it up</button>
+          <button class="btn btn--ghost" name="decision" value="park">Keep parked</button>
+        {% else %}
+          <button class="btn btn--primary" name="decision" value="keep">Keep going</button>
+          {% if p.next_phase %}<button class="btn" name="decision" value="advance">Advance to {{ PHASES[p.next_phase] }}</button>{% endif %}
+          <button class="btn btn--ghost" name="decision" value="park">Park</button>
+        {% endif %}
+        <button class="btn btn--danger" name="decision" value="drop" formnovalidate>Drop</button>
+      </div>
+    </form>
+  </div>
+  <p class="muted small">{{ projects|length - 1 }} more to go{% if projects|length > 1 %}: {{ projects[1:]|map(attribute='name')|join(', ') }}{% endif %}.</p>
+{% else %}
+  <div class="empty">
+    <p>{% if total %}Review complete. Every active project has a decision and a next action.{% else %}No active projects to review.{% endif %}</p>
+    <a class="btn btn--primary" href="{{ url_for('dashboard.today') }}">Back to Today</a>
+  </div>
+{% endif %}
+{% endblock %}

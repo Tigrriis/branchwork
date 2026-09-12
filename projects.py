@@ -17,7 +17,8 @@ from flask_login import current_user, login_required
 
 from extensions import db
 from icons import DEFAULT_ICON, ICONS
-from models import HUES, Branch, Project, Task
+from models import CADENCES, HUES, PHASES, Branch, Project, Task
+from starters import DEFAULT_STARTER, STARTERS, apply_starter
 
 projects_bp = Blueprint("projects", __name__)
 
@@ -55,14 +56,6 @@ def _int(value, default: int, lo: int, hi: int) -> int:
 
 # ── Projects ────────────────────────────────────────────────────────────────
 
-@projects_bp.route("/")
-def index():
-    if not current_user.is_authenticated:
-        return redirect(url_for("auth.login"))
-    projects = sorted(current_user.projects, key=lambda p: p.created_at or 0, reverse=True)
-    return render_template("projects.html", projects=projects)
-
-
 def _read_project_form(project: Project) -> bool:
     name = (request.form.get("name") or "").strip()[:120]
     if not name:
@@ -73,6 +66,13 @@ def _read_project_form(project: Project) -> bool:
     project.description = (request.form.get("description") or "").strip() or None
     project.gate_points = _int(request.form.get("gate_points"),
                                current_app.config["DEFAULT_GATE_POINTS"], 1, 99)
+    cadence = _int(request.form.get("cadence_days"), 14, 0, 365)
+    project.cadence_days = cadence if cadence in CADENCES else 14
+    project.next_action = (request.form.get("next_action") or "").strip()[:200] or None
+    project.repo_path = (request.form.get("repo_path") or "").strip()[:400] or None
+    phase = request.form.get("phase") or project.phase or "idea"
+    if phase in PHASES and phase != project.phase:
+        project.phase = phase
     return True
 
 
@@ -81,16 +81,21 @@ def _read_project_form(project: Project) -> bool:
 def new_project():
     if len(current_user.projects) >= current_app.config["MAX_PROJECTS_PER_USER"]:
         flash("You have reached the project limit.", "error")
-        return redirect(url_for("projects.index"))
+        return redirect(url_for("dashboard.board"))
     # Not attached to current_user until the form is valid: appending to the
     # relationship would let an autoflush insert a half-built row.
-    project = Project(owner_id=current_user.id, gate_points=current_app.config["DEFAULT_GATE_POINTS"])
+    project = Project(owner_id=current_user.id, gate_points=current_app.config["DEFAULT_GATE_POINTS"],
+                      phase="idea", cadence_days=14)
     if request.method == "POST" and _read_project_form(project):
         db.session.add(project)
+        for branch in apply_starter(project, request.form.get("starter") or "blank"):
+            db.session.add(branch)
+        project.record("touch", note="Project created")
         db.session.commit()
-        flash("Project created. Add a branch to start the tree.", "success")
+        flash("Project created." + (" Add a branch to start the tree." if not project.branches else ""), "success")
         return redirect(url_for("projects.tree", project_id=project.id))
-    return render_template("project_form.html", project=project, is_new=True)
+    return render_template("project_form.html", project=project, is_new=True,
+                           starters=STARTERS, default_starter=DEFAULT_STARTER)
 
 
 @projects_bp.route("/projects/<int:project_id>")
@@ -132,7 +137,7 @@ def delete_project(project_id: int):
     db.session.delete(project)
     db.session.commit()
     flash("Project deleted.", "info")
-    return redirect(url_for("projects.index"))
+    return redirect(url_for("dashboard.board"))
 
 
 # ── Branches ────────────────────────────────────────────────────────────────
@@ -276,6 +281,8 @@ def new_task(branch_id: int):
                 position=len([t for t in branch.tasks if t.tier == tier]))
     if request.method == "POST" and _read_task_form(task, project, default_branch=branch):
         db.session.add(task)
+        db.session.flush()
+        project.record("task", task=task, note=f"Added {task.title}")
         db.session.commit()
         flash(f"Task “{task.title}” added.", "success")
         return redirect(url_for("projects.tree", project_id=project.id))
@@ -319,10 +326,13 @@ def task_points(task_id: int):
     if not task.editable:
         return jsonify({"error": "locked",
                         "message": "This task is on a locked tier."}), 409
+    before = task.points_done
     if "set" in payload:
         task.set_points(_int(payload.get("set"), task.points_done, 0, task.points_max))
     else:
         task.adjust(_int(payload.get("delta"), 1, -task.points_max, task.points_max))
+    if task.points_done != before:
+        project.record("points", task=task, delta=task.points_done - before, note=task.title)
     db.session.commit()
     html = render_template("_tree.html", project=project)
     return jsonify({

@@ -41,6 +41,11 @@ class Config:
     # Each project can override it.
     DEFAULT_GATE_POINTS = 3
 
+    # Kanban-style work-in-progress cap on the Building phase. The point of
+    # the cap is to force a finish-or-park decision before a fourth build.
+    WIP_BUILDING_LIMIT = int(os.environ.get("WIP_BUILDING_LIMIT", "3"))
+    MAX_INBOX_ITEMS = 200
+
     MAX_PROJECTS_PER_USER = 50
     MAX_BRANCHES_PER_PROJECT = 12
     MAX_TASKS_PER_BRANCH = 200

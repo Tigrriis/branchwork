@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Today · {{ SITE_NAME }}{% endblock %}
+{% block topactions %}
+  <a class="btn btn--primary btn--sm" href="{{ url_for('projects.new_project') }}">+ New project</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Today</h1>
+    <p class="muted">{{ today.strftime('%A %d %B') }} · {{ active_projects|length }} active project{{ '' if active_projects|length == 1 else 's' }}</p>
+  </div>
+  <div class="chips">
+    <span class="chip {% if due %}chip--warn{% endif %}">{{ due|length }} due for a touch</span>
+    <span class="chip {% if no_action %}chip--warn{% endif %}">{{ no_action|length }} without a next action</span>
+    <span class="chip">{{ inbox|length }} in the inbox</span>
+  </div>
+</div>
+
+<div class="today-grid">
+  <div class="today-main">
+
+    {% if resurfaced %}
+    <section class="section">
+      <h2 class="section__title">Back from the shelf</h2>
+      {% for p in resurfaced %}
+      <div class="due-row">
+        <div class="due-row__main">
+          <a class="due-row__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
+          <span class="muted small">Parked until {{ p.parked_until.strftime('%d %b') }}. Time to decide.</span>
+        </div>
+        <div class="due-row__actions">
+          <form method="post" action="{{ url_for('dashboard.set_phase', project_id=p.id) }}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="exploring">
+            <button class="btn btn--sm">Pick it up</button>
+          </form>
+          <form method="post" action="{{ url_for('dashboard.set_phase', project_id=p.id) }}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="parked">
+            <input type="hidden" name="parked_until" value="{{ (today.toordinal() + 30)|to_date }}">
+            <button class="btn btn--ghost btn--sm">Park 30 more days</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    <section class="section">
+      <h2 class="section__title">Due for a touch</h2>
+      {% if due %}
+        {% for p in due %}
+        <div class="due-row">
+          <div class="due-row__main">
+            <div class="due-row__head">
+              <a class="due-row__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
+              <span class="phase phase--{{ p.phase }}">{{ p.phase_label }}</span>
+              <span class="due-row__age">{{ p.days_since_touch }} days since a touch · {{ p.cadence_label|lower }}</span>
+            </div>
+            <form method="post" action="{{ url_for('dashboard.set_next_action', project_id=p.id) }}" class="action-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input class="input input--sm" type="text" name="next_action" maxlength="200" value="{{ p.next_action or '' }}" placeholder="Next action…">
+              <button class="btn btn--ghost btn--sm" type="submit">Save</button>
+            </form>
+          </div>
+          <div class="due-row__actions">
+            {% with counts=p.activity_strip() %}{% include "_strip.html" %}{% endwith %}
+            <form method="post" action="{{ url_for('dashboard.touch', project_id=p.id) }}" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn--sm" title="Log work done outside the app">Touched it</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted">Nothing overdue. Every active project has been touched within its cadence.</p>
+      {% endif %}
+    </section>
+
+    {% if no_action %}
+    <section class="section">
+      <h2 class="section__title">No next action</h2>
+      <p class="muted small">A project without a next action is how projects stall. Give each one a single concrete step.</p>
+      {% for p in no_action %}
+      <div class="due-row">
+        <div class="due-row__main">
+          <div class="due-row__head">
+            <a class="due-row__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
+            <span class="phase phase--{{ p.phase }}">{{ p.phase_label }}</span>
+          </div>
+          <form method="post" action="{{ url_for('dashboard.set_next_action', project_id=p.id) }}" class="action-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input class="input input--sm" type="text" name="next_action" maxlength="200" placeholder="The one next step…">
+            <button class="btn btn--ghost btn--sm" type="submit">Save</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    {% if on_track %}
+    <section class="section">
+      <h2 class="section__title">On track</h2>
+      {% for p in on_track %}
+      <div class="due-row due-row--quiet">
+        <div class="due-row__main">
+          <div class="due-row__head">
+            <a class="due-row__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
+            <span class="phase phase--{{ p.phase }}">{{ p.phase_label }}</span>
+            <span class="due-row__age">{% if p.days_since_touch == 0 %}touched today{% else %}{{ p.days_since_touch }}d ago{% endif %}</span>
+          </div>
+          <div class="muted small">→ {{ p.next_action }}</div>
+        </div>
+        <div class="due-row__actions">{% with counts=p.activity_strip() %}{% include "_strip.html" %}{% endwith %}</div>
+      </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    {% if not active_projects %}
+    <div class="empty">
+      <p>No active projects.</p>
+      <a class="btn btn--primary" href="{{ url_for('projects.new_project') }}">Create the first one</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <aside class="today-side">
+    <section class="section">
+      <h2 class="section__title">Inbox</h2>
+      <form method="post" action="{{ url_for('dashboard.inbox_add') }}" class="inbox-add">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <textarea class="input" name="text" rows="2" placeholder="Capture an idea, a thought, a thing to do…" required></textarea>
+        <button class="btn btn--primary btn--sm" type="submit">Add</button>
+      </form>
+      {% for item in inbox %}
+      <div class="inbox-item {% if item.resurfaced %}inbox-item--back{% endif %}">
+        <div class="inbox-item__text">{{ item.text }}</div>
+        {% if item.resurfaced %}<div class="muted small">Back from {{ item.revisit_on.strftime('%d %b') }}</div>{% endif %}
+        <div class="inbox-item__actions">
+          <form method="post" action="{{ url_for('dashboard.inbox_file', item_id=item.id) }}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select class="input input--xs" name="project_id" required>
+              <option value="">File into…</option>
+              {% for p in active_projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+            </select>
+            <button class="btn btn--ghost btn--sm" type="submit">File</button>
+          </form>
+          <form method="post" action="{{ url_for('dashboard.inbox_park', item_id=item.id) }}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input class="input input--xs" type="date" name="revisit_on" value="{{ (today.toordinal() + 30)|to_date }}">
+            <button class="btn btn--ghost btn--sm" type="submit">Park</button>
+          </form>
+          <form method="post" action="{{ url_for('dashboard.inbox_done', item_id=item.id) }}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="icon-btn" type="submit" title="Done">✓</button>
+          </form>
+          <form method="post" action="{{ url_for('dashboard.inbox_delete', item_id=item.id) }}" class="inline-form" data-confirm="Delete this note?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="icon-btn" type="submit" title="Delete">×</button>
+          </form>
+        </div>
+      </div>
+      {% else %}
+      <p class="muted small">Empty. Capture things here as they occur to you, then file or park them in your weekly review.</p>
+      {% endfor %}
+      {% if parked_items %}
+      <details class="parked-list">
+        <summary class="muted small">{{ parked_items|length }} parked</summary>
+        {% for item in parked_items %}<div class="muted small">{{ item.revisit_on.strftime('%d %b') }} · {{ item.text|truncate(60) }}</div>{% endfor %}
+      </details>
+      {% endif %}
+    </section>
+    <a class="review-link" href="{{ url_for('dashboard.review') }}">Start the weekly review →</a>
+  </aside>
+</div>
+{% endblock %}

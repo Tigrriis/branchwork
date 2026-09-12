@@ -1,7 +1,9 @@
 """
 Branchwork: plan large, multi-stranded projects as a skill tree.
 
-  /                      my projects
+  /                      Today: projects due for a touch, the inbox
+  /board                 every project by phase (Idea → Maintaining, shelves)
+  /review                the weekly review: keep / advance / park / drop
   /projects/<id>         the tree (branches as columns, tasks in tiers)
   /projects/<id>/list    the same tasks as a table
   /login, /register, /account
@@ -20,10 +22,12 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 import config
 from auth import auth_bp
+from dashboard import dashboard_bp
 from demo import demo_bp
+from gitsync import gitsync_bp
 from extensions import csrf, db, login_manager, migrate
 from icons import ICONS, icon_svg
-from models import HUES
+from models import CADENCES, HUES, PHASES
 from projects import projects_bp
 
 
@@ -42,7 +46,9 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(projects_bp)
+    app.register_blueprint(dashboard_bp)
     app.register_blueprint(demo_bp)
+    app.register_blueprint(gitsync_bp)
 
     _register_asset_versioning(app)
     _register_template_helpers(app)
@@ -77,11 +83,18 @@ def _register_asset_versioning(app: Flask) -> None:
 
 
 def _register_template_helpers(app: Flask) -> None:
+    @app.template_filter("to_date")
+    def _to_date(ordinal: int) -> str:
+        from datetime import date
+        return date.fromordinal(int(ordinal)).isoformat()
+
     @app.context_processor
     def _inject():
         return {
             "SITE_NAME": config.SITE_NAME,
             "HUES": HUES,
+            "PHASES": PHASES,
+            "CADENCES": CADENCES,
             "ICON_NAMES": list(ICONS),
             "icon": icon_svg,
         }

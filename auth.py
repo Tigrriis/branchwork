@@ -26,13 +26,13 @@ def _safe_next(target: str | None) -> bool:
 
 def _after_login():
     nxt = request.args.get("next")
-    return redirect(nxt if _safe_next(nxt) else url_for("projects.index"))
+    return redirect(nxt if _safe_next(nxt) else url_for("dashboard.today"))
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for("projects.index"))
+        return redirect(url_for("dashboard.today"))
     if request.method == "POST":
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
@@ -57,7 +57,7 @@ def register():
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for("projects.index"))
+        return redirect(url_for("dashboard.today"))
     if request.method == "POST":
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""

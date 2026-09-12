@@ -20,6 +20,8 @@
   <div class="tree-head__title">
     <h1>{{ project.name }}</h1>
     {% if project.code %}<span class="muted">Project {{ project.code }}</span>{% endif %}
+    <span class="phase phase--{{ project.phase }}">{{ project.phase_label }}</span>
+    <span class="{% if project.is_due %}is-due{% else %}muted{% endif %} small">{% if project.days_since_touch == 0 %}touched today{% else %}{{ project.days_since_touch }}d since a touch{% endif %}</span>
     <a class="link-quiet" href="{{ url_for('projects.edit_project', project_id=project.id) }}">Edit</a>
   </div>
   <div class="tree-head__stats" id="tree-stats">
@@ -31,6 +33,19 @@
       <span class="bar bar--wide"><span class="bar__fill" data-points-bar style="width: {{ project.percent }}%"></span></span>
     </span>
   </div>
+</div>
+
+<div class="next-action-bar">
+  <form method="post" action="{{ url_for('dashboard.set_next_action', project_id=project.id) }}" class="action-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <span class="field__label">Next action</span>
+    <input class="input input--sm" type="text" name="next_action" maxlength="200" value="{{ project.next_action or '' }}" placeholder="The one concrete step that moves it forward">
+    <button class="btn btn--ghost btn--sm" type="submit">Save</button>
+  </form>
+  <form method="post" action="{{ url_for('dashboard.touch', project_id=project.id) }}" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn--ghost btn--sm" title="Log work done outside the app">Touched it</button>
+  </form>
 </div>
 
 <div id="tree" class="tree" data-project="{{ project.id }}">

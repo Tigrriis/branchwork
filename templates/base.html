@@ -14,10 +14,17 @@
 <body class="{% block body_class %}{% endblock %}">
   <header class="topbar">
     <div class="topbar__left">
-      <a class="brand" href="{{ url_for('projects.index') }}">
+      <a class="brand" href="{{ url_for('dashboard.today') }}">
         <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="5" height="18" rx="1.5" fill="#3fcf63"></rect><rect x="8.5" y="2" width="5" height="18" rx="1.5" fill="#5b8def"></rect><rect x="15" y="2" width="5" height="18" rx="1.5" fill="#f0684e"></rect></svg>
         {{ SITE_NAME }}
       </a>
+      {% if current_user.is_authenticated %}
+      <nav class="gnav">
+        <a class="gnav__item {% if request.endpoint == 'dashboard.today' %}is-active{% endif %}" href="{{ url_for('dashboard.today') }}">Today</a>
+        <a class="gnav__item {% if request.endpoint == 'dashboard.board' %}is-active{% endif %}" href="{{ url_for('dashboard.board') }}">Board</a>
+        <a class="gnav__item {% if request.endpoint == 'dashboard.review' %}is-active{% endif %}" href="{{ url_for('dashboard.review') }}">Review</a>
+      </nav>
+      {% endif %}
       {% block topnav %}{% endblock %}
     </div>
     <nav class="topbar__right">

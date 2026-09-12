@@ -17,9 +17,45 @@
         <input class="input" type="text" id="code" name="code" maxlength="40" value="{{ project.code or '' }}" placeholder="2026-014">
       </div>
       <div class="field">
+        <label class="field__label" for="phase">Phase</label>
+        <select class="input" id="phase" name="phase">
+          {% for key, label in PHASES.items() %}<option value="{{ key }}" {% if project.phase == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field__label" for="cadence_days">Tempo</label>
+        <select class="input" id="cadence_days" name="cadence_days">
+          {% for days, label in CADENCES.items() %}<option value="{{ days }}" {% if project.cadence_days == days %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field">
         <label class="field__label" for="gate_points">Points to open the next tier</label>
         <input class="input" type="number" id="gate_points" name="gate_points" min="1" max="99" value="{{ project.gate_points }}">
       </div>
+    </div>
+    <div class="field">
+      <label class="field__label" for="next_action">Next action</label>
+      <input class="input" type="text" id="next_action" name="next_action" maxlength="200" value="{{ project.next_action or '' }}" placeholder="The one concrete step that moves it forward">
+    </div>
+    {% if is_new %}
+    <div class="field">
+      <span class="field__label">Start from</span>
+      <div class="starter-picker">
+        {% for key, spec in starters.items() %}
+        <label class="starter">
+          <input type="radio" name="starter" value="{{ key }}" {% if key == default_starter %}checked{% endif %}>
+          <span class="starter__body"><span class="starter__name">{{ spec.label }}</span><span class="muted small">{{ spec.hint }}</span></span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    <div class="field">
+      <label class="field__label" for="repo_path">Repository folder <span class="muted">(optional)</span></label>
+      <input class="input" type="text" id="repo_path" name="repo_path" maxlength="400" value="{{ project.repo_path or '' }}" placeholder="C:\Users\you\Documents\Dev\project">
+      <span class="muted small">With a folder set, <code>flask sync-git</code> turns commits into activity so "last touched" stays honest.</span>
     </div>
     <div class="field">
       <label class="field__label" for="description">Description <span class="muted">(optional)</span></label>
@@ -27,7 +63,7 @@
     </div>
     <div class="form__actions">
       <button class="btn btn--primary" type="submit">{{ 'Create project' if is_new else 'Save' }}</button>
-      <a class="btn btn--ghost" href="{{ url_for('projects.tree', project_id=project.id) if not is_new else url_for('projects.index') }}">Cancel</a>
+      <a class="btn btn--ghost" href="{{ url_for('projects.tree', project_id=project.id) if not is_new else url_for('dashboard.board') }}">Cancel</a>
     </div>
   </form>
 </div>

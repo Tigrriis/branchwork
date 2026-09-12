@@ -1,11 +1,11 @@
 from conftest import login, make_project, make_user
 
 
-def test_register_and_land_on_projects(client):
+def test_register_and_land_on_today(client):
     r = client.post("/register", data={"email": "New@Example.com", "password": "longenough1"},
                     follow_redirects=True)
     assert r.status_code == 200
-    assert b"Projects" in r.data
+    assert b"Today" in r.data and b"Inbox" in r.data
     # email normalised to lower case
     r = client.post("/login", data={"email": "new@example.com", "password": "longenough1"})
     assert r.status_code == 302

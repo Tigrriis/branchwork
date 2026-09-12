@@ -6,11 +6,13 @@ Creates the user if the email is new (a password is then required) and adds
 an "Office fit-out, Level 3" project with three branches, so a fresh
 database has something to look at.
 """
+from datetime import datetime, timedelta, timezone
+
 import click
 from flask import Blueprint
 
 from extensions import db
-from models import Branch, Project, Task, User
+from models import Branch, InboxItem, Project, Task, User
 
 demo_bp = Blueprint("demo", __name__, cli_group=None)
 
@@ -33,8 +35,19 @@ DEMO = {
 }
 
 
+EXTRA_PROJECTS = [
+    # name, phase, cadence, next action, days since touch
+    ("Lead-lag scanner", "exploring", 14, "Backtest the FRED series against last quarter", 19),
+    ("Drainage sizing tool", "maintaining", 30, "Fix the unit-conversion bug in the report", 6),
+    ("Field notes app", "idea", 30, None, 2),
+    ("Old portfolio site", "parked", 30, "Decide whether to rebuild or retire", 60),
+]
+
+
 def build_demo(user: User) -> Project:
-    project = Project(owner=user, name=DEMO["name"], code=DEMO["code"], gate_points=3)
+    project = Project(owner=user, name=DEMO["name"], code=DEMO["code"], gate_points=3,
+                      phase="building", cadence_days=7,
+                      next_action="Issue detailed drawings for tender")
     db.session.add(project)
     by_name: dict[str, Branch] = {}
     for pos, spec in enumerate(DEMO["branches"]):
@@ -51,6 +64,19 @@ def build_demo(user: User) -> Project:
     for spec in DEMO["branches"]:
         if spec.get("requires"):
             by_name[spec["name"]].requires = by_name[spec["requires"]]
+
+    # A plausible activity history so the strips and "last touched" mean something.
+    now = datetime.now(timezone.utc)
+    for days_ago in (1, 3, 4, 8, 9, 15, 16, 23, 30, 31, 45, 52, 60):
+        project.record("points", delta=1, note="Progress", at=now - timedelta(days=days_ago))
+    for name, phase, cadence, action, age in EXTRA_PROJECTS:
+        extra = Project(owner=user, name=name, phase=phase, cadence_days=cadence, next_action=action,
+                        parked_until=(now + timedelta(days=14)).date() if phase == "parked" else None)
+        db.session.add(extra)
+        for days_ago in (age, age + 7, age + 20):
+            extra.record("touch", note="Worked on it", at=now - timedelta(days=days_ago))
+    db.session.add(InboxItem(user=user, text="Try a hex-grid layout for the tree view"))
+    db.session.add(InboxItem(user=user, text="Ask the certifier about the fire report timing"))
     db.session.commit()
     return project
 

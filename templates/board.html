@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Board · {{ SITE_NAME }}{% endblock %}
+{% block main_class %}page page--wide{% endblock %}
+{% block topactions %}
+  <a class="btn btn--primary btn--sm" href="{{ url_for('projects.new_project') }}">+ New project</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Board</h1>
+  <span class="muted">Every project by phase. Building is capped at {{ wip_limit }} so something has to ship or park before a fourth starts.</span>
+</div>
+
+<div class="board">
+  {% for key, label, projects in columns %}
+  {% set loop_i = loop.index0 %}
+  <section class="bcol bcol--{{ key }}">
+    <header class="bcol__head">
+      <span class="bcol__name">{{ label }}</span>
+      <span class="bcol__count {% if key == 'building' and projects|length >= wip_limit %}is-full{% endif %}">
+        {{ projects|length }}{% if key == 'building' %} / {{ wip_limit }}{% endif %}
+      </span>
+    </header>
+    <div class="bcol__body">
+      {% for project in projects %}
+        {% set prev = columns[loop_i - 1][0] if loop_i > 0 else none %}
+        {% set next = columns[loop_i + 1][0] if loop_i + 1 < columns|length else 'done' %}
+        {% include "_project_card.html" %}
+      {% else %}
+        <div class="bcol__empty muted small">Nothing here.</div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+
+<div class="shelves">
+  {% for key, label, projects in shelves %}
+  <details class="shelf" {% if projects and key == 'parked' %}open{% endif %}>
+    <summary class="shelf__head"><span class="phase phase--{{ key }}">{{ label }}</span> <span class="muted">{{ projects|length }}</span></summary>
+    <div class="shelf__body">
+      {% for p in projects %}
+      <div class="shelf-row">
+        <a class="due-row__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
+        {% if key == 'parked' and p.parked_until %}<span class="muted small">until {{ p.parked_until.strftime('%d %b %Y') }}</span>{% endif %}
+        <span class="muted small">{{ p.points_done }} / {{ p.points_max }} pts</span>
+        <form method="post" action="{{ url_for('dashboard.set_phase', project_id=p.id) }}" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="exploring">
+          <button class="btn btn--ghost btn--sm">{% if key == 'done' %}Reopen{% else %}Pick it up{% endif %}</button>
+        </form>
+      </div>
+      {% else %}
+      <div class="muted small">Nothing here.</div>
+      {% endfor %}
+    </div>
+  </details>
+  {% endfor %}
+</div>
+{% endblock %}
