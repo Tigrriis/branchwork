@@ -118,14 +118,18 @@ def test_inbox_add_file_park_done(client, db):
     item = InboxItem.query.one()
     assert item.status == "open"
 
-    # filing into a project with no branches creates a Backlog branch + task
+    # Filing moves it to that project's ideas. It is not a task yet: where in
+    # the tree it belongs is a separate decision, made by dragging it onto a
+    # tier. Nothing is invented on the project's behalf.
     client.post(f"/inbox/{item.id}/file", data={"project_id": str(p.id)})
     db.session.refresh(item); db.session.refresh(p)
-    assert item.status == "filed"
-    assert p.branches[0].name == "Backlog"
-    task = Task.query.one()
-    assert task.title == "Try the new router" and task.notes.startswith("Try the new router")
-    assert any(e.kind == "task" for e in p.events)
+    assert item.project_id == p.id
+    assert item.status == "open" and not item.is_loose
+    assert Task.query.count() == 0 and p.branches == []
+    assert p.events == []                      # triage is not progress
+    # Gone from Today, present under the project's tree.
+    assert b"Try the new router" not in client.get("/").data
+    assert b"Try the new router" in client.get(f"/projects/{p.id}").data
 
     client.post("/inbox", data={"text": "Later idea"})
     later = InboxItem.query.filter_by(text="Later idea").one()
@@ -455,3 +459,29 @@ def test_finishing_an_idea_leaves_the_tree_alone(client, db):
     db.session.refresh(idea)
     assert idea.status == "done" and Task.query.count() == 0
     assert "Never mind" not in client.get(f"/projects/{p.id}").data.decode()
+
+
+def test_an_idea_travels_from_today_to_a_tier(client, db):
+    """The whole journey: capture loose, file to a project, drag onto a tier."""
+    user = make_user()
+    login(client)
+    p = make_project(user); p.phase = "building"
+    branch = make_branch(p, "Delivery")
+    db.session.commit()
+
+    client.post("/inbox", data={"text": "Standardise the handover pack"})
+    item = InboxItem.query.one()
+    assert item.is_loose and b"Standardise the handover pack" in client.get("/").data
+
+    client.post(f"/inbox/{item.id}/file", data={"project_id": str(p.id)})
+    db.session.refresh(item)
+    assert item.project_id == p.id and item.status == "open" and Task.query.count() == 0
+
+    _promote(client, item.id, branch.id, 1)
+    db.session.refresh(item)
+    assert item.status == "filed"
+    task = db.session.get(Task, item.task_id)
+    assert task.title == "Standardise the handover pack"
+    assert task.branch_id == branch.id and task.tier == 1
+    # Only now does it count as work on the project.
+    assert any(e.kind == "task" for e in p.events)

@@ -17,8 +17,9 @@ projects and forgets to move them along:
 * **Review** puts every active project on one scrolling page so the whole
   scope is visible at once, and takes one decision each: keep, advance, park
   or drop. Each card edits the project's objective and next action.
-* **Inbox** captures ideas that belong to no project yet; file them into a
-  project (they become tasks), park them until a date, or finish them.
+* **Inbox** captures ideas that belong to no project yet. Filing one sends
+  it to that project's ideas, not into its tree; you can also park it until
+  a date or tick it off.
 * **Ideas** are the same thing scoped to one project, listed under its tree.
   They carry no points and count towards nothing until you drag one onto a
   tier, which is the moment it becomes a task. Dragging is the quick path;

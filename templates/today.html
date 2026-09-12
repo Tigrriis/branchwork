@@ -141,10 +141,10 @@
           <form method="post" action="{{ url_for('dashboard.inbox_file', item_id=item.id) }}" class="inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <select class="input input--xs" name="project_id" required>
-              <option value="">File into…</option>
+              <option value="">Send to…</option>
               {% for p in active_projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
             </select>
-            <button class="btn btn--ghost btn--sm" type="submit">File</button>
+            <button class="btn btn--ghost btn--sm" type="submit" title="Move it to that project's ideas">File</button>
           </form>
           <form method="post" action="{{ url_for('dashboard.inbox_park', item_id=item.id) }}" class="inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -162,7 +162,8 @@
         </div>
       </div>
       {% else %}
-      <p class="muted small">Empty. Capture things here as they occur to you, then file or park them in your weekly review.</p>
+      <p class="muted small">Empty. Capture things here as they occur to you, then file them to a
+        project's ideas, park them for later, or tick them off in your weekly review.</p>
       {% endfor %}
       {% if parked_items %}
       <details class="parked-list">

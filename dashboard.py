@@ -15,7 +15,7 @@ from flask_login import current_user, login_required
 
 from extensions import db
 from models import (
-    ACTIVE_PHASES, CADENCES, PHASES, Branch, InboxItem, Project, Task,
+    ACTIVE_PHASES, CADENCES, PHASES, InboxItem, Project,
 )
 
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -164,28 +164,27 @@ def inbox_add():
 @dashboard_bp.route("/inbox/<int:item_id>/file", methods=["POST"])
 @login_required
 def inbox_file(item_id: int):
-    """Turn an inbox item into a task on a project (first branch, tier 1)."""
+    """Move a loose idea into a project's idea list.
+
+    Deliberately not a task: filing decides *which project* an idea belongs
+    to, and dragging it onto a tier later decides *where in the tree*. Those
+    are two different judgements and guessing the second one -- the old
+    behaviour dropped it on the first branch at tier 1 -- put tasks in
+    places nobody chose.
+
+    No activity is recorded either. Tempo is meant to mean real progress,
+    and filing an idea is triage, not work on the project.
+    """
     item = _inbox_item(item_id)
     project_id = request.form.get("project_id") or ""
     project = _project(int(project_id)) if project_id.isdigit() else None
     if project is None:
         flash("Pick a project to file it into.", "error")
         return _back()
-    branch = project.branches[0] if project.branches else None
-    if branch is None:
-        branch = Branch(project=project, name="Backlog", hue="violet", position=0)
-        db.session.add(branch)
-        db.session.flush()
-    title = item.text.strip().splitlines()[0][:120]
-    task = Task(branch=branch, tier=1, title=title, icon="check", points_max=1, points_done=0,
-                notes=item.text if len(item.text) > len(title) else None,
-                position=len([t for t in branch.tasks if t.tier == 1]))
-    db.session.add(task)
-    db.session.flush()
-    item.project, item.task_id = project, task.id
-    project.record("task", task=task, note=f"Filed from inbox: {title}")
+    item.project = project
     db.session.commit()
-    flash(f"Filed into {project.name} › {branch.name}.", "success")
+    flash(f"Filed into {project.name}. Drag it onto a tier when you know where it goes.",
+          "success")
     return _back()
 
 
