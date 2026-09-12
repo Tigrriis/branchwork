@@ -60,9 +60,21 @@ the models, so a missed migration fails loudly rather than 500ing later.
 
 ## Deploy
 
-`render.yaml` describes a free-tier web service plus Postgres. Render sets
-`DATABASE_URL`, generates `SECRET_KEY`, and the start command runs the
-migrations before gunicorn takes traffic.
+The repository is a Render Blueprint. In the Render dashboard choose
+**New → Blueprint**, pick `Tigrriis/branchwork`, and apply. Render reads
+`render.yaml`, creates `branchwork-db` and the `branchwork` web service
+together, generates `SECRET_KEY`, wires `DATABASE_URL` from the database,
+and runs the migrations before gunicorn takes traffic. Later edits to
+`render.yaml` re-sync on push.
+
+Two free-tier limits worth knowing: a free Postgres instance is deleted 30
+days after creation, and a free web service sleeps after 15 minutes idle.
+Both are changed by switching plans in the dashboard; nothing in the code
+depends on either.
+
+The first account to register is just a normal account — there are no roles
+and every project is private to its owner, so registration should be treated
+as open to anyone who has the URL.
 
 ## Design
 
@@ -77,6 +89,16 @@ Set a project's repository folder on its edit page, then run this whenever
 you like (a scheduled task works well):
 
 ```bash
+.venv\Scripts\flask --app app sync-git
+```
+
+This reads git history from folders on the machine it runs on, so it always
+runs locally even when the app itself is deployed. To point a local run at
+the deployed database, copy the external connection string from the Render
+dashboard and set it for that one command:
+
+```bash
+set DATABASE_URL=postgresql://...render.com/branchwork
 .venv\Scripts\flask --app app sync-git
 ```
 

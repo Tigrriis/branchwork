@@ -1,3 +1,13 @@
+# Render Blueprint. Create it from the dashboard: New → Blueprint → pick the
+# Tigrriis/branchwork repo. Render reads this file, creates the database and
+# the web service together, and re-syncs them whenever this file changes.
+#
+# Free tier caveats, both deliberate and both reversible in the dashboard:
+#   * A free Postgres instance is deleted 30 days after it is created. Move
+#     the database to a paid plan before then if this is more than a trial.
+#   * A free web service sleeps after 15 minutes idle, so the first request
+#     after a quiet spell takes a few seconds to wake it.
+
 databases:
   - name: branchwork-db
     plan: free
@@ -9,7 +19,15 @@ services:
     name: branchwork
     runtime: python
     plan: free
+    region: oregon
+    autoDeploy: true
     buildCommand: pip install -r requirements.txt
+    # bootstrap_db.py applies the Alembic migrations and verifies the schema
+    # before gunicorn takes traffic, so a bad schema fails the deploy rather
+    # than surfacing as a 500 on someone's first request.
+    #
+    # Two workers with threads: this app is I/O-bound and holds no per-process
+    # state beyond a static-asset hash cache.
     startCommand: python bootstrap_db.py && gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60
     healthCheckPath: /healthz
     envVars:
@@ -17,6 +35,8 @@ services:
         value: "3.12.4"
       - key: SECRET_KEY
         generateValue: true
+      # The app sits behind Render's TLS-terminating proxy, so cookies can be
+      # marked Secure. ProxyFix in app.py is what makes this correct.
       - key: SESSION_COOKIE_SECURE
         value: "1"
       - key: DATABASE_URL
@@ -25,3 +45,7 @@ services:
           property: connectionString
       - key: SITE_NAME
         value: Branchwork
+      # How many projects may sit in Building at once before the board refuses
+      # a fourth. Change it here or in the dashboard.
+      - key: WIP_BUILDING_LIMIT
+        value: "3"
