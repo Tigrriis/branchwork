@@ -201,3 +201,49 @@ def test_sync_git_records_commits_once(db, tmp_path):
     assert p.days_since_touch == 0
     assert sync_project(p) == 0
     assert sorted(e.note.split(" ", 1)[1] for e in p.events if e.kind == "git") == ["commit 0", "commit 1"]
+
+
+def test_business_starter_seeds_unchained_areas_with_mapping_tasks(client, db):
+    user = make_user()
+    login(client)
+    client.post("/projects/new", data={"name": "Arete", "starter": "business",
+                                       "cadence_days": "7", "phase": "maintaining",
+                                       "gate_points": "3"})
+    p = user.projects[0]
+    assert [b.name for b in p.branches] == [
+        "Sales & marketing", "Delivery", "Finance & admin", "People", "Systems & tools"]
+
+    # An operating business cannot have a whole area locked behind another.
+    assert all(b.requires is None and not b.is_locked for b in p.branches)
+
+    # One mapping task per area, seeded through the cascade rather than a
+    # direct session.add, so this also guards that wiring.
+    assert Task.query.count() == 5
+    for branch in p.branches:
+        assert [(t.tier, t.points_max, t.points_done) for t in branch.tasks] == [(1, 3, 0)]
+        assert branch.tasks[0].title.startswith(("Map", "List"))
+
+    # The mapping task is worth exactly the gate, so finishing it opens tier 2.
+    sales = p.branches[0]
+    assert sales.tier_open(1) and not sales.tier_open(2)
+    sales.tasks[0].set_points(3)
+    db.session.commit()
+    assert sales.tier_open(2)
+    # ...and only for the area you actually mapped.
+    assert not p.branches[1].tier_open(2)
+
+
+def test_starters_are_internally_consistent():
+    """Every seeded task names a real branch and a real icon."""
+    from icons import ICONS
+    from models import HUES
+    from starters import STARTERS
+
+    for key, spec in STARTERS.items():
+        names = {name for name, _ in spec["branches"]}
+        assert all(hue in HUES for _, hue in spec["branches"]), key
+        for branch_name, tasks in (spec.get("tasks") or {}).items():
+            assert branch_name in names, f"{key}: no branch {branch_name!r}"
+            for title, icon, points in tasks:
+                assert icon in ICONS, f"{key}: unknown icon {icon!r}"
+                assert 1 <= points <= 20 and title
