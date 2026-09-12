@@ -1,0 +1,12 @@
+{
+  "name": "branchwork-design",
+  "private": true,
+  "description": "Design-time tooling only. The Flask app does not use node; these packages rasterise static/branchwork/img/logo.svg into the committed icon files.",
+  "scripts": {
+    "icons": "node design/gen_icons.mjs"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "png-to-ico": "^2.1.8"
+  }
+}

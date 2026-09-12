@@ -5,3 +5,9 @@ instance/
 .env
 .pytest_cache/
 design/branchwork.html
+
+# Affinity / editor lock and temp files
+*~lock~
+*.tmp
+node_modules/
+package-lock.json

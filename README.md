@@ -102,12 +102,17 @@ Split by whether a browser fetches the file:
 Binaries stay in git history forever, so commit SVG and small PNGs freely
 and keep large or layered originals out of the repo.
 
-The mark is `img/logo.svg` (header) and `img/favicon.svg` (bolder, for small
-sizes). The PNG and ICO versions are generated and committed:
+`img/logo.svg` is the mark, used for the header and as the SVG favicon. The
+PNG and ICO versions are generated from it and committed, so this only runs
+when the logo changes:
 
 ```bash
-.venv\Scripts\python design\gen_icons.py
+npm install
+node design/gen_icons.mjs
 ```
+
+`design/logo1.af` is the Affinity source. Node is design-time tooling only;
+the Flask app never touches it.
 
 ## Keeping git activity honest
 
