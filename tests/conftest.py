@@ -12,6 +12,30 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app import create_app  # noqa: E402
 from extensions import db as _db  # noqa: E402
 from models import Branch, Project, Task, User  # noqa: E402
+from markupsafe import escape  # noqa: E402
+import copytext  # noqa: E402
+
+# Under test a missing copy key or placeholder raises instead of showing [key].
+copytext.STRICT = True
+
+
+def copy_in(html, key, **values) -> bool:
+    """Is this catalogue line on the page, escaped the way the page escapes it?
+
+    Tests assert through the catalogue rather than literal English, so editing
+    the copy never breaks them.
+    """
+    if isinstance(html, bytes):
+        html = html.decode()
+    return str(escape(copytext.tx(key, **values))) in html
+
+
+def copy_prefix_in(html, key) -> bool:
+    """The fixed words before a line's first {placeholder}, for messages whose
+    filled-in values a test cannot predict."""
+    if isinstance(html, bytes):
+        html = html.decode()
+    return str(escape(copytext.catalogue()[key].split("{", 1)[0])) in html
 
 
 @pytest.fixture

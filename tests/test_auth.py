@@ -1,11 +1,11 @@
-from conftest import login, make_project, make_user
+from conftest import copy_in, login, make_project, make_user
 
 
 def test_register_and_land_on_today(client):
     r = client.post("/register", data={"email": "New@Example.com", "password": "longenough1"},
                     follow_redirects=True)
     assert r.status_code == 200
-    assert b"Today" in r.data and b"Inbox" in r.data
+    assert copy_in(r.data, "today.heading") and copy_in(r.data, "today.inbox_heading")
     # email normalised to lower case
     r = client.post("/login", data={"email": "new@example.com", "password": "longenough1"})
     assert r.status_code == 302
@@ -13,13 +13,13 @@ def test_register_and_land_on_today(client):
 
 def test_register_rejects_short_password(client):
     r = client.post("/register", data={"email": "a@b.c", "password": "short"}, follow_redirects=True)
-    assert b"at least 8" in r.data
+    assert copy_in(r.data, "auth.password_short", min=8)
 
 
 def test_login_bad_password(client):
     make_user()
     r = login(client, password="wrong")
-    assert b"Invalid email or password" in r.data
+    assert copy_in(r.data, "auth.bad_login")
 
 
 def test_anonymous_is_redirected_to_login(client):
@@ -51,6 +51,6 @@ def test_account_password_change(client):
     login(client)
     r = client.post("/account", data={"display_name": "R", "current_password": "hunter2hunter2",
                                       "new_password": "newpassword9"}, follow_redirects=True)
-    assert b"Account updated" in r.data
+    assert copy_in(r.data, "auth.account_updated")
     client.post("/logout")
     assert client.post("/login", data={"email": "ruben@example.com", "password": "newpassword9"}).status_code == 302

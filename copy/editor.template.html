@@ -1,0 +1,435 @@
+<title>Villainy Script</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Manrope:wght@400;500;600;700&family=Martian+Mono:wght@400;500&display=swap">
+<style>
+  /* One deliberate world: Villainy's own dark ground, a shade deeper, so the
+     script reads as backstage for the app it voices. Single-theme on purpose;
+     every surface and colour is painted explicitly. */
+  :root {
+    color-scheme: dark;
+    --ground: #111318;
+    --panel: #181b21;
+    --field: #1f232a;
+    --line: #272c35;
+    --ink: #ece9e1;
+    --ink-2: #c9c6be;
+    --muted: #868b95;
+    --villain: #a98bf5;      /* the one accent */
+    --villain-dim: rgba(169, 139, 245, 0.14);
+    --changed: #f0a13a;
+    --broken: #f06a52;
+    --kept: #56d27a;
+    --display: 'Unbounded', 'Arial Black', system-ui, sans-serif;
+    --body: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+    --mono: 'Martian Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--ground); color: var(--ink); }
+  body { margin: 0; font: 15px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
+  a { color: var(--villain); }
+  button, input, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--villain); outline-offset: 2px; }
+
+  /* ── Masthead ─────────────────────────────────────────────── */
+  .mast {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: end;
+    padding: 36px clamp(18px, 4vw, 48px) 22px; border-bottom: 1px solid var(--line);
+  }
+  .eyebrow { font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--villain); }
+  h1 {
+    margin: 10px 0 8px; font: 800 clamp(34px, 5vw, 56px)/0.95 var(--display);
+    letter-spacing: -0.02em; text-wrap: balance;
+  }
+  .lede { margin: 0; max-width: 62ch; color: var(--ink-2); }
+  .lede code { font: 500 13px var(--mono); color: var(--villain); background: var(--villain-dim); padding: 1px 5px; border-radius: 4px; }
+  .tally { display: grid; grid-auto-flow: column; gap: 22px; font-variant-numeric: tabular-nums; }
+  .tally div { display: grid; gap: 2px; justify-items: end; }
+  .tally b { font: 600 26px/1 var(--display); }
+  .tally span { font: 400 11px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .tally .is-changed b { color: var(--changed); }
+  .tally .is-broken b { color: var(--broken); }
+
+  /* ── Toolbar ──────────────────────────────────────────────── */
+  .bar {
+    position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+    padding: 12px clamp(18px, 4vw, 48px); background: rgba(17, 19, 24, 0.94);
+    backdrop-filter: blur(6px); border-bottom: 1px solid var(--line);
+  }
+  .search {
+    flex: 1 1 260px; max-width: 420px; height: 38px; padding: 0 12px; border-radius: 8px;
+    background: var(--field); border: 1px solid var(--line);
+  }
+  .search::placeholder { color: var(--muted); }
+  .filters { display: flex; gap: 2px; padding: 3px; border-radius: 9px; background: var(--field); border: 1px solid var(--line); }
+  .filters button {
+    border: 0; background: transparent; padding: 6px 12px; border-radius: 6px; cursor: pointer;
+    font-weight: 600; font-size: 13px; color: var(--muted);
+  }
+  .filters button[aria-pressed="true"] { background: var(--panel); color: var(--ink); }
+  .save { margin-left: auto; font: 400 12px var(--mono); color: var(--muted); display: flex; gap: 8px; align-items: center; }
+  .save::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .save[data-state="saved"]::before { background: var(--kept); }
+  .save[data-state="saving"]::before { background: var(--changed); }
+  .save[data-state="offline"]::before, .save[data-state="error"]::before { background: var(--broken); }
+
+  /* ── Layout ───────────────────────────────────────────────── */
+  .shell { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: clamp(20px, 3vw, 44px); padding: 26px clamp(18px, 4vw, 48px) 80px; }
+  .index { position: sticky; top: 76px; align-self: start; max-height: calc(100vh - 96px); overflow: auto; }
+  .index h2 { margin: 0 0 10px; font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .index ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+  .index a {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: baseline;
+    padding: 6px 8px; border-radius: 6px; color: var(--ink-2); text-decoration: none; font-size: 13.5px;
+  }
+  .index a:hover { background: var(--panel); color: var(--ink); }
+  .index a span { font: 400 11px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .index a.has-changes span { color: var(--changed); }
+  .index a.has-broken span { color: var(--broken); }
+
+  /* ── Direction ────────────────────────────────────────────── */
+  .direction { margin-bottom: 34px; padding: 18px 20px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); }
+  .direction label { display: block; font: 600 20px/1.2 var(--display); margin-bottom: 4px; }
+  .direction p { margin: 0 0 12px; color: var(--muted); font-size: 13.5px; max-width: 64ch; }
+  .direction textarea {
+    width: 100%; min-height: 76px; resize: vertical; padding: 10px 12px; border-radius: 8px;
+    background: var(--field); border: 1px solid var(--line); line-height: 1.5;
+  }
+
+  /* ── The script ───────────────────────────────────────────── */
+  .scene { margin-bottom: 44px; scroll-margin-top: 80px; }
+  .scene header { display: grid; gap: 4px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+  .scene h3 { margin: 0; font: 600 22px/1.15 var(--display); letter-spacing: -0.01em; text-wrap: balance; }
+  .scene header p { margin: 0; color: var(--muted); font-size: 13.5px; }
+
+  .cue {
+    display: grid; grid-template-columns: minmax(170px, 250px) minmax(0, 1fr); gap: 8px 24px;
+    padding: 14px 0; border-bottom: 1px solid var(--line);
+  }
+  .cue__id { display: grid; gap: 5px; align-content: start; min-width: 0; }
+  .cue__id code { font: 400 11.5px/1.4 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+  .cue__note { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+  .tag {
+    justify-self: start; font: 500 10px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 4px 6px; border-radius: 4px;
+  }
+  .tag--changed { color: var(--changed); background: rgba(240, 161, 58, 0.12); }
+  .tag--broken { color: var(--broken); background: rgba(240, 106, 82, 0.13); }
+
+  .take { display: grid; gap: 8px; min-width: 0; }
+  .take textarea {
+    width: 100%; resize: none; overflow: hidden; padding: 9px 12px; border-radius: 8px; line-height: 1.5;
+    background: var(--field); border: 1px solid var(--line); color: var(--ink);
+  }
+  .take textarea:hover { border-color: #353b46; }
+  .cue.is-changed .take textarea { border-color: rgba(240, 161, 58, 0.55); }
+  .cue.is-broken .take textarea { border-color: var(--broken); }
+  .take__meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+  .chip {
+    font: 400 11px/1 var(--mono); padding: 4px 6px; border-radius: 4px;
+    color: var(--kept); background: rgba(86, 210, 122, 0.1);
+  }
+  .chip.is-missing { color: var(--broken); background: rgba(240, 106, 82, 0.13); text-decoration: line-through; }
+  .chip.is-unknown { color: var(--broken); background: rgba(240, 106, 82, 0.13); }
+  .was { flex: 1 1 240px; min-width: 0; font-size: 12.5px; color: var(--muted); }
+  .was q { color: var(--ink-2); }
+  .restore {
+    margin-left: auto; border: 1px solid var(--line); background: transparent; color: var(--ink-2);
+    padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .restore:hover { border-color: var(--villain); color: var(--ink); }
+  .problem { font-size: 12.5px; color: var(--broken); }
+  .empty-result { padding: 40px 0; color: var(--muted); }
+
+  @media (max-width: 860px) {
+    .mast { grid-template-columns: 1fr; }
+    .tally { justify-content: start; }
+    .tally div { justify-items: start; }
+    .shell { grid-template-columns: 1fr; }
+    .index { position: static; max-height: none; }
+    .cue { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .cue { transition: background-color 0.4s ease; }
+    .cue.is-flash { background: var(--villain-dim); }
+  }
+</style>
+
+<div class="mast">
+  <div>
+    <div class="eyebrow">Villainy · every line the app says</div>
+    <h1>The Script</h1>
+    <p class="lede">Rewrite any line and it saves as you type. Words in <code>{braces}</code> are
+      filled in by the app, so keep each one exactly as it is. When you are done, tell Claude to
+      apply the script.</p>
+  </div>
+  <div class="tally" aria-live="polite">
+    <div><b id="n-lines">0</b><span>lines</span></div>
+    <div class="is-changed"><b id="n-changed">0</b><span>rewritten</span></div>
+    <div class="is-broken"><b id="n-broken">0</b><span>need fixing</span></div>
+  </div>
+</div>
+
+<div class="bar">
+  <input class="search" id="search" type="search" placeholder="Find a line, a word, or a key…" aria-label="Find a line">
+  <div class="filters" role="group" aria-label="Show">
+    <button type="button" data-filter="all" aria-pressed="true">All</button>
+    <button type="button" data-filter="changed" aria-pressed="false">Rewritten</button>
+    <button type="button" data-filter="broken" aria-pressed="false">Need fixing</button>
+  </div>
+  <span class="save" id="save" data-state="loading">Connecting…</span>
+</div>
+
+<div class="shell">
+  <nav class="index" aria-label="Screens">
+    <h2>Screens</h2>
+    <ol id="index"></ol>
+  </nav>
+  <main>
+    <section class="direction">
+      <label for="direction">Stage directions</label>
+      <p>Anything broader than one line, for Claude to act on when applying: a tone to push harder,
+        a joke to thread through, words to never use.</p>
+      <textarea id="direction" placeholder="e.g. Every error message should sound personally offended."></textarea>
+    </section>
+    <div id="script"></div>
+    <p class="empty-result" id="no-results" hidden>No lines match.</p>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var DATA = __COPY_DATA__;
+  var PH = /\{(\w+)\}/g;
+  var cues = new Map();            // key -> state
+  var db = null;
+  var pending = 0;
+  var filter = "all";
+
+  function placeholders(text) {
+    var out = new Set(), m;
+    PH.lastIndex = 0;
+    while ((m = PH.exec(text))) out.add(m[1]);
+    return out;
+  }
+
+  function el(tag, attrs, children) {
+    var node = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      if (k === "text") node.textContent = attrs[k];
+      else if (k === "class") node.className = attrs[k];
+      else node.setAttribute(k, attrs[k]);
+    });
+    (children || []).forEach(function (c) { if (c) node.appendChild(c); });
+    return node;
+  }
+
+  function autosize(area) {
+    area.style.height = "auto";
+    area.style.height = area.scrollHeight + 2 + "px";
+  }
+
+  // ── Render the script once, from the catalogue baked into the page ──
+  var index = document.getElementById("index");
+  var script = document.getElementById("script");
+  var total = 0;
+
+  DATA.screens.forEach(function (screen) {
+    if (!screen.lines.length) return;
+    var link = el("a", { href: "#" + screen.id }, [el("i", { text: screen.name, style: "font-style:normal" }), el("span", { text: String(screen.lines.length) })]);
+    index.appendChild(el("li", {}, [link]));
+    var section = el("section", { class: "scene", id: screen.id }, [
+      el("header", {}, [el("h3", { text: screen.name }), screen.about ? el("p", { text: screen.about }) : null])
+    ]);
+
+    screen.lines.forEach(function (line) {
+      total += 1;
+      var required = placeholders(line.text);
+      var area = el("textarea", { rows: "1", "aria-label": line.key, spellcheck: "true" });
+      area.value = line.text;
+      var chips = el("span", { class: "chips" });
+      var tag = el("span", { class: "tag", hidden: "" });
+      var was = el("span", { class: "was", hidden: "" });
+      var problem = el("span", { class: "problem", hidden: "" });
+      var restore = el("button", { type: "button", class: "restore", hidden: "", text: "Restore" });
+      var row = el("div", { class: "cue", "data-key": line.key }, [
+        el("div", { class: "cue__id" }, [el("code", { text: line.key }), tag, line.note ? el("span", { class: "cue__note", text: line.note }) : null]),
+        el("div", { class: "take" }, [area, el("div", { class: "take__meta" }, [chips, was, restore]), problem])
+      ]);
+      section.appendChild(row);
+
+      var state = { key: line.key, original: line.text, required: required, area: area, row: row,
+                    chips: chips, tag: tag, was: was, problem: problem, restore: restore,
+                    screen: link, timer: null };
+      cues.set(line.key, state);
+
+      area.addEventListener("input", function () { autosize(area); refresh(state); queueSave(state); });
+      restore.addEventListener("click", function () {
+        area.value = state.original; autosize(area); refresh(state); queueSave(state, true);
+      });
+      refresh(state);
+    });
+    script.appendChild(section);
+  });
+  document.getElementById("n-lines").textContent = total;
+  requestAnimationFrame(function () { cues.forEach(function (s) { autosize(s.area); }); });
+
+  // ── Per-line state: rewritten? placeholders intact? ──
+  function refresh(state) {
+    var text = state.area.value;
+    var found = placeholders(text);
+    var missing = [], unknown = [];
+    state.required.forEach(function (p) { if (!found.has(p)) missing.push(p); });
+    found.forEach(function (p) { if (!state.required.has(p)) unknown.push(p); });
+    var changed = text !== state.original;
+    var broken = changed && (!text.trim() || missing.length > 0 || unknown.length > 0);
+
+    state.chips.textContent = "";
+    state.required.forEach(function (p) {
+      state.chips.appendChild(el("span", { class: "chip" + (found.has(p) ? "" : " is-missing"), text: "{" + p + "}",
+        title: found.has(p) ? "Filled in by the app" : "Missing: the app has nowhere to put this" }));
+    });
+    unknown.forEach(function (p) {
+      state.chips.appendChild(el("span", { class: "chip is-unknown", text: "{" + p + "}", title: "The app does not fill this one in" }));
+    });
+
+    state.row.classList.toggle("is-changed", changed && !broken);
+    state.row.classList.toggle("is-broken", broken);
+    state.tag.hidden = !changed;
+    state.tag.className = "tag " + (broken ? "tag--broken" : "tag--changed");
+    state.tag.textContent = broken ? "Needs fixing" : "Rewritten";
+    state.restore.hidden = !changed;
+    state.was.hidden = !changed;
+    if (changed) {
+      state.was.textContent = "";
+      state.was.appendChild(document.createTextNode("Was "));
+      state.was.appendChild(el("q", { text: state.original }));
+    }
+    var why = [];
+    if (changed && !text.trim()) why.push("A line can't be empty.");
+    if (missing.length) why.push("Put back " + missing.map(function (p) { return "{" + p + "}"; }).join(", ") + ".");
+    if (unknown.length) why.push("The app doesn't fill in " + unknown.map(function (p) { return "{" + p + "}"; }).join(", ") + ".");
+    state.problem.hidden = !why.length;
+    state.problem.textContent = why.join(" ");
+    state.changed = changed;
+    state.broken = broken;
+    applyFilter();
+    tally();
+  }
+
+  function tally() {
+    var changed = 0, broken = 0, perScreen = new Map();
+    cues.forEach(function (s) {
+      var entry = perScreen.get(s.screen) || { changed: 0, broken: 0 };
+      if (s.changed) { changed += 1; entry.changed += 1; }
+      if (s.broken) { broken += 1; entry.broken += 1; }
+      perScreen.set(s.screen, entry);
+    });
+    document.getElementById("n-changed").textContent = changed;
+    document.getElementById("n-broken").textContent = broken;
+    perScreen.forEach(function (entry, link) {
+      link.classList.toggle("has-changes", entry.changed > 0 && entry.broken === 0);
+      link.classList.toggle("has-broken", entry.broken > 0);
+    });
+  }
+
+  // ── Search and filter ──
+  var search = document.getElementById("search");
+  function applyFilter() {
+    var q = search.value.trim().toLowerCase();
+    var shown = 0;
+    cues.forEach(function (s) {
+      var match = !q || s.key.toLowerCase().indexOf(q) >= 0 || s.area.value.toLowerCase().indexOf(q) >= 0
+        || s.original.toLowerCase().indexOf(q) >= 0;
+      if (filter === "changed") match = match && s.changed;
+      if (filter === "broken") match = match && s.broken;
+      s.row.hidden = !match;
+      if (match) shown += 1;
+    });
+    document.querySelectorAll(".scene").forEach(function (section) {
+      section.hidden = !section.querySelector(".cue:not([hidden])");
+    });
+    document.getElementById("no-results").hidden = shown > 0;
+  }
+  search.addEventListener("input", applyFilter);
+  document.querySelectorAll("[data-filter]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      filter = button.getAttribute("data-filter");
+      document.querySelectorAll("[data-filter]").forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b === button));
+      });
+      applyFilter();
+    });
+  });
+
+  // ── Saving: one database document per rewritten line ──
+  var saveEl = document.getElementById("save");
+  function setSave(state, text) { saveEl.setAttribute("data-state", state); saveEl.textContent = text; }
+
+  function queueSave(state, now) {
+    if (!db) return;
+    clearTimeout(state.timer);
+    state.timer = setTimeout(function () { write(state); }, now ? 0 : 600);
+    setSave("saving", "Saving…");
+  }
+
+  function write(state) {
+    pending += 1;
+    var ref = db.doc("edits/" + state.key);
+    var op = state.area.value === state.original
+      ? ref.delete()
+      : ref.set({ key: state.key, text: state.area.value, original: state.original, updated: new Date().toISOString() });
+    op.then(function () {
+      pending -= 1;
+      if (!pending) setSave("saved", "Saved");
+    }, function () {
+      pending -= 1;
+      setSave("error", "Not saved — check your connection");
+    });
+  }
+
+  var direction = document.getElementById("direction");
+  var directionTimer = null;
+  direction.addEventListener("input", function () {
+    if (!db) return;
+    clearTimeout(directionTimer);
+    setSave("saving", "Saving…");
+    directionTimer = setTimeout(function () {
+      db.doc("meta/direction").set({ text: direction.value, updated: new Date().toISOString() })
+        .then(function () { if (!pending) setSave("saved", "Saved"); },
+              function () { setSave("error", "Not saved — check your connection"); });
+    }, 600);
+  });
+
+  // Light the page up once the database answers. Until then it is readable
+  // and editable, just not kept.
+  if (!window.claude || typeof window.claude.use !== "function") {
+    setSave("offline", "Open in Claude to save edits");
+    return;
+  }
+  window.claude.use("db").then(function (namespace) {
+    if (!namespace) { setSave("offline", "Saving isn't available here"); return; }
+    db = namespace;
+    db.collection("edits").onSnapshot(function (snap) {
+      snap.docChanges().forEach(function (change) {
+        var body = change.doc.data() || {};
+        var state = cues.get(body.key || change.doc.id);
+        if (!state || document.activeElement === state.area) return;   // never clobber typing
+        var next = change.type === "removed" ? state.original : body.text;
+        if (typeof next === "string" && next !== state.area.value) {
+          state.area.value = next;
+          autosize(state.area);
+          refresh(state);
+        }
+      });
+      if (!pending) setSave("saved", "Saved");
+    }, function () { setSave("error", "Lost the connection — reload to keep saving"); });
+    db.doc("meta/direction").onSnapshot(function (snap) {
+      var body = snap.exists ? snap.data() : null;
+      if (body && document.activeElement !== direction && typeof body.text === "string") direction.value = body.text;
+    });
+  });
+})();
+</script>

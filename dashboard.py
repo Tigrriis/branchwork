@@ -13,6 +13,7 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
+from copytext import tx
 from extensions import db
 from models import (
     ACTIVE_PHASES, CADENCES, PHASES, InboxItem, Project,
@@ -150,8 +151,7 @@ def _set_phase(project: Project, phase: str, *, park_until: date | None = None,
     limit = current_user.wip_building_limit
     if limit and phase == "building" and project.phase != "building" and _building_count(project) >= limit:
         names = ", ".join(p.name for p in current_user.projects if p.phase == "building")
-        flash(f"Building is full ({limit}): {names}. Ship or park one first, "
-              f"or raise the cap on your account page.", "error")
+        flash(tx("board.building_full", limit=limit, names=names), "error")
         return False
     old = project.phase
     project.phase = phase
@@ -169,7 +169,7 @@ def set_phase(project_id: int):
     until = _parse_date(request.form.get("parked_until")) if phase == "parked" else None
     if _set_phase(project, phase, park_until=until):
         db.session.commit()
-        flash(f"{project.name} → {project.phase_label}.", "success")
+        flash(tx("board.phase_moved", name=project.name, phase=project.phase_label), "success")
     return _back()
 
 
@@ -189,7 +189,7 @@ def touch(project_id: int):
     project = _project(project_id)
     project.record("touch", note=(request.form.get("note") or "").strip()[:200] or None)
     db.session.commit()
-    flash(f"Logged a touch on {project.name}.", "success")
+    flash(tx("board.touched", name=project.name), "success")
     return _back()
 
 
@@ -200,9 +200,9 @@ def touch(project_id: int):
 def inbox_add():
     text = (request.form.get("text") or "").strip()
     if not text:
-        flash("Write something first.", "error")
+        flash(tx("inbox.text_required"), "error")
     elif len([i for i in current_user.inbox_items if i.status != "done"]) >= current_app.config["MAX_INBOX_ITEMS"]:
-        flash("The inbox is full. Triage it before adding more.", "error")
+        flash(tx("inbox.full"), "error")
     else:
         db.session.add(InboxItem(user=current_user, text=text[:2000]))
         db.session.commit()
@@ -227,12 +227,11 @@ def inbox_file(item_id: int):
     project_id = request.form.get("project_id") or ""
     project = _project(int(project_id)) if project_id.isdigit() else None
     if project is None:
-        flash("Pick a project to file it into.", "error")
+        flash(tx("inbox.pick_scheme"), "error")
         return _back()
     item.project = project
     db.session.commit()
-    flash(f"Filed into {project.name}. Drag it onto a tier when you know where it goes.",
-          "success")
+    flash(tx("inbox.filed", name=project.name), "success")
     return _back()
 
 

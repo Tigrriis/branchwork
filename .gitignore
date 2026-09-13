@@ -11,3 +11,6 @@ design/branchwork.html
 *.tmp
 node_modules/
 package-lock.json
+
+# Generated from copy/villainy.toml by copy/export_editor.py
+copy/editor.html

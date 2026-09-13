@@ -43,8 +43,6 @@ services:
         fromDatabase:
           name: branchwork-db
           property: connectionString
-      - key: SITE_NAME
-        value: Branchwork
       # Starting cap on how many projects may sit in Building at once, for a
       # brand-new account only. Each person then changes their own on the
       # account page, so editing this never moves an existing user's cap.

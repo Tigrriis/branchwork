@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}{{ project.name }} · list · {{ SITE_NAME }}{% endblock %}
+{% block title %}{{ t('list.title', name=project.name) }} · {{ SITE_NAME }}{% endblock %}
 {% block main_class %}page{% endblock %}
 
 {% block topnav %}
   <div class="segmented">
-    <a class="segmented__item" href="{{ url_for('projects.tree', project_id=project.id) }}">Tree</a>
-    <a class="segmented__item is-active" href="{{ url_for('projects.task_list', project_id=project.id) }}">List</a>
+    <a class="segmented__item" href="{{ url_for('projects.tree', project_id=project.id) }}">{{ t('tree.tab_tree') }}</a>
+    <a class="segmented__item is-active" href="{{ url_for('projects.task_list', project_id=project.id) }}">{{ t('tree.tab_list') }}</a>
   </div>
 {% endblock %}
 
@@ -13,31 +13,31 @@
 <div class="tree-head">
   <div class="tree-head__title">
     <h1>{{ project.name }}</h1>
-    <span class="muted">{{ project.points_done }} / {{ project.points_max }} points</span>
+    <span class="muted">{{ t('tree.points', done=project.points_done, max=project.points_max) }}</span>
   </div>
 </div>
 
 {% for branch in project.branches %}
 <section class="list-branch">
   <h2 class="list-branch__name list-branch__name--{{ branch.hue }}">{{ branch.name }} <span class="muted">{{ branch.points_done }} / {{ branch.points_max }}</span>
-    {% if branch.is_locked %}<span class="pill">locked</span>{% endif %}</h2>
+    {% if branch.is_locked %}<span class="pill">{{ t('list.locked') }}</span>{% endif %}</h2>
   <table class="table">
-    <thead><tr><th>Tier</th><th>Task</th><th>Points</th><th>State</th><th></th></tr></thead>
+    <thead><tr><th>{{ t('list.col_tier') }}</th><th>{{ t('list.col_machination') }}</th><th>{{ t('list.col_points') }}</th><th>{{ t('list.col_state') }}</th><th></th></tr></thead>
     <tbody>
       {% for row in branch.tiers() %}{% for task in row.tasks %}
       <tr class="{% if not row.open %}is-dim{% endif %}">
         <td class="muted">{{ row.tier }}</td>
         <td><span class="table__icon">{{ icon(task.icon, 18) }}</span>{{ task.title }}{% if task.notes %}<div class="muted small">{{ task.notes }}</div>{% endif %}</td>
         <td>{{ task.points_done }} / {{ task.points_max }}</td>
-        <td><span class="state state--{{ task.state }}">{{ {'full': 'Complete', 'part': 'In progress', 'empty': 'Not started'}[task.state] }}</span></td>
-        <td class="table__actions"><a class="link-quiet" href="{{ url_for('projects.edit_task', task_id=task.id) }}">Edit</a></td>
+        <td><span class="state state--{{ task.state }}">{{ t('state.' ~ task.state) }}</span></td>
+        <td class="table__actions"><a class="link-quiet" href="{{ url_for('projects.edit_task', task_id=task.id) }}">{{ t('common.edit') }}</a></td>
       </tr>
       {% endfor %}{% endfor %}
-      {% if not branch.tasks %}<tr><td colspan="5" class="muted">No tasks yet.</td></tr>{% endif %}
+      {% if not branch.tasks %}<tr><td colspan="5" class="muted">{{ t('list.no_machinations') }}</td></tr>{% endif %}
     </tbody>
   </table>
 </section>
 {% else %}
-<div class="empty"><p>No branches yet.</p><a class="btn btn--primary" href="{{ url_for('projects.new_branch', project_id=project.id) }}">Add a branch</a></div>
+<div class="empty"><p>{{ t('list.no_plots') }}</p><a class="btn btn--primary" href="{{ url_for('projects.new_branch', project_id=project.id) }}">{{ t('tree.add_plot') }}</a></div>
 {% endfor %}
 {% endblock %}

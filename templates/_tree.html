@@ -1,4 +1,4 @@
-{# The tree itself: one column per branch, tiers stacked inside. Rendered on
+{# The tree itself: one column per plot, tiers stacked inside. Rendered on
    the page and again by POST /tasks/<id>/points, which swaps it in place. #}
 {% for branch in project.branches %}
 <section class="col col--{{ branch.hue }} {% if branch.is_locked %}col--locked{% endif %}" data-branch="{{ branch.id }}">
@@ -21,35 +21,35 @@
       <div class="tier__row" data-branch="{{ branch.id }}" data-tier="{{ row.tier }}">
         {% for task in row.tasks %}
         <div class="tile tile--{{ task.state }} {% if row.open %}tile--live{% endif %}" data-task="{{ task.id }}" title="{{ task.title }}{% if task.notes %} — {{ task.notes }}{% endif %}">
-          <button type="button" class="tile__box" {% if not row.open %}disabled{% endif %} aria-label="{{ task.title }}: {{ task.points_done }} of {{ task.points_max }} points">
+          <button type="button" class="tile__box" {% if not row.open %}disabled{% endif %} aria-label="{{ t('tree.tile_aria', title=task.title, done=task.points_done, max=task.points_max) }}">
             {{ icon(task.icon, 32) }}
           </button>
           <span class="tile__plate">{{ task.points_done }}/{{ task.points_max }}</span>
           <a class="tile__label" href="{{ url_for('projects.edit_task', task_id=task.id) }}">{{ task.title }}</a>
         </div>
         {% endfor %}
-        <a class="tile tile--add" href="{{ url_for('projects.new_task', branch_id=branch.id, tier=row.tier) }}" title="Add a task to tier {{ row.tier }}">
+        <a class="tile tile--add" href="{{ url_for('projects.new_task', branch_id=branch.id, tier=row.tier) }}" title="{{ t('tree.add_to_tier_title', tier=row.tier) }}">
           <span class="tile__box tile__box--add">+</span>
-          <span class="tile__label muted">Tier {{ row.tier }}</span>
+          <span class="tile__label muted">{{ t('tree.tier', tier=row.tier) }}</span>
         </a>
       </div>
     </div>
     {% endfor %}
     <a class="tier-add" href="{{ url_for('projects.new_task', branch_id=branch.id, tier=branch.next_tier) }}"
        data-branch="{{ branch.id }}" data-tier="{{ branch.next_tier }}">
-      + {{ 'Add the first task' if not branch.tasks else 'New tier' }}
+      {% if not branch.tasks %}{{ t('tree.add_first_machination') }}{% else %}{{ t('tree.new_tier') }}{% endif %}
     </a>
   </div>
   <div class="col__foot">
     <span class="col__name">{{ branch.name }}</span>
-    <span class="col__pts">{{ branch.points_done }} / {{ branch.points_max }} pts</span>
+    <span class="col__pts">{{ t('common.pts', done=branch.points_done, max=branch.points_max) }}</span>
     <span class="col__tools">
       <form method="post" action="{{ url_for('projects.move_branch', branch_id=branch.id) }}" class="inline-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="icon-btn" name="direction" value="left" title="Move left" {% if loop.first %}disabled{% endif %}>‹</button>
-        <button class="icon-btn" name="direction" value="right" title="Move right" {% if loop.last %}disabled{% endif %}>›</button>
+        <button class="icon-btn" name="direction" value="left" title="{{ t('tree.move_left') }}" {% if loop.first %}disabled{% endif %}>‹</button>
+        <button class="icon-btn" name="direction" value="right" title="{{ t('tree.move_right') }}" {% if loop.last %}disabled{% endif %}>›</button>
       </form>
-      <a class="icon-btn" href="{{ url_for('projects.edit_branch', branch_id=branch.id) }}" title="Edit branch">
+      <a class="icon-btn" href="{{ url_for('projects.edit_branch', branch_id=branch.id) }}" title="{{ t('tree.edit_plot_title') }}">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l4-1L19 8l-3-3L5 16z"></path></svg>
       </a>
     </span>
@@ -58,6 +58,6 @@
 {% endfor %}
 <a class="col col--add" href="{{ url_for('projects.new_branch', project_id=project.id) }}">
   <span class="col--add__plus">+</span>
-  <span>{{ 'Add the first branch' if not project.branches else 'Add a branch' }}</span>
-  {% if not project.branches %}<span class="muted col--add__hint">Branches are the columns of the tree: Design, Approvals, Construction…</span>{% endif %}
+  <span>{% if not project.branches %}{{ t('tree.add_first_plot') }}{% else %}{{ t('tree.add_plot') }}{% endif %}</span>
+  {% if not project.branches %}<span class="muted col--add__hint">{{ t('tree.plots_hint') }}</span>{% endif %}
 </a>

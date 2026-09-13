@@ -9,6 +9,14 @@
   var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || "";
   var tree = document.getElementById("tree");
 
+  // Pop-up words come from the copy catalogue, handed over as window.COPY.
+  function say(key, values) {
+    var text = (window.COPY || {})[key] || key;
+    return text.replace(/\{(\w+)\}/g, function (whole, name) {
+      return values && Object.prototype.hasOwnProperty.call(values, name) ? values[name] : whole;
+    });
+  }
+
   // ── Shared ────────────────────────────────────────────────────────────
   function flash(message, category) {
     var host = document.getElementById("flashes");
@@ -75,13 +83,13 @@
       tile.classList.add("is-busy");
       post("/tasks/" + id + "/points", { delta: delta })
         .then(function (res) {
-          if (!res.ok) { flash(res.body.message || "Could not update that task.", "error"); return; }
+          if (!res.ok) { flash(res.body.message || say("points_failed"), "error"); return; }
           tree.innerHTML = res.body.html;
           updateStats(res.body);
           var again = tree.querySelector('[data-task="' + id + '"]');
           if (again) again.classList.add("is-flash");
         })
-        .catch(function () { flash("Network error. Try again.", "error"); })
+        .catch(function () { flash(say("network"), "error"); })
         .finally(function () { busy = false; tile.classList.remove("is-busy"); });
     }
   }
@@ -110,15 +118,15 @@
     if (!ideaId || !branchId) return;
     post("/ideas/" + ideaId + "/promote", { branch_id: Number(branchId), tier: Number(tier) })
       .then(function (res) {
-        if (!res.ok) { flash(res.body.message || "Could not add that idea.", "error"); return; }
+        if (!res.ok) { flash(res.body.message || say("idea_failed"), "error"); return; }
         var list = document.getElementById("ideas-list");
         if (tree) tree.innerHTML = res.body.tree;
         if (list) list.innerHTML = res.body.ideas;
         updateStats(res.body);
-        flash("“" + res.body.title + "” added to " + res.body.branch +
-              ", tier " + res.body.tier + ".", "success");
+        flash(say("idea_added", { title: res.body.title, plot: res.body.branch, tier: res.body.tier }),
+              "success");
       })
-      .catch(function () { flash("Network error. Try again.", "error"); });
+      .catch(function () { flash(say("network"), "error"); });
   }
 
   // The page header is outside #lanes, so the drop has to move it by hand.
@@ -138,14 +146,14 @@
   function setFocus(projectId, focused) {
     post("/projects/" + projectId + "/focus", { focused: focused ? "1" : "0" })
       .then(function (res) {
-        if (!res.ok) { flash(res.body.message || "Could not move that project.", "error"); return; }
+        if (!res.ok) { flash(res.body.message || say("focus_failed"), "error"); return; }
         var lanes = document.getElementById("lanes");
         if (lanes) lanes.innerHTML = res.body.lists;
         updateFocusCounts(res.body.counts);
-        flash(res.body.name + (res.body.focused ? " is in focus." : " is on the backburner."),
+        flash(say(res.body.focused ? "focused" : "backburnered", { name: res.body.name }),
               "success");
       })
-      .catch(function () { flash("Network error. Try again.", "error"); });
+      .catch(function () { flash(say("network"), "error"); });
   }
 
   document.addEventListener("dragstart", function (e) {

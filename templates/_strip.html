@@ -1,8 +1,8 @@
 {# 12-week activity strip. Pass counts=list[int], oldest first. #}
 {% set peak = counts|max if counts else 0 %}
-<span class="strip" title="Activity over the last {{ counts|length }} weeks">
+<span class="strip" title="{{ t('strip.title', n=counts|length) }}">
   {% for n in counts %}
   {% set level = 0 if n == 0 else (1 if n <= 1 else (2 if n < peak else 3)) %}
-  <span class="strip__cell strip__cell--{{ level }}" title="{{ n }} event{{ '' if n == 1 else 's' }}"></span>
+  <span class="strip__cell strip__cell--{{ level }}" title="{% if n == 1 %}{{ t('strip.event_one', n=n) }}{% else %}{{ t('strip.event_many', n=n) }}{% endif %}"></span>
   {% endfor %}
 </span>

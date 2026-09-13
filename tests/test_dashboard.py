@@ -4,7 +4,8 @@ import re
 import subprocess
 from datetime import date, datetime, timedelta, timezone
 
-from conftest import login, make_branch, make_project, make_task, make_user
+from conftest import copy_in, copy_prefix_in, login, make_branch, make_project, make_task, make_user
+from copytext import tx
 from gitsync import sync_project
 from models import InboxItem, Task
 
@@ -86,7 +87,7 @@ def test_wip_limit_on_building(client, db):
     db.session.commit()
     third = make_project(user)
     r = client.post(f"/projects/{third.id}/phase", data={"phase": "building"}, follow_redirects=True)
-    assert b"Building is full" in r.data
+    assert copy_prefix_in(r.data, "board.building_full")
     db.session.refresh(third)
     assert third.phase == "idea"
     # moving within building (no-op) or elsewhere is fine
@@ -105,7 +106,7 @@ def test_park_and_resurface(client, db):
     db.session.refresh(p)
     assert p.phase == "parked" and p.parked_expired
     html = client.get("/").data.decode()
-    assert "Back from the shelf" in html
+    assert copy_in(html, "today.shelf_heading")
     client.post(f"/projects/{p.id}/phase", data={"phase": "exploring"})
     db.session.refresh(p)
     assert p.phase == "exploring" and p.parked_until is None
@@ -193,7 +194,7 @@ def test_review_shows_every_project_at_once_and_marks_decided(client, db):
     # decided, so the banner shows.
     html = client.get(f"/review?done={a.id},{b.id}").data.decode()
     assert "1 of 1 decided" in html
-    assert "Every project has a decision" in html
+    assert copy_in(html, "review.all_decided")
 
 
 def test_review_ignores_stale_done_ids(client, db):
@@ -309,7 +310,7 @@ def test_wip_cap_is_a_per_user_setting(client, db):
     db.session.commit()
     fourth = make_project(user)
     r = client.post(f"/projects/{fourth.id}/phase", data={"phase": "building"}, follow_redirects=True)
-    assert b"Building is full" in r.data
+    assert copy_prefix_in(r.data, "board.building_full")
 
     client.post("/account", data={"display_name": "", "wip_building_limit": "5"})
     db.session.refresh(user)
@@ -332,7 +333,7 @@ def test_wip_cap_of_zero_turns_it_off(client, db):
     assert sum(1 for p in user.projects if p.phase == "building") == 6
     # The board says so rather than showing a "6 / 0" counter.
     html = client.get("/board").data.decode()
-    assert "No cap on Building" in html and "6 / 0" not in html
+    assert copy_in(html, "board.no_cap") and "6 / 0" not in html
 
 
 def test_lowering_the_cap_does_not_evict_projects(client, db):
@@ -347,7 +348,7 @@ def test_lowering_the_cap_does_not_evict_projects(client, db):
     # ...but nothing new gets in until it is back under the cap.
     extra = make_project(user)
     r = client.post(f"/projects/{extra.id}/phase", data={"phase": "building"}, follow_redirects=True)
-    assert b"Building is full" in r.data
+    assert copy_prefix_in(r.data, "board.building_full")
 
 
 def test_account_rejects_a_nonsense_cap(client, db):
@@ -620,12 +621,12 @@ def test_copying_a_builtin_gives_an_editable_template(client, db):
     login(client)
     client.post("/settings/templates/new", data={"copy": "engineering"})
     t = Template.query.one()
-    assert t.name == "Engineering job" and t.user_id == user.id
+    assert t.name == tx("starter.engineering.label") and t.user_id == user.id
     assert [(b.name, b.hue, b.waits) for b in t.branches] == [
         ("Design", "green", False), ("Approvals", "blue", False), ("Construction", "red", True)]
     # It shows on the new-project form, marked as the user's own.
     html = client.get("/projects/new").data.decode()
-    assert f'value="custom:{t.id}"' in html and "yours" in html
+    assert f'value="custom:{t.id}"' in html and copy_in(html, "scheme.yours_tag")
 
 
 def test_copying_carries_seeded_tasks_with_their_points(client, db):
@@ -645,7 +646,8 @@ def test_a_copy_gets_a_distinct_name(client, db):
     login(client)
     client.post("/settings/templates/new", data={"copy": "software"})
     client.post("/settings/templates/new", data={"copy": "software"})
-    assert sorted(t.name for t in Template.query.all()) == ["Software", "Software 2"]
+    label = tx("starter.software.label")
+    assert sorted(t.name for t in Template.query.all()) == sorted([label, label + " 2"])
 
 
 def test_editing_a_template_renames_reorders_and_deletes(client, db):

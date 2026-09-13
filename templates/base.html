@@ -24,9 +24,9 @@
       </a>
       {% if current_user.is_authenticated %}
       <nav class="gnav">
-        <a class="gnav__item {% if request.endpoint == 'dashboard.today' %}is-active{% endif %}" href="{{ url_for('dashboard.today') }}">Today</a>
-        <a class="gnav__item {% if request.endpoint == 'dashboard.board' %}is-active{% endif %}" href="{{ url_for('dashboard.board') }}">Board</a>
-        <a class="gnav__item {% if request.endpoint == 'dashboard.review' %}is-active{% endif %}" href="{{ url_for('dashboard.review') }}">Review</a>
+        <a class="gnav__item {% if request.endpoint == 'dashboard.today' %}is-active{% endif %}" href="{{ url_for('dashboard.today') }}">{{ t('nav.today') }}</a>
+        <a class="gnav__item {% if request.endpoint == 'dashboard.board' %}is-active{% endif %}" href="{{ url_for('dashboard.board') }}">{{ t('nav.board') }}</a>
+        <a class="gnav__item {% if request.endpoint == 'dashboard.review' %}is-active{% endif %}" href="{{ url_for('dashboard.review') }}">{{ t('nav.review') }}</a>
       </nav>
       {% endif %}
       {% block topnav %}{% endblock %}
@@ -53,6 +53,8 @@
     {% block content %}{% endblock %}
   </main>
 
+  {# Pop-ups raised in the browser read their words from the same catalogue. #}
+  <script>window.COPY = {{ js_copy()|tojson }};</script>
   <script src="{{ url_for('static', filename='branchwork/app.js') }}"></script>
   {% block scripts %}{% endblock %}
 </body>

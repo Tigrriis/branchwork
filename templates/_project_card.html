@@ -1,31 +1,31 @@
-{# One project on the board. Pass project, and prev/next phase keys (or none). #}
+{# One scheme on the board. Pass project, and prev/next phase keys (or none). #}
 <article class="pcard {% if project.is_due %}pcard--due{% endif %}">
   <div class="pcard__top">
     <a class="pcard__name" href="{{ url_for('projects.tree', project_id=project.id) }}">
-      {% if project.focused %}<span class="focus-dot" title="In focus"></span>{% endif %}{{ project.name }}
+      {% if project.focused %}<span class="focus-dot" title="{{ t('card.in_focus_title') }}"></span>{% endif %}{{ project.name }}
     </a>
-    <span class="pcard__age {% if project.is_due %}is-due{% endif %}" title="Cadence: {{ project.cadence_label }}">
-      {% if project.days_since_touch == 0 %}today{% else %}{{ project.days_since_touch }}d{% endif %}
+    <span class="pcard__age {% if project.is_due %}is-due{% endif %}" title="{{ t('card.cadence_title', cadence=project.cadence_label) }}">
+      {% if project.days_since_touch == 0 %}{{ t('card.today') }}{% else %}{{ t('card.days', n=project.days_since_touch) }}{% endif %}
     </span>
   </div>
   {% with counts=project.activity_strip() %}{% include "_strip.html" %}{% endwith %}
   <div class="bar"><span class="bar__fill" style="width: {{ project.percent }}%"></span></div>
   <div class="pcard__action {% if not project.next_action %}is-missing{% endif %}">
-    {% if project.next_action %}{{ project.next_action }}{% else %}No next action{% endif %}
+    {% if project.next_action %}{{ project.next_action }}{% else %}{{ t('card.no_action') }}{% endif %}
   </div>
   <div class="pcard__foot">
-    <span class="muted small">{{ project.points_done }} / {{ project.points_max }} pts</span>
+    <span class="muted small">{{ t('common.pts', done=project.points_done, max=project.points_max) }}</span>
     <span class="pcard__moves">
       {% if prev %}
       <form method="post" action="{{ url_for('dashboard.set_phase', project_id=project.id) }}" class="inline-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="{{ prev }}">
-        <button class="icon-btn" title="Back to {{ PHASES[prev] }}">‹</button>
+        <button class="icon-btn" title="{{ t('card.back_to', phase=PHASES[prev]) }}">‹</button>
       </form>
       {% endif %}
       {% if next %}
       <form method="post" action="{{ url_for('dashboard.set_phase', project_id=project.id) }}" class="inline-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="{{ next }}">
-        <button class="icon-btn" title="Advance to {{ PHASES[next] }}">›</button>
+        <button class="icon-btn" title="{{ t('card.advance_to', phase=PHASES[next]) }}">›</button>
       </form>
       {% endif %}
     </span>

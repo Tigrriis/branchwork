@@ -1,51 +1,49 @@
 {% extends "base.html" %}
-{% block title %}Project templates · {{ SITE_NAME }}{% endblock %}
+{% block title %}{{ t('templates.title') }} · {{ SITE_NAME }}{% endblock %}
 {% block main_class %}page page--narrow{% endblock %}
 
 {% block content %}
 <div class="page-head">
   <div>
-    <h1>Project templates</h1>
-    <p class="muted">The branches a new project starts with. Yours appear on the new-project form
-      alongside the built-in ones.</p>
+    <h1>{{ t('templates.heading') }}</h1>
+    <p class="muted">{{ t('templates.about') }}</p>
   </div>
-  <a class="link-quiet" href="{{ url_for('auth.account') }}">← Account</a>
+  <a class="link-quiet" href="{{ url_for('auth.account') }}">{{ t('templates.back_account') }}</a>
 </div>
 
 <section class="section">
-  <h2 class="section__title">Yours</h2>
-  {% for t in templates %}
+  <h2 class="section__title">{{ t('templates.yours') }}</h2>
+  {% for tmpl in templates %}
   <div class="tmpl-row">
     <div class="tmpl-row__main">
-      <a class="tmpl-row__name" href="{{ url_for('starters.edit_template', template_id=t.id) }}">{{ t.name }}</a>
-      <span class="muted small">{{ t.summary }}</span>
+      <a class="tmpl-row__name" href="{{ url_for('starters.edit_template', template_id=tmpl.id) }}">{{ tmpl.name }}</a>
+      <span class="muted small">{{ tmpl.summary }}</span>
     </div>
     <span class="tmpl-row__actions">
-      <a class="btn btn--ghost btn--sm" href="{{ url_for('starters.edit_template', template_id=t.id) }}">Edit</a>
-      <form method="post" action="{{ url_for('starters.delete_template', template_id=t.id) }}"
-            class="inline-form" data-confirm="Delete “{{ t.name }}”? Projects already made from it are untouched.">
+      <a class="btn btn--ghost btn--sm" href="{{ url_for('starters.edit_template', template_id=tmpl.id) }}">{{ t('common.edit') }}</a>
+      <form method="post" action="{{ url_for('starters.delete_template', template_id=tmpl.id) }}"
+            class="inline-form" data-confirm="{{ t('templates.delete_confirm', name=tmpl.name) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="icon-btn" type="submit" title="Delete">×</button>
+        <button class="icon-btn" type="submit" title="{{ t('common.delete') }}">×</button>
       </form>
     </span>
   </div>
   {% else %}
-  <p class="muted small">None yet. Copy a built-in below and change it, which is usually easier than
-    starting from nothing.</p>
+  <p class="muted small">{{ t('templates.none') }}</p>
   {% endfor %}
 
   {% if templates|length < limit %}
   <form method="post" action="{{ url_for('starters.new_template') }}" class="inline-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button class="btn btn--sm" type="submit">+ New template</button>
+    <button class="btn btn--sm" type="submit">{{ t('templates.new') }}</button>
   </form>
   {% endif %}
 </section>
 
 <section class="section">
-  <h2 class="section__title">Built in</h2>
-  <p class="muted small">These cannot be changed, but copying one gives you an editable version.</p>
-  {% for key, spec in builtins.items() if key != 'blank' %}
+  <h2 class="section__title">{{ t('templates.builtin') }}</h2>
+  <p class="muted small">{{ t('templates.builtin_about') }}</p>
+  {% for spec in builtins if spec.key != 'blank' %}
   <div class="tmpl-row tmpl-row--quiet">
     <div class="tmpl-row__main">
       <span class="tmpl-row__name">{{ spec.label }}</span>
@@ -55,8 +53,8 @@
       {% if templates|length < limit %}
       <form method="post" action="{{ url_for('starters.new_template') }}" class="inline-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="copy" value="{{ key }}">
-        <button class="btn btn--ghost btn--sm" type="submit">Copy &amp; edit</button>
+        <input type="hidden" name="copy" value="{{ spec.key }}">
+        <button class="btn btn--ghost btn--sm" type="submit">{{ t('templates.copy') }}</button>
       </form>
       {% endif %}
     </span>

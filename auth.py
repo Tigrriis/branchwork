@@ -10,6 +10,7 @@ from flask import (
 )
 from flask_login import current_user, login_required, login_user, logout_user
 
+from copytext import tx
 from extensions import db
 from models import User
 
@@ -48,11 +49,11 @@ def register():
         password = request.form.get("password") or ""
         display_name = (request.form.get("display_name") or "").strip()[:80]
         if not email or "@" not in email:
-            flash("Enter a valid email address.", "error")
+            flash(tx("auth.invalid_email"), "error")
         elif len(password) < MIN_PASSWORD_LEN:
-            flash(f"Password must be at least {MIN_PASSWORD_LEN} characters.", "error")
+            flash(tx("auth.password_short", min=MIN_PASSWORD_LEN), "error")
         elif User.query.filter_by(email=email).first():
-            flash("That email is already registered. Sign in instead.", "error")
+            flash(tx("auth.email_taken"), "error")
         else:
             user = User(email=email, display_name=display_name or None,
                         wip_building_limit=current_app.config["DEFAULT_WIP_BUILDING_LIMIT"])
@@ -60,7 +61,7 @@ def register():
             db.session.add(user)
             db.session.commit()
             login_user(user)
-            flash("Welcome. Start by creating a project.", "success")
+            flash(tx("auth.welcome"), "success")
             return _after_login()
     return render_template("register.html")
 
@@ -76,7 +77,7 @@ def login():
         if user and user.check_password(password):
             login_user(user, remember=bool(request.form.get("remember")))
             return _after_login()
-        flash("Invalid email or password.", "error")
+        flash(tx("auth.bad_login"), "error")
     return render_template("login.html")
 
 
@@ -101,13 +102,13 @@ def account():
         new_pw = request.form.get("new_password") or ""
         if new_pw:
             if not current_user.check_password(current_pw):
-                flash("Current password is wrong.", "error")
+                flash(tx("auth.wrong_password"), "error")
                 return render_template("account.html")
             if len(new_pw) < MIN_PASSWORD_LEN:
-                flash(f"New password must be at least {MIN_PASSWORD_LEN} characters.", "error")
+                flash(tx("auth.new_password_short", min=MIN_PASSWORD_LEN), "error")
                 return render_template("account.html")
             current_user.set_password(new_pw)
         db.session.commit()
-        flash("Account updated.", "success")
+        flash(tx("auth.account_updated"), "success")
         return redirect(url_for("auth.account"))
     return render_template("account.html")

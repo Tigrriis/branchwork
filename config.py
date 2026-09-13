@@ -55,5 +55,3 @@ class Config:
     MAX_TASKS_PER_BRANCH = 200
     MAX_POINTS_PER_TASK = 20
 
-
-SITE_NAME = os.environ.get("SITE_NAME", "Branchwork")

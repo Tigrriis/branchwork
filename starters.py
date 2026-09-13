@@ -14,34 +14,25 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
+from copytext import tx
 from extensions import db
 from models import HUES, Branch, Project, Task, Template, TemplateBranch
 
 starters_bp = Blueprint("starters", __name__)
 
-# The systemisation ladder, spelled out for the templates that use it. Tiers
-# rather than branches, because every area of a business climbs the same rungs
-# independently and the tier gate stops you systemising what you never mapped.
-LADDER = "Tier 1 map it · 2 fix the worst of it · 3 write the checklist · 4 put a number on it"
-
 STARTERS: dict[str, dict] = {
-    "blank": {"label": "Blank", "hint": "No branches. Add your own.", "branches": [], "chain": False},
+    # Names and descriptions live in the copy catalogue under [starter.<key>].
+    "blank": {"branches": [], "chain": False},
     "lifecycle": {
-        "label": "Lifecycle",
-        "hint": "Idea → Prototype → Build → Launch → Maintain, each waiting on the last.",
         "branches": [("Idea", "violet"), ("Prototype", "blue"), ("Build", "green"),
                      ("Launch", "amber"), ("Maintain", "teal")],
         "chain": True,
     },
     "engineering": {
-        "label": "Engineering job",
-        "hint": "Design → Approvals → Construction, construction waiting on approvals.",
         "branches": [("Design", "green"), ("Approvals", "blue"), ("Construction", "red")],
         "chain": "last",
     },
     "software": {
-        "label": "Software",
-        "hint": "Spec, Build and Ship side by side, plus a Maintain branch that opens after Ship.",
         "branches": [("Spec", "violet"), ("Build", "green"), ("Ship", "amber"), ("Maintain", "teal")],
         "chain": "last",
     },
@@ -52,9 +43,6 @@ STARTERS: dict[str, dict] = {
     # tiers instead, one ladder per area, so each area keeps its own tempo and
     # the board shows at a glance which one you have stopped touching.
     "business": {
-        "label": "Running business",
-        "hint": ("Five areas of a business that already operates, each improving at its own pace. "
-                 + LADDER + ". Starts with one mapping task per area."),
         "branches": [("Sales & marketing", "amber"), ("Delivery", "green"),
                      ("Finance & admin", "blue"), ("People", "violet"),
                      ("Systems & tools", "teal")],
@@ -126,10 +114,15 @@ def _apply_custom(project: Project, raw_id: str) -> list[Branch]:
     return made
 
 
+def builtin_choices() -> list[dict]:
+    """The built-ins with their words, which live in the copy catalogue."""
+    return [{"key": key, "label": tx(f"starter.{key}.label"), "hint": tx(f"starter.{key}.hint")}
+            for key in STARTERS]
+
+
 def choices_for(user) -> list[dict]:
     """Everything offerable on the new-project form, built-ins first."""
-    out = [{"key": key, "label": spec["label"], "hint": spec["hint"], "custom": False}
-           for key, spec in STARTERS.items()]
+    out = [dict(spec, custom=False) for spec in builtin_choices()]
     out += [{"key": t.key, "label": t.name, "hint": t.hint or t.summary, "custom": True}
             for t in sorted(user.templates, key=lambda t: t.name.lower())]
     return out
@@ -160,7 +153,7 @@ def _unique_name(base: str) -> str:
 def template_list():
     return render_template("templates_list.html",
                            templates=sorted(current_user.templates, key=lambda t: t.name.lower()),
-                           builtins=STARTERS, limit=MAX_TEMPLATES)
+                           builtins=builtin_choices(), limit=MAX_TEMPLATES)
 
 
 @starters_bp.route("/settings/templates/new", methods=["POST"])
@@ -168,13 +161,14 @@ def template_list():
 def new_template():
     """Blank, or a copy of a built-in to edit. Copying is the usual route."""
     if len(current_user.templates) >= MAX_TEMPLATES:
-        flash("You have reached the template limit.", "error")
+        flash(tx("templates.limit"), "error")
         return redirect(url_for("starters.template_list"))
 
     source = request.form.get("copy") or ""
     spec = STARTERS.get(source)
     if spec is not None:
-        template = Template(user=current_user, name=_unique_name(spec["label"]), hint=spec["hint"])
+        template = Template(user=current_user, name=_unique_name(tx(f"starter.{source}.label")),
+                            hint=tx(f"starter.{source}.hint"))
         seeded = spec.get("tasks") or {}
         last = len(spec["branches"]) - 1
         for pos, (name, hue) in enumerate(spec["branches"]):
@@ -184,11 +178,11 @@ def new_template():
                 waits=spec["chain"] is True or (spec["chain"] == "last" and pos == last),
                 tasks_text=lines or None))
     else:
-        template = Template(user=current_user, name=_unique_name("My template"))
-        db.session.add(TemplateBranch(template=template, name="First branch", hue="green", position=0))
+        template = Template(user=current_user, name=_unique_name(tx("templates.default_name")))
+        db.session.add(TemplateBranch(template=template, name=tx("templates.first_plot"), hue="green", position=0))
     db.session.add(template)
     db.session.commit()
-    flash(f"“{template.name}” created. Edit it below.", "success")
+    flash(tx("templates.created", name=template.name), "success")
     return redirect(url_for("starters.edit_template", template_id=template.id))
 
 
@@ -199,7 +193,7 @@ def edit_template(template_id: int):
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()[:80]
         if not name:
-            flash("Give the template a name.", "error")
+            flash(tx("templates.name_required"), "error")
             return render_template("template_form.html", template=template)
         template.name = name
         template.hint = (request.form.get("hint") or "").strip()[:300] or None
@@ -235,7 +229,7 @@ def edit_template(template_id: int):
         for leftover in existing[len(kept):]:
             db.session.delete(leftover)
         db.session.commit()
-        flash("Template saved.", "success")
+        flash(tx("templates.saved"), "success")
         return redirect(url_for("starters.template_list"))
     return render_template("template_form.html", template=template)
 
@@ -246,5 +240,5 @@ def delete_template(template_id: int):
     template = _template(template_id)
     db.session.delete(template)
     db.session.commit()
-    flash("Template deleted. Projects already made from it are untouched.", "info")
+    flash(tx("templates.deleted"), "info")
     return redirect(url_for("starters.template_list"))

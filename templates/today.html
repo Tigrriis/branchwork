@@ -1,21 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Today · {{ SITE_NAME }}{% endblock %}
+{% block title %}{{ t('today.title') }} · {{ SITE_NAME }}{% endblock %}
 {% block topactions %}
-  <a class="btn btn--primary btn--sm" href="{{ url_for('projects.new_project') }}">+ New project</a>
+  <a class="btn btn--primary btn--sm" href="{{ url_for('projects.new_project') }}">{{ t('common.new_scheme') }}</a>
 {% endblock %}
 
 {% block content %}
 <div class="page-head">
   <div>
-    <h1>Today</h1>
-    <p class="muted">{{ today.strftime('%A %d %B') }} ·
-      <span data-count-focus>{{ focus|length }}</span> in focus,
-      <span data-count-back>{{ backburner|length }}</span> on the backburner</p>
+    <h1>{{ t('today.heading') }}</h1>
+    {% set n_focus %}<span data-count-focus>{{ focus|length }}</span>{% endset %}
+    {% set n_back %}<span data-count-back>{{ backburner|length }}</span>{% endset %}
+    <p class="muted">{{ t('today.subhead', date=today.strftime('%A %d %B'), focus=n_focus, back=n_back) }}</p>
   </div>
   <div class="chips">
-    <span class="chip {% if due %}chip--warn{% endif %}" data-chip-due><span data-count-due>{{ due|length }}</span> in focus need a touch</span>
-    <span class="chip {% if no_action %}chip--warn{% endif %}" data-chip-noaction><span data-count-noaction>{{ no_action|length }}</span> without a next action</span>
-    <span class="chip">{{ inbox|length }} in the inbox</span>
+    {% set n_due %}<span data-count-due>{{ due|length }}</span>{% endset %}
+    {% set n_noaction %}<span data-count-noaction>{{ no_action|length }}</span>{% endset %}
+    <span class="chip {% if due %}chip--warn{% endif %}" data-chip-due>{{ t('today.chip_due', n=n_due) }}</span>
+    <span class="chip {% if no_action %}chip--warn{% endif %}" data-chip-noaction>{{ t('today.chip_noaction', n=n_noaction) }}</span>
+    <span class="chip">{{ t('today.chip_inbox', n=inbox|length) }}</span>
   </div>
 </div>
 
@@ -24,22 +26,22 @@
 
     {% if resurfaced %}
     <section class="section">
-      <h2 class="section__title">Back from the shelf</h2>
+      <h2 class="section__title">{{ t('today.shelf_heading') }}</h2>
       {% for p in resurfaced %}
       <div class="due-row">
         <div class="due-row__main">
           <a class="due-row__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
-          <span class="muted small">Parked until {{ p.parked_until.strftime('%d %b') }}. Time to decide.</span>
+          <span class="muted small">{{ t('today.shelf_note', date=p.parked_until.strftime('%d %b')) }}</span>
         </div>
         <div class="due-row__actions">
           <form method="post" action="{{ url_for('dashboard.set_phase', project_id=p.id) }}" class="inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="exploring">
-            <button class="btn btn--sm">Pick it up</button>
+            <button class="btn btn--sm">{{ t('common.pick_up') }}</button>
           </form>
           <form method="post" action="{{ url_for('dashboard.set_phase', project_id=p.id) }}" class="inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="parked">
             <input type="hidden" name="parked_until" value="{{ (today.toordinal() + 30)|to_date }}">
-            <button class="btn btn--ghost btn--sm">Park 30 more days</button>
+            <button class="btn btn--ghost btn--sm">{{ t('today.park_more') }}</button>
           </form>
         </div>
       </div>
@@ -50,64 +52,63 @@
     <div id="lanes" class="lanes">
       {% include "_focus_lists.html" %}
     </div>
-    <p class="hint muted">Drag a project between the two lists, or use the arrows.</p>
+    <p class="hint muted">{{ t('today.drag_hint') }}</p>
 
     {% if not active_projects %}
     <div class="empty">
-      <p>No projects yet.</p>
-      <a class="btn btn--primary" href="{{ url_for('projects.new_project') }}">Create the first one</a>
+      <p>{{ t('today.empty') }}</p>
+      <a class="btn btn--primary" href="{{ url_for('projects.new_project') }}">{{ t('today.empty_cta') }}</a>
     </div>
     {% endif %}
   </div>
 
   <aside class="today-side">
     <section class="section">
-      <h2 class="section__title">Inbox</h2>
+      <h2 class="section__title">{{ t('today.inbox_heading') }}</h2>
       <form method="post" action="{{ url_for('dashboard.inbox_add') }}" class="inbox-add">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <textarea class="input" name="text" rows="2" placeholder="Capture an idea, a thought, a thing to do…" required></textarea>
-        <button class="btn btn--primary btn--sm" type="submit">Add</button>
+        <textarea class="input" name="text" rows="2" placeholder="{{ t('today.inbox_placeholder') }}" required></textarea>
+        <button class="btn btn--primary btn--sm" type="submit">{{ t('common.add') }}</button>
       </form>
       {% for item in inbox %}
       <div class="inbox-item {% if item.resurfaced %}inbox-item--back{% endif %}">
         <div class="inbox-item__text">{{ item.text }}</div>
-        {% if item.resurfaced %}<div class="muted small">Back from {{ item.revisit_on.strftime('%d %b') }}</div>{% endif %}
+        {% if item.resurfaced %}<div class="muted small">{{ t('today.inbox_back_from', date=item.revisit_on.strftime('%d %b')) }}</div>{% endif %}
         <div class="inbox-item__actions">
           <form method="post" action="{{ url_for('dashboard.inbox_file', item_id=item.id) }}" class="inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <select class="input input--xs" name="project_id" required>
-              <option value="">Send to…</option>
+              <option value="">{{ t('today.inbox_send_to') }}</option>
               {% for p in active_projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
             </select>
-            <button class="btn btn--ghost btn--sm" type="submit" title="Move it to that project's ideas">File</button>
+            <button class="btn btn--ghost btn--sm" type="submit" title="{{ t('today.inbox_file_title') }}">{{ t('today.inbox_file') }}</button>
           </form>
           <form method="post" action="{{ url_for('dashboard.inbox_park', item_id=item.id) }}" class="inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input class="input input--xs" type="date" name="revisit_on" value="{{ (today.toordinal() + 30)|to_date }}">
-            <button class="btn btn--ghost btn--sm" type="submit">Park</button>
+            <button class="btn btn--ghost btn--sm" type="submit">{{ t('today.inbox_park') }}</button>
           </form>
           <form method="post" action="{{ url_for('dashboard.inbox_done', item_id=item.id) }}" class="inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="icon-btn" type="submit" title="Done">✓</button>
+            <button class="icon-btn" type="submit" title="{{ t('common.done') }}">✓</button>
           </form>
-          <form method="post" action="{{ url_for('dashboard.inbox_delete', item_id=item.id) }}" class="inline-form" data-confirm="Delete this note?">
+          <form method="post" action="{{ url_for('dashboard.inbox_delete', item_id=item.id) }}" class="inline-form" data-confirm="{{ t('today.inbox_delete_confirm') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="icon-btn" type="submit" title="Delete">×</button>
+            <button class="icon-btn" type="submit" title="{{ t('common.delete') }}">×</button>
           </form>
         </div>
       </div>
       {% else %}
-      <p class="muted small">Empty. Capture things here as they occur to you, then file them to a
-        project's ideas, park them for later, or tick them off in your weekly review.</p>
+      <p class="muted small">{{ t('today.inbox_empty') }}</p>
       {% endfor %}
       {% if parked_items %}
       <details class="parked-list">
-        <summary class="muted small">{{ parked_items|length }} parked</summary>
+        <summary class="muted small">{{ t('today.inbox_parked', n=parked_items|length) }}</summary>
         {% for item in parked_items %}<div class="muted small">{{ item.revisit_on.strftime('%d %b') }} · {{ item.text|truncate(60) }}</div>{% endfor %}
       </details>
       {% endif %}
     </section>
-    <a class="review-link" href="{{ url_for('dashboard.review') }}">Start the weekly review →</a>
+    <a class="review-link" href="{{ url_for('dashboard.review') }}">{{ t('today.review_link') }}</a>
   </aside>
 </div>
 {% endblock %}

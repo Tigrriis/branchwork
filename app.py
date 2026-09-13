@@ -1,5 +1,5 @@
 """
-Branchwork: plan large, multi-stranded projects as a skill tree.
+Villainy: plan large, multi-stranded schemes as a skill tree.
 
   /                      Today: projects due for a touch, the inbox
   /board                 every project by phase (Idea → Maintaining, shelves)
@@ -22,6 +22,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 import config
 from auth import auth_bp
+from copytext import js_copy, t, tx
 from dashboard import dashboard_bp
 from demo import demo_bp
 from gitsync import gitsync_bp
@@ -93,7 +94,10 @@ def _register_template_helpers(app: Flask) -> None:
     @app.context_processor
     def _inject():
         return {
-            "SITE_NAME": config.SITE_NAME,
+            # The product name is copy like any other, so it lives in the catalogue.
+            "SITE_NAME": tx("brand.name"),
+            "t": t,
+            "js_copy": js_copy,
             "HUES": HUES,
             "PHASES": PHASES,
             "CADENCES": CADENCES,
@@ -112,7 +116,7 @@ def _register_error_handlers(app: Flask) -> None:
     @app.errorhandler(404)
     def _not_found(_e):
         return render_template("error.html", code=404,
-                               message="That page does not exist, or is not yours."), 404
+                               message=tx("error.not_found")), 404
 
     @app.errorhandler(CSRFError)
     def _csrf(e):
@@ -123,7 +127,7 @@ def _register_error_handlers(app: Flask) -> None:
     @app.errorhandler(500)
     def _server_error(_e):
         return render_template("error.html", code=500,
-                               message="Something went wrong on our side."), 500
+                               message=tx("error.server")), 500
 
 
 app = create_app()

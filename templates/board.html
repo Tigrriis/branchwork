@@ -1,20 +1,20 @@
 {% extends "base.html" %}
-{% block title %}Board · {{ SITE_NAME }}{% endblock %}
+{% block title %}{{ t('board.title') }} · {{ SITE_NAME }}{% endblock %}
 {% block main_class %}page page--wide{% endblock %}
 {% block topactions %}
-  <a class="btn btn--primary btn--sm" href="{{ url_for('projects.new_project') }}">+ New project</a>
+  <a class="btn btn--primary btn--sm" href="{{ url_for('projects.new_project') }}">{{ t('common.new_scheme') }}</a>
 {% endblock %}
 
 {% block content %}
 <div class="page-head">
-  <h1>Board</h1>
+  <h1>{{ t('board.heading') }}</h1>
   <span class="muted">
-    Every project by phase.
+    {{ t('board.about') }}
     {% if wip_limit %}
-      Building is capped at {{ wip_limit }}, so something has to ship or park before another starts.
-      <a class="link-quiet" href="{{ url_for('auth.account') }}">Change the cap</a>
+      {{ t('board.capped', limit=wip_limit) }}
+      <a class="link-quiet" href="{{ url_for('auth.account') }}">{{ t('board.change_cap') }}</a>
     {% else %}
-      No cap on Building. <a class="link-quiet" href="{{ url_for('auth.account') }}">Set one</a>
+      {{ t('board.no_cap') }} <a class="link-quiet" href="{{ url_for('auth.account') }}">{{ t('board.set_cap') }}</a>
     {% endif %}
   </span>
 </div>
@@ -35,7 +35,7 @@
         {% set next = columns[loop_i + 1][0] if loop_i + 1 < columns|length else 'done' %}
         {% include "_project_card.html" %}
       {% else %}
-        <div class="bcol__empty muted small">Nothing here.</div>
+        <div class="bcol__empty muted small">{{ t('common.nothing_here') }}</div>
       {% endfor %}
     </div>
   </section>
@@ -50,15 +50,15 @@
       {% for p in projects %}
       <div class="shelf-row">
         <a class="due-row__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
-        {% if key == 'parked' and p.parked_until %}<span class="muted small">until {{ p.parked_until.strftime('%d %b %Y') }}</span>{% endif %}
-        <span class="muted small">{{ p.points_done }} / {{ p.points_max }} pts</span>
+        {% if key == 'parked' and p.parked_until %}<span class="muted small">{{ t('board.parked_until', date=p.parked_until.strftime('%d %b %Y')) }}</span>{% endif %}
+        <span class="muted small">{{ t('common.pts', done=p.points_done, max=p.points_max) }}</span>
         <form method="post" action="{{ url_for('dashboard.set_phase', project_id=p.id) }}" class="inline-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="exploring">
-          <button class="btn btn--ghost btn--sm">{% if key == 'done' %}Reopen{% else %}Pick it up{% endif %}</button>
+          <button class="btn btn--ghost btn--sm">{% if key == 'done' %}{{ t('board.reopen') }}{% else %}{{ t('common.pick_up') }}{% endif %}</button>
         </form>
       </div>
       {% else %}
-      <div class="muted small">Nothing here.</div>
+      <div class="muted small">{{ t('common.nothing_here') }}</div>
       {% endfor %}
     </div>
   </details>

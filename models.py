@@ -1,4 +1,7 @@
-"""Database models for Branchwork.
+"""Database models for Villainy.
+
+In the interface a Project is a *scheme*, a Branch a *plot* and a Task a
+*machination*. The code keeps the plain names; only the words changed.
 
 A ``Project`` is a skill tree. It splits into ``Branch`` columns, each branch
 stacks its ``Task`` tiles in numbered tiers, and every task carries points
@@ -18,11 +21,13 @@ routes, not just hidden by the template.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
 
 from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from copytext import tx
 from extensions import db, login_manager
 
 
@@ -30,16 +35,31 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+class _Labels(Mapping):
+    """A fixed set of keys whose display words come from the copy catalogue.
+
+    Behaves like the plain dict it replaced (``items()``, ``in``, ``get``) but
+    looks each label up when asked, so a catalogue edit shows without a restart.
+    """
+
+    def __init__(self, prefix: str, keys: tuple):
+        self._prefix, self._keys = prefix, keys
+
+    def __getitem__(self, key):
+        if key not in self._keys:
+            raise KeyError(key)
+        return tx(f"{self._prefix}.{key}")
+
+    def __iter__(self):
+        return iter(self._keys)
+
+    def __len__(self):
+        return len(self._keys)
+
+
 # Column tints. Stored as short strings so adding one is a CSS change, not a
 # migration; the CSS classes are .col--<hue> in static/branchwork/theme.css.
-HUES = {
-    "green": "Green",
-    "blue": "Blue",
-    "red": "Red",
-    "amber": "Amber",
-    "violet": "Violet",
-    "teal": "Teal",
-}
+HUES = _Labels("hue", ("green", "blue", "red", "amber", "violet", "teal"))
 
 STATE_FULL = "full"       # every point earned
 STATE_PART = "part"       # some points earned
@@ -48,20 +68,12 @@ STATE_EMPTY = "empty"     # none yet
 # Project lifecycle. The first four are "active" and appear on the board's
 # main columns; the rest are shelves. ``PHASE_ADVANCE`` is the path the
 # review page's "advance" button walks.
-PHASES = {
-    "idea": "Idea",
-    "exploring": "Exploring",
-    "building": "Building",
-    "maintaining": "Maintaining",
-    "done": "Done",
-    "parked": "Parked",
-    "dropped": "Dropped",
-}
+PHASES = _Labels("phase", ("idea", "exploring", "building", "maintaining", "done", "parked", "dropped"))
 ACTIVE_PHASES = ("idea", "exploring", "building", "maintaining")
 PHASE_ADVANCE = ["idea", "exploring", "building", "maintaining", "done"]
 
 # How often a project expects to be touched. 0 means no tempo (never "due").
-CADENCES = {7: "Weekly", 14: "Fortnightly", 30: "Monthly", 90: "Quarterly", 0: "No tempo"}
+CADENCES = _Labels("cadence", (7, 14, 30, 90, 0))
 
 # Activity event kinds. ``points`` and ``task`` come from the tree, ``touch``
 # from the "touched it" button, ``phase`` from the board, ``git`` from
@@ -192,7 +204,7 @@ class Project(db.Model):
 
     @property
     def cadence_label(self) -> str:
-        return CADENCES.get(self.cadence_days, f"Every {self.cadence_days} days")
+        return CADENCES.get(self.cadence_days, tx("cadence.every", n=self.cadence_days))
 
     def record(self, kind: str, *, task: Task | None = None, delta: int = 0,
                note: str | None = None, at: datetime | None = None) -> ActivityEvent:
@@ -300,7 +312,7 @@ class Branch(db.Model):
         if self.requires is None:
             return None
         if self.is_locked:
-            return f"Opens when {self.requires.name} is complete"
+            return tx("gate.opens_when", name=self.requires.name)
         return None
 
     # ── Tiers ───────────────────────────────────────────────────────────────
@@ -334,8 +346,8 @@ class Branch(db.Model):
                 have = sum(t.points_done for t in prev["tasks"])
                 open_ = prev["open"] and have >= gate
                 reason = None if open_ else (
-                    f"Needs {gate} points in the tier above · {have}/{gate}"
-                    if prev["open"] else "Tier above is still locked")
+                    tx("gate.needs_points", gate=gate, have=have)
+                    if prev["open"] else tx("gate.above_locked"))
             row = {"tier": n, "tasks": tasks, "open": open_, "have": have,
                    "need": gate, "reason": reason}
             rows.append(row)
@@ -430,7 +442,7 @@ class Template(db.Model):
 
     @property
     def summary(self) -> str:
-        return " → ".join(b.name for b in self.branches) if self.branches else "No branches yet"
+        return " → ".join(b.name for b in self.branches) if self.branches else tx("templates.summary_empty")
 
 
 class TemplateBranch(db.Model):

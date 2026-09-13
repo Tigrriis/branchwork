@@ -5,13 +5,13 @@
 
 {% block topnav %}
   <div class="segmented">
-    <a class="segmented__item is-active" href="{{ url_for('projects.tree', project_id=project.id) }}">Tree</a>
-    <a class="segmented__item" href="{{ url_for('projects.task_list', project_id=project.id) }}">List</a>
+    <a class="segmented__item is-active" href="{{ url_for('projects.tree', project_id=project.id) }}">{{ t('tree.tab_tree') }}</a>
+    <a class="segmented__item" href="{{ url_for('projects.task_list', project_id=project.id) }}">{{ t('tree.tab_list') }}</a>
   </div>
 {% endblock %}
 {% block topactions %}
   {% if project.branches %}
-  <a class="btn btn--primary btn--sm" href="{{ url_for('projects.new_task', branch_id=project.branches[0].id) }}">+ New task</a>
+  <a class="btn btn--primary btn--sm" href="{{ url_for('projects.new_task', branch_id=project.branches[0].id) }}">{{ t('tree.new_machination') }}</a>
   {% endif %}
 {% endblock %}
 
@@ -19,17 +19,19 @@
 <div class="tree-head">
   <div class="tree-head__title">
     <h1>{{ project.name }}</h1>
-    {% if project.code %}<span class="muted">Project {{ project.code }}</span>{% endif %}
+    {% if project.code %}<span class="muted">{{ t('tree.code', code=project.code) }}</span>{% endif %}
     <span class="phase phase--{{ project.phase }}">{{ project.phase_label }}</span>
-    <span class="{% if project.is_due %}is-due{% else %}muted{% endif %} small">{% if project.days_since_touch == 0 %}touched today{% else %}{{ project.days_since_touch }}d since a touch{% endif %}</span>
-    <a class="link-quiet" href="{{ url_for('projects.edit_project', project_id=project.id) }}">Edit</a>
+    <span class="{% if project.is_due %}is-due{% else %}muted{% endif %} small">{% if project.days_since_touch == 0 %}{{ t('common.touched_today') }}{% else %}{{ t('tree.since_touch', n=project.days_since_touch) }}{% endif %}</span>
+    <a class="link-quiet" href="{{ url_for('projects.edit_project', project_id=project.id) }}">{{ t('common.edit') }}</a>
   </div>
   <div class="tree-head__stats" id="tree-stats">
-    <span class="legend"><span class="legend__swatch legend__swatch--full"></span>Complete <span class="legend__n" data-count="full">{{ project.count_state('full') }}</span></span>
-    <span class="legend"><span class="legend__swatch legend__swatch--part"></span>In progress <span class="legend__n" data-count="part">{{ project.count_state('part') }}</span></span>
-    <span class="legend"><span class="legend__swatch legend__swatch--empty"></span>Not started <span class="legend__n" data-count="empty">{{ project.count_state('empty') }}</span></span>
+    <span class="legend"><span class="legend__swatch legend__swatch--full"></span>{{ t('state.full') }} <span class="legend__n" data-count="full">{{ project.count_state('full') }}</span></span>
+    <span class="legend"><span class="legend__swatch legend__swatch--part"></span>{{ t('state.part') }} <span class="legend__n" data-count="part">{{ project.count_state('part') }}</span></span>
+    <span class="legend"><span class="legend__swatch legend__swatch--empty"></span>{{ t('state.empty') }} <span class="legend__n" data-count="empty">{{ project.count_state('empty') }}</span></span>
+    {% set p_done %}<span data-points-done>{{ project.points_done }}</span>{% endset %}
+    {% set p_max %}<span data-points-max>{{ project.points_max }}</span>{% endset %}
     <span class="points">
-      <strong><span data-points-done>{{ project.points_done }}</span> / <span data-points-max>{{ project.points_max }}</span> points</strong>
+      <strong>{{ t('tree.points', done=p_done, max=p_max) }}</strong>
       <span class="bar bar--wide"><span class="bar__fill" data-points-bar style="width: {{ project.percent }}%"></span></span>
     </span>
   </div>
@@ -38,31 +40,31 @@
 <div class="next-action-bar">
   <form method="post" action="{{ url_for('dashboard.set_next_action', project_id=project.id) }}" class="action-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <span class="field__label">Next action</span>
-    <input class="input input--sm" type="text" name="next_action" maxlength="200" value="{{ project.next_action or '' }}" placeholder="The one concrete step that moves it forward">
-    <button class="btn btn--ghost btn--sm" type="submit">Save</button>
+    <span class="field__label">{{ t('fields.next_label') }}</span>
+    <input class="input input--sm" type="text" name="next_action" maxlength="200" value="{{ project.next_action or '' }}" placeholder="{{ t('fields.next_placeholder') }}">
+    <button class="btn btn--ghost btn--sm" type="submit">{{ t('common.save') }}</button>
   </form>
   <form method="post" action="{{ url_for('dashboard.touch', project_id=project.id) }}" class="inline-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button class="btn btn--ghost btn--sm" title="Log work done outside the app">Touched it</button>
+    <button class="btn btn--ghost btn--sm" title="{{ t('common.touched_title') }}">{{ t('common.touched') }}</button>
   </form>
 </div>
 
 <div id="tree" class="tree" data-project="{{ project.id }}">
   {% include "_tree.html" %}
 </div>
-<p class="hint muted">Click a tile to add a point. Shift-click (or right-click) to take one away.</p>
+<p class="hint muted">{{ t('tree.click_hint') }}</p>
 
 <section class="ideas" id="ideas">
   <div class="ideas__head">
-    <h2 class="section__title">Ideas</h2>
-    <span class="muted small">Loose thoughts for this project. They carry no points and count towards nothing until you drag one onto a tier.</span>
+    <h2 class="section__title">{{ t('ideas.heading') }}</h2>
+    <span class="muted small">{{ t('ideas.about') }}</span>
   </div>
   <form method="post" action="{{ url_for('projects.add_idea', project_id=project.id) }}" class="ideas__add">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input class="input input--sm" type="text" name="text" maxlength="2000" required
-           placeholder="Something to do here eventually…">
-    <button class="btn btn--sm" type="submit">Add</button>
+           placeholder="{{ t('ideas.placeholder') }}">
+    <button class="btn btn--sm" type="submit">{{ t('common.add') }}</button>
   </form>
   <div id="ideas-list">
     {% include "_ideas.html" %}

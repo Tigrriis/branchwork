@@ -1,55 +1,50 @@
 {% extends "base.html" %}
-{% block title %}Account · {{ SITE_NAME }}{% endblock %}
+{% block title %}{{ t('account.title') }} · {{ SITE_NAME }}{% endblock %}
 {% block main_class %}page page--narrow{% endblock %}
 
 {% block content %}
 <div class="card">
-  <div class="card__head"><h1>Account</h1><span class="muted">{{ current_user.email }}</span></div>
+  <div class="card__head"><h1>{{ t('account.heading') }}</h1><span class="muted">{{ current_user.email }}</span></div>
   <form method="post" class="form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="field">
-      <label class="field__label" for="display_name">Name</label>
+      <label class="field__label" for="display_name">{{ t('common.name') }}</label>
       <input class="input" type="text" id="display_name" name="display_name" maxlength="80" value="{{ current_user.display_name or '' }}">
     </div>
     <fieldset class="fieldset">
-      <legend>Work in progress</legend>
+      <legend>{{ t('account.wip_legend') }}</legend>
       <div class="field">
-        <label class="field__label" for="wip_building_limit">Projects allowed in Building at once</label>
+        <label class="field__label" for="wip_building_limit">{{ t('account.wip_label') }}</label>
         <input class="input" type="number" id="wip_building_limit" name="wip_building_limit"
                min="0" max="{{ config.MAX_WIP_BUILDING_LIMIT }}" value="{{ current_user.wip_building_limit }}">
-        <span class="muted small">
-          The board refuses to move another project into Building once this many are there, so
-          something has to ship or park first. Set it to 0 to turn the cap off. Lowering it never
-          moves projects that are already in Building.
-        </span>
+        <span class="muted small">{{ t('account.wip_help') }}</span>
       </div>
     </fieldset>
     <fieldset class="fieldset">
-      <legend>Change password</legend>
+      <legend>{{ t('account.password_legend') }}</legend>
       <div class="field">
-        <label class="field__label" for="current_password">Current password</label>
+        <label class="field__label" for="current_password">{{ t('account.current_password') }}</label>
         <input class="input" type="password" id="current_password" name="current_password" autocomplete="current-password">
       </div>
       <div class="field">
-        <label class="field__label" for="new_password">New password <span class="muted">(leave blank to keep)</span></label>
+        <label class="field__label" for="new_password">{{ t('account.new_password') }} <span class="muted">{{ t('account.new_password_hint') }}</span></label>
         <input class="input" type="password" id="new_password" name="new_password" autocomplete="new-password">
       </div>
     </fieldset>
     <div class="form__actions">
-      <button class="btn btn--primary" type="submit">Save</button>
+      <button class="btn btn--primary" type="submit">{{ t('common.save') }}</button>
     </div>
   </form>
 </div>
 <div class="card settings-link">
   <div>
-    <strong>Project templates</strong>
-    <div class="muted small">The branches a new project starts with. Copy a built-in and change it,
-      or build your own.</div>
+    <strong>{{ t('account.templates_heading') }}</strong>
+    <div class="muted small">{{ t('account.templates_help') }}</div>
   </div>
-  <a class="btn btn--ghost btn--sm" href="{{ url_for('starters.template_list') }}">Manage</a>
+  <a class="btn btn--ghost btn--sm" href="{{ url_for('starters.template_list') }}">{{ t('account.templates_manage') }}</a>
 </div>
 <form method="post" action="{{ url_for('auth.logout') }}" class="inline-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <button class="btn btn--ghost" type="submit">Sign out</button>
+  <button class="btn btn--ghost" type="submit">{{ t('account.sign_out') }}</button>
 </form>
 {% endblock %}

@@ -2,9 +2,9 @@
    Rendered on the page and again by POST /projects/<id>/focus after a drop. #}
 <section class="lane lane--focus" data-focus-zone="1">
   <div class="lane__head">
-    <h2 class="section__title">Focus</h2>
+    <h2 class="section__title">{{ t('focus.heading') }}</h2>
     <span class="lane__count">{{ focus|length }}</span>
-    <span class="muted small">What you are giving time to now.</span>
+    <span class="muted small">{{ t('focus.about') }}</span>
   </div>
 
   {% for p in focus %}
@@ -16,18 +16,16 @@
       <div class="prow__head">
         <a class="prow__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
         <span class="phase phase--{{ p.phase }}">{{ p.phase_label }}</span>
-        <span class="prow__age {% if p.is_due %}is-due{% endif %}">
-          {% if p.days_since_touch == 0 %}touched today{% else %}{{ p.days_since_touch }}d ago{% endif %}
-          · {{ p.cadence_label|lower }}
-        </span>
+        {% set age %}{% if p.days_since_touch == 0 %}{{ t('common.touched_today') }}{% else %}{{ t('common.days_ago', n=p.days_since_touch) }}{% endif %}{% endset %}
+        <span class="prow__age {% if p.is_due %}is-due{% endif %}">{{ t('focus.age_cadence', age=age, cadence=p.cadence_label|lower) }}</span>
       </div>
       {% if p.objective %}<div class="prow__objective muted small">{{ p.objective }}</div>{% endif %}
       <form method="post" action="{{ url_for('dashboard.set_next_action', project_id=p.id) }}" class="action-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input class="input input--sm {% if not p.next_action %}input--wanting{% endif %}" type="text"
                name="next_action" maxlength="200" value="{{ p.next_action or '' }}"
-               placeholder="No next action — this is how a project stalls">
-        <button class="btn btn--ghost btn--sm" type="submit">Save</button>
+               placeholder="{{ t('focus.next_placeholder') }}">
+        <button class="btn btn--ghost btn--sm" type="submit">{{ t('common.save') }}</button>
       </form>
     </div>
     <div class="prow__side">
@@ -35,29 +33,27 @@
       <span class="prow__actions">
         <form method="post" action="{{ url_for('dashboard.touch', project_id=p.id) }}" class="inline-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="btn btn--sm" title="Log work done outside the app">Touched it</button>
+          <button class="btn btn--sm" title="{{ t('common.touched_title') }}">{{ t('common.touched') }}</button>
         </form>
         <form method="post" action="{{ url_for('dashboard.set_focus', project_id=p.id) }}" class="inline-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="focused" value="0">
-          <button class="icon-btn" type="submit" title="Move to the backburner">↓</button>
+          <button class="icon-btn" type="submit" title="{{ t('focus.demote_title') }}">↓</button>
         </form>
       </span>
     </div>
   </article>
   {% else %}
-  <p class="lane__empty muted">
-    Nothing in focus. Drag something up from the backburner, or
-    <a href="{{ url_for('projects.new_project') }}">start something new</a>.
-  </p>
+  {% set link %}<a href="{{ url_for('projects.new_project') }}">{{ t('focus.empty_link') }}</a>{% endset %}
+  <p class="lane__empty muted">{{ t('focus.empty', link=link) }}</p>
   {% endfor %}
 </section>
 
 <section class="lane lane--back" data-focus-zone="0">
   <div class="lane__head">
-    <h2 class="section__title">Backburner</h2>
+    <h2 class="section__title">{{ t('backburner.heading') }}</h2>
     <span class="lane__count">{{ backburner|length }}</span>
-    <span class="muted small">Still yours, just not this weekend. They stop asking for your attention.</span>
+    <span class="muted small">{{ t('backburner.about') }}</span>
   </div>
 
   {% for p in backburner %}
@@ -69,7 +65,7 @@
       <div class="prow__head">
         <a class="prow__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
         <span class="phase phase--{{ p.phase }}">{{ p.phase_label }}</span>
-        <span class="prow__age muted">{% if p.days_since_touch == 0 %}touched today{% else %}{{ p.days_since_touch }}d ago{% endif %}</span>
+        <span class="prow__age muted">{% if p.days_since_touch == 0 %}{{ t('common.touched_today') }}{% else %}{{ t('common.days_ago', n=p.days_since_touch) }}{% endif %}</span>
       </div>
       {% if p.next_action %}<div class="muted small">→ {{ p.next_action }}</div>{% endif %}
     </div>
@@ -79,12 +75,12 @@
         <form method="post" action="{{ url_for('dashboard.set_focus', project_id=p.id) }}" class="inline-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="focused" value="1">
-          <button class="icon-btn" type="submit" title="Bring into focus">↑</button>
+          <button class="icon-btn" type="submit" title="{{ t('backburner.promote_title') }}">↑</button>
         </form>
       </span>
     </div>
   </article>
   {% else %}
-  <p class="lane__empty muted small">Nothing here. Drop a project you are not touching this weekend.</p>
+  <p class="lane__empty muted small">{{ t('backburner.empty') }}</p>
   {% endfor %}
 </section>

@@ -1,5 +1,6 @@
 """Gate and lock rules, and the points endpoint that enforces them."""
-from conftest import login, make_branch, make_project, make_task, make_user
+from conftest import copy_in, login, make_branch, make_project, make_task, make_user
+from copytext import tx
 
 
 def _points(client, task_id, delta=1):
@@ -17,7 +18,7 @@ def test_tier_two_opens_at_gate(db):
     rows = branch.tiers()
     assert [r["tier"] for r in rows] == [1, 2]
     assert rows[0]["open"] and not rows[1]["open"]
-    assert "Needs 3 points" in rows[1]["reason"]
+    assert rows[1]["reason"] == tx("gate.needs_points", gate=3, have=0)
     assert not c.editable
 
     a.set_points(2); b.set_points(1); db.session.commit()
@@ -45,7 +46,7 @@ def test_branch_locked_until_required_branch_complete(db):
     tender = make_task(construction, "Tender")
 
     assert construction.is_locked
-    assert construction.lock_reason == "Opens when Approvals is complete"
+    assert construction.lock_reason == tx("gate.opens_when", name="Approvals")
     assert not tender.editable
     permit.set_points(2); db.session.commit()
     assert approvals.is_complete and not construction.is_locked
@@ -123,7 +124,7 @@ def test_branch_form_rejects_cycle(client, db):
     r = client.post(f"/branches/{a.id}/edit", data={"name": "A", "hue": "green",
                                                     "requires_branch_id": str(b.id)},
                     follow_redirects=True)
-    assert b"wait on each other" in r.data
+    assert copy_in(r.data, "plot.cycle")
     db.session.refresh(a)
     assert a.requires_branch_id is None
 
@@ -165,7 +166,7 @@ def test_tree_page_renders_tiles_and_locks(client, db):
     r = client.get(f"/projects/{project.id}")
     html = r.data.decode()
     assert "tile--part" in html and "1/2" in html
-    assert "col--locked" in html and "Opens when Design is complete" in html
+    assert "col--locked" in html and copy_in(html, "gate.opens_when", name="Design")
     assert "col--red" in html
 
 
