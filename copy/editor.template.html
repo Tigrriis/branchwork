@@ -207,6 +207,11 @@
   var db = null;
   var pending = 0;
   var filter = "all";
+  // Looked up before anything renders: the first render already needs them,
+  // and a lookup declared further down is still undefined at that point.
+  var search = document.getElementById("search");
+  var saveEl = document.getElementById("save");
+  var building = true;             // batch the first render's filter and counts
 
   function placeholders(text) {
     var out = new Set(), m;
@@ -274,6 +279,9 @@
     script.appendChild(section);
   });
   document.getElementById("n-lines").textContent = total;
+  building = false;
+  applyFilter();
+  tally();
   requestAnimationFrame(function () { cues.forEach(function (s) { autosize(s.area); }); });
 
   // ── Per-line state: rewritten? placeholders intact? ──
@@ -315,8 +323,7 @@
     state.problem.textContent = why.join(" ");
     state.changed = changed;
     state.broken = broken;
-    applyFilter();
-    tally();
+    if (!building) { applyFilter(); tally(); }
   }
 
   function tally() {
@@ -336,7 +343,6 @@
   }
 
   // ── Search and filter ──
-  var search = document.getElementById("search");
   function applyFilter() {
     var q = search.value.trim().toLowerCase();
     var shown = 0;
@@ -365,7 +371,6 @@
   });
 
   // ── Saving: one database document per rewritten line ──
-  var saveEl = document.getElementById("save");
   function setSave(state, text) { saveEl.setAttribute("data-state", state); saveEl.textContent = text; }
 
   function queueSave(state, now) {
@@ -412,6 +417,7 @@
   window.claude.use("db").then(function (namespace) {
     if (!namespace) { setSave("offline", "Saving isn't available here"); return; }
     db = namespace;
+    setSave("saved", "Ready");     // don't wait on a first snapshot to say so
     db.collection("edits").onSnapshot(function (snap) {
       snap.docChanges().forEach(function (change) {
         var body = change.doc.data() || {};
