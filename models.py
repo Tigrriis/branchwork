@@ -1,6 +1,6 @@
 """Database models for Villainy.
 
-In the interface a Project is a *scheme*, a Branch a *plot* and a Task a
+In the interface a Project is a *plot*, a Branch a *scheme* and a Task a
 *machination*. The code keeps the plain names; only the words changed.
 
 A ``Project`` is a skill tree. It splits into ``Branch`` columns, each branch
@@ -21,6 +21,7 @@ routes, not just hidden by the template.
 """
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
 
@@ -77,8 +78,9 @@ CADENCES = _Labels("cadence", (7, 14, 30, 90, 0))
 
 # Activity event kinds. ``points`` and ``task`` come from the tree, ``touch``
 # from the "touched it" button, ``phase`` from the board, ``git`` from
-# ``flask sync-git``, ``review`` from the weekly review.
-EVENT_KINDS = ("points", "task", "touch", "phase", "git", "review", "park")
+# ``flask sync-git``, ``review`` from the weekly review, ``routine`` from
+# using a routine.
+EVENT_KINDS = ("points", "task", "touch", "phase", "git", "review", "park", "routine")
 
 
 def _aware(dt: datetime | None) -> datetime | None:
@@ -159,6 +161,9 @@ class Project(db.Model):
         cascade="all, delete-orphan")
     events = db.relationship(
         "ActivityEvent", backref="project", order_by="ActivityEvent.created_at",
+        cascade="all, delete-orphan")
+    routines = db.relationship(
+        "Routine", backref="project", order_by="Routine.position, Routine.id",
         cascade="all, delete-orphan")
 
     # ── Tempo ───────────────────────────────────────────────────────────────
@@ -328,9 +333,13 @@ class Branch(db.Model):
     def tiers(self) -> list[dict]:
         """Ordered tier rows with their open/closed state.
 
-        Each row: ``{"tier", "tasks", "open", "have", "need", "reason"}``.
-        ``have`` is the points in the row above (what the gate counts);
-        ``need`` is the project's gate size.
+        Each row: ``{"tier", "tasks", "open", "have", "need", "reason",
+        "points", "fill", "charged"}``. ``have`` is the points in the row
+        above (what the gate counts); ``need`` is the project's gate size.
+        ``points`` is this row's own points and ``fill`` how far they go
+        towards opening the row below, 0 to 1, so a tier is full exactly when
+        it holds enough to open the next one. A closed row reads 0: points
+        there cannot count yet.
         """
         gate = self.project.gate_points if self.project else 3
         locked = self.is_locked
@@ -348,8 +357,11 @@ class Branch(db.Model):
                 reason = None if open_ else (
                     tx("gate.needs_points", gate=gate, have=have)
                     if prev["open"] else tx("gate.above_locked"))
+            points = sum(t.points_done for t in tasks)
+            fill = min(1.0, points / gate) if open_ and gate > 0 else 0.0
             row = {"tier": n, "tasks": tasks, "open": open_, "have": have,
-                   "need": gate, "reason": reason}
+                   "need": gate, "reason": reason, "points": points,
+                   "fill": fill, "charged": fill >= 1.0}
             rows.append(row)
             prev = row
         return rows
@@ -413,6 +425,68 @@ class Task(db.Model):
 
     def adjust(self, delta: int) -> None:
         self.set_points((self.points_done or 0) + delta)
+
+
+class Routine(db.Model):
+    """Something a plot needs doing on a tempo: an ability with a cooldown.
+
+    ``last_done_at`` starts the cooldown and ``every_days`` is its length.
+    ``charge`` runs from 0 just after use to 1 when it is ready again, and a
+    routine that has never been done is ready. The sums live here so the plot
+    page, Today and the tests all read the same clock.
+    """
+    __tablename__ = "routines"
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False, index=True)
+    title = db.Column(db.String(120), nullable=False)
+    icon = db.Column(db.String(30), nullable=False, default="refresh", server_default="refresh")
+    every_days = db.Column(db.Integer, nullable=False, default=7, server_default="7")
+    position = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    last_done_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
+
+    @property
+    def cooldown(self) -> timedelta:
+        return timedelta(days=max(1, self.every_days or 1))
+
+    @property
+    def ready_at(self) -> datetime | None:
+        done = _aware(self.last_done_at)
+        return done + self.cooldown if done is not None else None
+
+    @property
+    def charge(self) -> float:
+        done = _aware(self.last_done_at)
+        if done is None:
+            return 1.0
+        elapsed = (_utcnow() - done).total_seconds()
+        return max(0.0, min(1.0, elapsed / self.cooldown.total_seconds()))
+
+    @property
+    def is_ready(self) -> bool:
+        return self.charge >= 1.0
+
+    @property
+    def days_left(self) -> int:
+        """Whole days until ready, rounded up; 0 once ready."""
+        if self.is_ready:
+            return 0
+        return max(1, math.ceil((self.ready_at - _utcnow()).total_seconds() / 86400))
+
+    @property
+    def overdue_days(self) -> int:
+        """Whole days it has sat ready past its tempo; 0 if never done."""
+        ready_at = self.ready_at
+        if ready_at is None:
+            return 0
+        return max(0, (_utcnow() - ready_at).days)
+
+    def mark_done(self, at: datetime | None = None) -> None:
+        """Use it: restart the cooldown and count it as work on the plot."""
+        at = _aware(at) or _utcnow()
+        self.last_done_at = at
+        self.project.record("routine", note=self.title, at=at)
 
 
 class Template(db.Model):

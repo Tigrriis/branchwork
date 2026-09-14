@@ -79,7 +79,7 @@ def _int(value, default: int, lo: int, hi: int) -> int:
 def _read_project_form(project: Project) -> bool:
     name = (request.form.get("name") or "").strip()[:120]
     if not name:
-        flash(tx("scheme.name_required"), "error")
+        flash(tx("plot.name_required"), "error")
         return False
     project.name = name
     project.code = (request.form.get("code") or "").strip()[:40] or None
@@ -102,7 +102,7 @@ def _read_project_form(project: Project) -> bool:
 @login_required
 def new_project():
     if len(current_user.projects) >= current_app.config["MAX_PROJECTS_PER_USER"]:
-        flash(tx("scheme.limit"), "error")
+        flash(tx("plot.limit"), "error")
         return redirect(url_for("dashboard.board"))
     # Not attached to current_user until the form is valid: appending to the
     # relationship would let an autoflush insert a half-built row.
@@ -116,7 +116,7 @@ def new_project():
             db.session.add(branch)
         project.record("touch", note="Project created")
         db.session.commit()
-        flash(tx("scheme.created") if project.branches else tx("scheme.created_add_plot"), "success")
+        flash(tx("plot.created") if project.branches else tx("plot.created_add_scheme"), "success")
         return redirect(url_for("projects.tree", project_id=project.id))
     return render_template("project_form.html", project=project, is_new=True,
                            starters=choices_for(current_user), default_starter=DEFAULT_STARTER)
@@ -150,7 +150,7 @@ def edit_project(project_id: int):
     project = _project(project_id)
     if request.method == "POST" and _read_project_form(project):
         db.session.commit()
-        flash(tx("scheme.saved"), "success")
+        flash(tx("plot.saved"), "success")
         return redirect(url_for("projects.tree", project_id=project.id))
     return render_template("project_form.html", project=project, is_new=False)
 
@@ -161,7 +161,7 @@ def delete_project(project_id: int):
     project = _project(project_id)
     db.session.delete(project)
     db.session.commit()
-    flash(tx("scheme.deleted"), "info")
+    flash(tx("plot.deleted"), "info")
     return redirect(url_for("dashboard.board"))
 
 
@@ -182,7 +182,7 @@ def _would_cycle(branch: Branch, requires: Branch | None) -> bool:
 def _read_branch_form(branch: Branch, project: Project) -> bool:
     name = (request.form.get("name") or "").strip()[:80]
     if not name:
-        flash(tx("plot.name_required"), "error")
+        flash(tx("scheme.name_required"), "error")
         return False
     hue = request.form.get("hue") or "green"
     if hue not in HUES:
@@ -192,10 +192,10 @@ def _read_branch_form(branch: Branch, project: Project) -> bool:
     if requires_id:
         requires = db.session.get(Branch, int(requires_id)) if requires_id.isdigit() else None
         if requires is None or requires.project_id != project.id:
-            flash(tx("plot.not_in_scheme"), "error")
+            flash(tx("scheme.not_in_plot"), "error")
             return False
         if branch.id is not None and _would_cycle(branch, requires):
-            flash(tx("plot.cycle"), "error")
+            flash(tx("scheme.cycle"), "error")
             return False
     branch.name, branch.hue, branch.requires = name, hue, requires
     return True
@@ -206,7 +206,7 @@ def _read_branch_form(branch: Branch, project: Project) -> bool:
 def new_branch(project_id: int):
     project = _project(project_id)
     if len(project.branches) >= current_app.config["MAX_BRANCHES_PER_PROJECT"]:
-        flash(tx("plot.limit"), "error")
+        flash(tx("scheme.limit"), "error")
         return redirect(url_for("projects.tree", project_id=project.id))
     # Rotate through the hues so consecutive branches differ by default.
     hues = list(HUES)
@@ -216,7 +216,7 @@ def new_branch(project_id: int):
         branch.project = project
         db.session.add(branch)
         db.session.commit()
-        flash(tx("plot.added", name=branch.name), "success")
+        flash(tx("scheme.added", name=branch.name), "success")
         return redirect(url_for("projects.tree", project_id=project.id))
     return render_template("branch_form.html", project=project, branch=branch, is_new=True)
 
@@ -228,7 +228,7 @@ def edit_branch(branch_id: int):
     project = branch.project
     if request.method == "POST" and _read_branch_form(branch, project):
         db.session.commit()
-        flash(tx("plot.saved"), "success")
+        flash(tx("scheme.saved"), "success")
         return redirect(url_for("projects.tree", project_id=project.id))
     return render_template("branch_form.html", project=project, branch=branch, is_new=False)
 
@@ -260,7 +260,7 @@ def delete_branch(branch_id: int):
             other.requires = None
     db.session.delete(branch)
     db.session.commit()
-    flash(tx("plot.deleted"), "info")
+    flash(tx("scheme.deleted"), "info")
     return redirect(url_for("projects.tree", project_id=project.id))
 
 
@@ -275,7 +275,7 @@ def _read_task_form(task: Task, project: Project, default_branch: Branch | None 
     if branch_id and branch_id.isdigit():
         target = db.session.get(Branch, int(branch_id))
         if target is None or target.project_id != project.id:
-            flash(tx("plot.not_in_scheme"), "error")
+            flash(tx("scheme.not_in_plot"), "error")
             return False
         if task.branch is not target:
             task.branch = target
@@ -401,12 +401,12 @@ def promote_idea(item_id: int):
     payload = request.get_json(silent=True) or {}
     branch = db.session.get(Branch, payload.get("branch_id") or 0)
     if branch is None or branch.project.owner_id != current_user.id:
-        return jsonify({"error": "no_branch", "message": tx("ideas.plot_gone")}), 404
+        return jsonify({"error": "no_branch", "message": tx("ideas.scheme_gone")}), 404
     project = branch.project
     if item.status != "open":
         return jsonify({"error": "not_open", "message": tx("ideas.not_open")}), 409
     if len(branch.tasks) >= current_app.config["MAX_TASKS_PER_BRANCH"]:
-        return jsonify({"error": "full", "message": tx("ideas.plot_full")}), 409
+        return jsonify({"error": "full", "message": tx("ideas.scheme_full")}), 409
 
     tier = _int(payload.get("tier"), branch.next_tier, 1, 50)
     title = item.text.strip().splitlines()[0][:120]

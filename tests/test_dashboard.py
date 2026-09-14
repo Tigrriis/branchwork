@@ -626,7 +626,7 @@ def test_copying_a_builtin_gives_an_editable_template(client, db):
         ("Design", "green", False), ("Approvals", "blue", False), ("Construction", "red", True)]
     # It shows on the new-project form, marked as the user's own.
     html = client.get("/projects/new").data.decode()
-    assert f'value="custom:{t.id}"' in html and copy_in(html, "scheme.yours_tag")
+    assert f'value="custom:{t.id}"' in html and copy_in(html, "plot.yours_tag")
 
 
 def test_copying_carries_seeded_tasks_with_their_points(client, db):

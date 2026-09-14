@@ -18,6 +18,7 @@ from extensions import db
 from models import (
     ACTIVE_PHASES, CADENCES, PHASES, InboxItem, Project,
 )
+from routines import next_routine, ready_routines
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -86,6 +87,9 @@ def _today_context():
                          if i.status == "parked" and i.project_id is None],
         "active_projects": [p for p in projects if p.is_active],
         "today": date.today(),
+        # The bar across the top: routines ready on any live plot.
+        "ready_routines": ready_routines(current_user),
+        "next_routine": next_routine(current_user),
     }
 
 
@@ -227,7 +231,7 @@ def inbox_file(item_id: int):
     project_id = request.form.get("project_id") or ""
     project = _project(int(project_id)) if project_id.isdigit() else None
     if project is None:
-        flash(tx("inbox.pick_scheme"), "error")
+        flash(tx("inbox.pick_plot"), "error")
         return _back()
     item.project = project
     db.session.commit()

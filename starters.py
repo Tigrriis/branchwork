@@ -179,7 +179,7 @@ def new_template():
                 tasks_text=lines or None))
     else:
         template = Template(user=current_user, name=_unique_name(tx("templates.default_name")))
-        db.session.add(TemplateBranch(template=template, name=tx("templates.first_plot"), hue="green", position=0))
+        db.session.add(TemplateBranch(template=template, name=tx("templates.first_scheme"), hue="green", position=0))
     db.session.add(template)
     db.session.commit()
     flash(tx("templates.created", name=template.name), "success")

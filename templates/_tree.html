@@ -1,4 +1,4 @@
-{# The tree itself: one column per plot, tiers stacked inside. Rendered on
+{# The tree itself: one column per scheme, tiers stacked inside. Rendered on
    the page and again by POST /tasks/<id>/points, which swaps it in place. #}
 {% for branch in project.branches %}
 <section class="col col--{{ branch.hue }} {% if branch.is_locked %}col--locked{% endif %}" data-branch="{{ branch.id }}">
@@ -11,7 +11,9 @@
     </div>
     {% endif %}
     {% for row in branch.tiers() %}
-    <div class="tier {% if not row.open %}tier--closed{% endif %}">
+    {# --fill (0-1) pours the scheme's colour down the tier; full means
+       it holds enough points to open the tier below. #}
+    <div class="tier {% if not row.open %}tier--closed{% endif %}{% if row.charged %} tier--charged{% endif %}" data-tier-key="{{ branch.id }}:{{ row.tier }}" style="--fill: {{ '%.3f'|format(row.fill) }}">
       {% if not row.open and not branch.is_locked %}
       <div class="tier-note">
         <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"></rect><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg>
@@ -49,7 +51,7 @@
         <button class="icon-btn" name="direction" value="left" title="{{ t('tree.move_left') }}" {% if loop.first %}disabled{% endif %}>‹</button>
         <button class="icon-btn" name="direction" value="right" title="{{ t('tree.move_right') }}" {% if loop.last %}disabled{% endif %}>›</button>
       </form>
-      <a class="icon-btn" href="{{ url_for('projects.edit_branch', branch_id=branch.id) }}" title="{{ t('tree.edit_plot_title') }}">
+      <a class="icon-btn" href="{{ url_for('projects.edit_branch', branch_id=branch.id) }}" title="{{ t('tree.edit_scheme_title') }}">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l4-1L19 8l-3-3L5 16z"></path></svg>
       </a>
     </span>
@@ -58,6 +60,6 @@
 {% endfor %}
 <a class="col col--add" href="{{ url_for('projects.new_branch', project_id=project.id) }}">
   <span class="col--add__plus">+</span>
-  <span>{% if not project.branches %}{{ t('tree.add_first_plot') }}{% else %}{{ t('tree.add_plot') }}{% endif %}</span>
-  {% if not project.branches %}<span class="muted col--add__hint">{{ t('tree.plots_hint') }}</span>{% endif %}
+  <span>{% if not project.branches %}{{ t('tree.add_first_scheme') }}{% else %}{{ t('tree.add_scheme') }}{% endif %}</span>
+  {% if not project.branches %}<span class="muted col--add__hint">{{ t('tree.schemes_hint') }}</span>{% endif %}
 </a>

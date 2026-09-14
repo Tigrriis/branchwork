@@ -162,7 +162,9 @@ select.input { appearance: none; }
   border-radius: var(--radius-lg); overflow: hidden;
 }
 .col__wm { position: absolute; right: -40px; bottom: 30px; color: var(--tint-wm, var(--muted)); opacity: 0.07; pointer-events: none; }
-.col__body { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 16px 16px 8px; }
+/* Tiers sit edge to edge, so their fills read as one column filling up. */
+.col__body { position: relative; display: flex; flex-direction: column; padding: 0 0 8px; }
+.col__body > .tier-note { padding: 14px 16px 0; }
 .col__foot {
   position: relative; display: flex; align-items: center; gap: 10px; margin-top: auto;
   padding: 12px 18px 14px; border-top: 1px solid var(--tint-edge, var(--line));
@@ -182,12 +184,13 @@ select.input { appearance: none; }
 .col--add__plus { font-size: 28px; line-height: 1; }
 .col--add__hint { font-weight: 500; font-size: 12px; }
 
-.tier { display: flex; flex-direction: column; gap: 8px; }
-.tier--closed { padding-top: 8px; border-top: 1px dashed var(--line2); }
+.tier { position: relative; isolation: isolate; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; }
+.tier + .tier { border-top: 1px solid var(--tint-edge, var(--line)); }
+.tier.tier--closed { border-top: 1px dashed var(--line2); }
 .tier--closed .tier__row { opacity: 0.45; }
 .tier-note { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--muted); }
 .tier__row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
-.tier-add { align-self: center; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--muted); text-decoration: none; }
+.tier-add { align-self: center; margin-top: 8px; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--muted); text-decoration: none; }
 .tier-add:hover { color: var(--fg); background: rgba(255, 255, 255, 0.05); }
 
 /* Tiles */
@@ -502,3 +505,105 @@ body.is-dragging-project .lane.is-drop {
 }
 .tbranch__waits { grid-column: 1 / -1; font-size: 12px; }
 .tbranch__tasks { grid-column: 1 / -1; height: auto; font-size: 12px; }
+
+/* ── Tier fill ────────────────────────────────────────────────────────── */
+/* Each tier fills from its top edge with its scheme's colour as points add
+   up, and is full at exactly the points that open the tier below, so a
+   scheme reads as a column being poured from the top. --fill (0-1) comes
+   from Branch.tiers(); the bright line is the level it has reached. */
+.tier::before {
+  content: ""; position: absolute; z-index: -1; top: 0; left: 0; right: 0;
+  height: calc(var(--fill, 0) * 100%);
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--tint-wm, var(--full)) 12%, transparent),
+    color-mix(in srgb, var(--tint-wm, var(--full)) 30%, transparent));
+  box-shadow: inset 0 -2px 0 var(--tint-wm, var(--full));
+  transition: height 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
+}
+.tier--charged::before {
+  background: color-mix(in srgb, var(--tint-wm, var(--full)) 28%, transparent);
+}
+.tier--charged .tier__row .tile__label { color: var(--fg); }
+
+/* ── Routines: abilities with cooldowns ───────────────────────────────── */
+.abilities {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 14px 20px;
+  margin-bottom: 16px; padding: 12px 16px; border-radius: var(--radius);
+  background: var(--card); border: 1px solid var(--line);
+}
+.abilities__head { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: 200px; }
+.abilities__head .section__title { margin: 0; }
+.abilities__row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; }
+.abilities--quiet { padding: 10px 16px; background: transparent; border-style: dashed; }
+
+.ability {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  width: 84px; margin: 0; text-decoration: none;
+}
+.ability__key {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  width: 60px; height: 60px; padding: 0; overflow: hidden; cursor: pointer;
+  border-radius: 12px; border: 2px solid var(--line2);
+  background: var(--card2); color: var(--muted);
+  transition: transform 0.08s ease, border-color 0.15s ease;
+}
+.ability__key:hover { transform: translateY(-1px); }
+.ability__key:active { transform: scale(0.96); }
+.ability__key:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.ability__icon { position: relative; z-index: 1; display: flex; }
+/* While cooling, the countdown is the thing to read, so the icon steps back. */
+.ability--cooling .ability__icon { opacity: 0.35; }
+/* The cooldown: a dark sweep over whatever has not recharged yet, retreating
+   clockwise from twelve o'clock as --charge runs from 0 to 1. */
+.ability__shade {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: conic-gradient(transparent calc(var(--charge, 1) * 360deg), rgba(8, 10, 13, 0.74) 0);
+}
+.ability__count {
+  position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 800; color: var(--fg); font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.ability__badge {
+  position: absolute; z-index: 3; top: 3px; right: 3px; padding: 0 4px; border-radius: 5px;
+  background: var(--part); color: var(--on-accent); font-size: 10px; font-weight: 800; line-height: 15px;
+}
+/* Ready: lit, glowing, nothing over the icon. Overdue swaps the glow amber. */
+.ability--ready .ability__key {
+  border-color: var(--accent); color: var(--fg);
+  background: color-mix(in srgb, var(--accent) 16%, var(--card2));
+  animation: ability-ready 2.4s ease-in-out infinite;
+}
+.ability--ready .ability__shade { display: none; }
+.ability--overdue .ability__key {
+  border-color: var(--part);
+  background: color-mix(in srgb, var(--part) 16%, var(--card2));
+  animation-name: ability-overdue;
+}
+@keyframes ability-ready {
+  0%, 100% { box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 25%, transparent); }
+  50% { box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 50%, transparent); }
+}
+@keyframes ability-overdue {
+  0%, 100% { box-shadow: 0 0 10px color-mix(in srgb, var(--part) 30%, transparent); }
+  50% { box-shadow: 0 0 22px color-mix(in srgb, var(--part) 55%, transparent); }
+}
+.ability__label {
+  max-width: 84px; font-size: 11px; font-weight: 700; line-height: 1.2; text-align: center;
+  color: var(--fg2); text-decoration: none; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.ability__label:hover { text-decoration: underline; color: var(--fg); }
+.ability--cooling .ability__label { color: var(--muted); }
+.ability__meta { max-width: 84px; font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ability--add { opacity: 0.6; transition: opacity 0.15s; }
+.ability--add:hover, .ability--add:focus-visible { opacity: 1; }
+.ability__key--add { border-style: dashed; border-width: 1.5px; background: transparent; font-size: 22px; }
+.ability.is-busy .ability__key { opacity: 0.6; }
+.ability.is-used .ability__key { animation: pop 0.25s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tier::before { transition: none; }
+  .ability--ready .ability__key, .ability.is-used .ability__key { animation: none; }
+}

@@ -38,6 +38,6 @@
   </table>
 </section>
 {% else %}
-<div class="empty"><p>{{ t('list.no_plots') }}</p><a class="btn btn--primary" href="{{ url_for('projects.new_branch', project_id=project.id) }}">{{ t('tree.add_plot') }}</a></div>
+<div class="empty"><p>{{ t('list.no_schemes') }}</p><a class="btn btn--primary" href="{{ url_for('projects.new_branch', project_id=project.id) }}">{{ t('tree.add_scheme') }}</a></div>
 {% endfor %}
 {% endblock %}

@@ -1,0 +1,13 @@
+{# A plot's routines as an ability bar above its schemes. Rendered on the
+   plot page and again by POST /routines/<id>/done, which swaps it in place. #}
+<div class="abilities__head">
+  <span class="section__title">{{ t('routines.heading') }}</span>
+  {% if not project.routines %}<span class="muted small">{{ t('routines.empty') }}</span>{% endif %}
+</div>
+<div class="abilities__row">
+  {% for r in project.routines %}{% include "_ability.html" %}{% endfor %}
+  <a class="ability ability--add" href="{{ url_for('routines.new_routine', project_id=project.id) }}" title="{{ t('routines.add_title') }}">
+    <span class="ability__key ability__key--add" aria-hidden="true">+</span>
+    <span class="ability__label">{{ t('routines.add') }}</span>
+  </a>
+</div>

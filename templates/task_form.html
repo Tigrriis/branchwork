@@ -16,7 +16,7 @@
     </div>
     <div class="field-row">
       <div class="field">
-        <label class="field__label" for="branch_id">{{ t('machination.plot') }}</label>
+        <label class="field__label" for="branch_id">{{ t('machination.scheme') }}</label>
         <select class="input" id="branch_id" name="branch_id">
           {% for b in project.branches %}
           <option value="{{ b.id }}" {% if branch.id == b.id %}selected{% endif %}>{{ b.name }}</option>

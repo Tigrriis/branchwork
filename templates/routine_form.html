@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{% if is_new %}{{ t('routine.title_new') }}{% else %}{{ t('routine.title_edit') }}{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block main_class %}page page--narrow{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__head">
+    <h1>{% if is_new %}{{ t('routine.title_new') }}{% else %}{{ t('routine.title_edit') }}{% endif %}</h1>
+    <span class="muted">{{ project.name }}</span>
+  </div>
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label class="field__label" for="title">{{ t('routine.title') }}</label>
+      <input class="input" type="text" id="title" name="title" maxlength="120" required autofocus
+             value="{{ routine.title or '' }}" placeholder="{{ t('routine.title_placeholder') }}">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field__label" for="every_days">{{ t('routine.every') }}</label>
+        <input class="input" type="number" id="every_days" name="every_days" min="1" max="365" value="{{ routine.every_days }}">
+      </div>
+      <div class="field">
+        <label class="field__label" for="last_done">{{ t('routine.last_done') }} <span class="muted">{{ t('common.optional') }}</span></label>
+        <input class="input" type="date" id="last_done" name="last_done"
+               value="{{ routine.last_done_at.strftime('%Y-%m-%d') if routine.last_done_at else '' }}">
+      </div>
+    </div>
+    <span class="muted small">{{ t('routine.last_done_help') }}</span>
+    <div class="field">
+      <span class="field__label">{{ t('routine.icon') }}</span>
+      <div class="icon-picker">
+        {% for name in ICON_NAMES %}
+        <label class="icon-pick" title="{{ name }}">
+          <input type="radio" name="icon" value="{{ name }}" {% if routine.icon == name %}checked{% endif %}>
+          <span class="icon-pick__tile">{{ icon(name, 24) }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="form__actions">
+      <button class="btn btn--primary" type="submit">{% if is_new %}{{ t('routine.add') }}{% else %}{{ t('common.save') }}{% endif %}</button>
+      <a class="btn btn--ghost" href="{{ url_for('projects.tree', project_id=project.id) }}">{{ t('common.cancel') }}</a>
+    </div>
+  </form>
+</div>
+{% if not is_new %}
+<form method="post" action="{{ url_for('routines.delete_routine', routine_id=routine.id) }}" class="inline-form" data-confirm="{{ t('routine.delete_confirm') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn btn--danger" type="submit">{{ t('routine.delete') }}</button>
+</form>
+{% endif %}
+{% endblock %}

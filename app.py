@@ -1,5 +1,5 @@
 """
-Villainy: plan large, multi-stranded schemes as a skill tree.
+Villainy: plan large, multi-stranded plots as a skill tree.
 
   /                      Today: projects due for a touch, the inbox
   /board                 every project by phase (Idea → Maintaining, shelves)
@@ -30,6 +30,7 @@ from extensions import csrf, db, login_manager, migrate
 from icons import ICONS, icon_svg
 from models import CADENCES, HUES, PHASES
 from projects import projects_bp
+from routines import routines_bp
 from starters import starters_bp
 
 
@@ -48,6 +49,7 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(projects_bp)
+    app.register_blueprint(routines_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(demo_bp)
     app.register_blueprint(gitsync_bp)

@@ -1,0 +1,21 @@
+{# One routine as an ability: the icon recharges over its tempo and lights up
+   when it is ready. Include with ``r`` set. ``show_plot`` names the plot
+   underneath instead of the tempo, for Today, where plots are mixed.
+   A plain form, so it works without the page script; the script intercepts
+   the submit and swaps the whole bar. Using one early asks first. #}
+{% set state %}{% if r.is_ready %}{{ t('routines.ready_title') }}{% else %}{{ t('routines.cooling_title', n=r.days_left) }}{% endif %}{% endset %}
+<form method="post" action="{{ url_for('routines.routine_done', routine_id=r.id) }}"
+      class="ability {% if r.is_ready %}ability--ready{% else %}ability--cooling{% endif %}{% if r.overdue_days %} ability--overdue{% endif %}"
+      style="--charge: {{ '%.3f'|format(r.charge) }}" data-routine="{{ r.id }}"
+      {% if not r.is_ready %}data-confirm="{{ t('routines.early_confirm', title=r.title, n=r.days_left) }}"{% endif %}>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="ability__key" type="submit" title="{{ state }}"
+          aria-label="{{ t('routines.key_aria', title=r.title, state=state) }}">
+    <span class="ability__icon">{{ icon(r.icon, 30) }}</span>
+    <span class="ability__shade" aria-hidden="true"></span>
+    {% if not r.is_ready %}<span class="ability__count" aria-hidden="true">{{ t('routines.days_left', n=r.days_left) }}</span>{% endif %}
+    {% if r.overdue_days %}<span class="ability__badge" aria-hidden="true">{{ t('routines.overdue', n=r.overdue_days) }}</span>{% endif %}
+  </button>
+  <a class="ability__label" href="{{ url_for('routines.edit_routine', routine_id=r.id) }}">{{ r.title }}</a>
+  <span class="ability__meta">{% if show_plot %}{{ r.project.name }}{% else %}{{ t('routines.every', n=r.every_days) }}{% endif %}</span>
+</form>

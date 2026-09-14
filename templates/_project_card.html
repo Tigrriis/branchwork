@@ -1,4 +1,4 @@
-{# One scheme on the board. Pass project, and prev/next phase keys (or none). #}
+{# One plot on the board. Pass project, and prev/next phase keys (or none). #}
 <article class="pcard {% if project.is_due %}pcard--due{% endif %}">
   <div class="pcard__top">
     <a class="pcard__name" href="{{ url_for('projects.tree', project_id=project.id) }}">

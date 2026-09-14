@@ -1,7 +1,7 @@
 # Villainy
 
-Plan large, multi-stranded schemes as a skill tree. A scheme splits into
-plots (the columns), each plot stacks its machinations in tiers, and every
+Plan large, multi-stranded plots as a skill tree. A plot splits into
+schemes (the columns), each scheme stacks its machinations in tiers, and every
 machination carries points. A plain checkbox is a machination worth one point.
 
 Formerly Branchwork. Only the words changed: the code, database tables, URLs,
@@ -37,6 +37,12 @@ projects and forgets to move them along:
 * **Activity** is recorded on every points change, task, phase move and
   review, and `flask sync-git` adds one event per commit for projects with a
   repository folder set. That feeds "last touched" and the 12-week strips.
+* **Routines** are what a project needs doing on a tempo: invoices, a site
+  walk, backups. They sit as a bar of abilities above the project's
+  branches. Using one empties its icon, which refills over its tempo until
+  it is ready again, and counts as a touch. Today's top bar gathers every
+  ready routine from live projects, backburner included, because a
+  routine's tempo is one you set on purpose.
 
 **Templates** decide the branches a new project starts with. Five are built
 in (Blank, Lifecycle, Engineering job, Software, Running business) and you
@@ -51,6 +57,9 @@ Two rules give the tree its shape:
   gate points (default 3).
 * **Branch locks.** A branch can wait on another branch and stays locked
   until that branch is complete.
+
+Each tier fills with its branch's colour as its points add up, and is full
+at exactly the gate points that open the tier below.
 
 ## Run locally
 

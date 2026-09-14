@@ -1,21 +1,21 @@
 {% extends "base.html" %}
-{% block title %}{% if is_new %}{{ t('plot.title_new') }}{% else %}{{ t('plot.title_edit') }}{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block title %}{% if is_new %}{{ t('scheme.title_new') }}{% else %}{{ t('scheme.title_edit') }}{% endif %} · {{ SITE_NAME }}{% endblock %}
 {% block main_class %}page page--narrow{% endblock %}
 
 {% block content %}
 <div class="card">
   <div class="card__head">
-    <h1>{% if is_new %}{{ t('plot.title_new') }}{% else %}{{ t('plot.title_edit') }}{% endif %}</h1>
+    <h1>{% if is_new %}{{ t('scheme.title_new') }}{% else %}{{ t('scheme.title_edit') }}{% endif %}</h1>
     <span class="muted">{{ project.name }}</span>
   </div>
   <form method="post" class="form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="field">
       <label class="field__label" for="name">{{ t('common.name') }}</label>
-      <input class="input" type="text" id="name" name="name" maxlength="80" required autofocus value="{{ branch.name or '' }}" placeholder="{{ t('plot.name_placeholder') }}">
+      <input class="input" type="text" id="name" name="name" maxlength="80" required autofocus value="{{ branch.name or '' }}" placeholder="{{ t('scheme.name_placeholder') }}">
     </div>
     <div class="field">
-      <span class="field__label">{{ t('plot.colour') }}</span>
+      <span class="field__label">{{ t('scheme.colour') }}</span>
       <div class="hue-picker">
         {% for key, label in HUES.items() %}
         <label class="hue-pick hue-pick--{{ key }}">
@@ -27,24 +27,24 @@
       </div>
     </div>
     <div class="field">
-      <label class="field__label" for="requires_branch_id">{{ t('plot.opens_after') }} <span class="muted">{{ t('common.optional') }}</span></label>
+      <label class="field__label" for="requires_branch_id">{{ t('scheme.opens_after') }} <span class="muted">{{ t('common.optional') }}</span></label>
       <select class="input" id="requires_branch_id" name="requires_branch_id">
-        <option value="">{{ t('plot.always_open') }}</option>
+        <option value="">{{ t('scheme.always_open') }}</option>
         {% for other in project.branches if other.id != branch.id %}
-        <option value="{{ other.id }}" {% if branch.requires_branch_id == other.id %}selected{% endif %}>{{ t('plot.is_complete', name=other.name) }}</option>
+        <option value="{{ other.id }}" {% if branch.requires_branch_id == other.id %}selected{% endif %}>{{ t('scheme.is_complete', name=other.name) }}</option>
         {% endfor %}
       </select>
     </div>
     <div class="form__actions">
-      <button class="btn btn--primary" type="submit">{% if is_new %}{{ t('plot.add') }}{% else %}{{ t('common.save') }}{% endif %}</button>
+      <button class="btn btn--primary" type="submit">{% if is_new %}{{ t('scheme.add') }}{% else %}{{ t('common.save') }}{% endif %}</button>
       <a class="btn btn--ghost" href="{{ url_for('projects.tree', project_id=project.id) }}">{{ t('common.cancel') }}</a>
     </div>
   </form>
 </div>
 {% if not is_new %}
-<form method="post" action="{{ url_for('projects.delete_branch', branch_id=branch.id) }}" class="inline-form" data-confirm="{{ t('plot.delete_confirm', n=branch.tasks|length) }}">
+<form method="post" action="{{ url_for('projects.delete_branch', branch_id=branch.id) }}" class="inline-form" data-confirm="{{ t('scheme.delete_confirm', n=branch.tasks|length) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <button class="btn btn--danger" type="submit">{{ t('plot.delete') }}</button>
+  <button class="btn btn--danger" type="submit">{{ t('scheme.delete') }}</button>
 </form>
 {% endif %}
 {% endblock %}

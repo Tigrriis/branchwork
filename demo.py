@@ -12,7 +12,7 @@ import click
 from flask import Blueprint
 
 from extensions import db
-from models import Branch, InboxItem, Project, Task, User
+from models import Branch, InboxItem, Project, Routine, Task, User
 
 demo_bp = Blueprint("demo", __name__, cli_group=None)
 
@@ -51,6 +51,15 @@ EXTRA_PROJECTS = [
 ]
 
 
+DEMO_ROUTINES = [
+    # title, icon, every N days, days since last done (None: never done)
+    ("Site walk", "hardhat", 7, 9),
+    ("Client update", "mail", 14, 5),
+    ("Progress claim", "cash", 30, 26),
+    ("Check the programme", "calendar", 7, None),
+]
+
+
 def build_demo(user: User) -> Project:
     project = Project(owner=user, name=DEMO["name"], code=DEMO["code"], gate_points=3,
                       phase="building", cadence_days=7,
@@ -75,6 +84,12 @@ def build_demo(user: User) -> Project:
 
     # A plausible activity history so the strips and "last touched" mean something.
     now = datetime.now(timezone.utc)
+    # Routines in every state the bar shows: overdue, cooling, nearly ready, ready.
+    for pos, (title, icon, every, done_ago) in enumerate(DEMO_ROUTINES):
+        routine = Routine(project=project, title=title, icon=icon, every_days=every, position=pos)
+        if done_ago is not None:
+            routine.last_done_at = now - timedelta(days=done_ago)
+        db.session.add(routine)
     for days_ago in (1, 3, 4, 8, 9, 15, 16, 23, 30, 31, 45, 52, 60):
         project.record("points", delta=1, note="Progress", at=now - timedelta(days=days_ago))
     for name, phase, cadence, objective, action, age in EXTRA_PROJECTS:

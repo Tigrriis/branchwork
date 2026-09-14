@@ -1,0 +1,14 @@
+{# Today's bar: routines that are ready, from every live plot. Rendered on
+   Today and again by POST /routines/<id>/done when one is used from here.
+   With nothing ready it shrinks to a line saying what comes up next. #}
+{% if ready_routines %}
+<div class="abilities__head">
+  <span class="section__title">{{ t('ready.heading') }}</span>
+  <span class="lane__count">{{ ready_routines|length }}</span>
+</div>
+<div class="abilities__row">
+  {% for r in ready_routines %}{% with show_plot=true %}{% include "_ability.html" %}{% endwith %}{% endfor %}
+</div>
+{% elif next_routine %}
+<span class="muted small">{{ t('ready.none_next', title=next_routine.title, name=next_routine.project.name, n=next_routine.days_left) }}</span>
+{% endif %}

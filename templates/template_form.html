@@ -23,15 +23,15 @@
     </div>
 
     <fieldset class="fieldset">
-      <legend>{{ t('template_form.plots_legend') }}</legend>
-      <p class="muted small">{{ t('template_form.plots_help') }}</p>
+      <legend>{{ t('template_form.schemes_legend') }}</legend>
+      <p class="muted small">{{ t('template_form.schemes_help') }}</p>
 
       {% set rows = template.branches|list %}
       {% for i in range(rows|length + 3) %}
       {% set b = rows[i] if i < rows|length else none %}
       <div class="tbranch">
         <input class="input input--sm tbranch__name" type="text" name="branch_name" maxlength="80"
-               value="{{ b.name if b else '' }}" placeholder="{{ t('template_form.plot_name_placeholder') }}" aria-label="{{ t('template_form.plot_name_placeholder') }}">
+               value="{{ b.name if b else '' }}" placeholder="{{ t('template_form.scheme_name_placeholder') }}" aria-label="{{ t('template_form.scheme_name_placeholder') }}">
         <select class="input input--sm tbranch__hue" name="branch_hue" aria-label="{{ t('template_form.colour_aria') }}">
           {% for key, label in HUES.items() %}
           <option value="{{ key }}" {% if b and b.hue == key %}selected{% endif %}>{{ label }}</option>

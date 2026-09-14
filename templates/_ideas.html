@@ -1,4 +1,4 @@
-{# The scheme's idea list. Rendered under the tree, and again by
+{# The plot's idea list. Rendered under the tree, and again by
    POST /ideas/<id>/promote when one of them leaves for the tree. #}
 {% if ideas %}
 <div class="ideas__list">
@@ -27,9 +27,9 @@
       <select class="input input--xs" data-idea-target aria-label="{{ t('ideas.where_aria') }}">
         {% for b in project.branches %}
           {% for row in b.tiers() %}
-          <option value="{{ b.id }}:{{ row.tier }}">{{ t('ideas.option_tier', plot=b.name, tier=row.tier) }}</option>
+          <option value="{{ b.id }}:{{ row.tier }}">{{ t('ideas.option_tier', scheme=b.name, tier=row.tier) }}</option>
           {% endfor %}
-          <option value="{{ b.id }}:{{ b.next_tier }}">{{ t('ideas.option_new_tier', plot=b.name, tier=b.next_tier) }}</option>
+          <option value="{{ b.id }}:{{ b.next_tier }}">{{ t('ideas.option_new_tier', scheme=b.name, tier=b.next_tier) }}</option>
         {% endfor %}
       </select>
       <button type="button" class="btn btn--sm" data-idea-confirm>{{ t('common.add') }}</button>

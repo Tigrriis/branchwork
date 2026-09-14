@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ t('today.title') }} · {{ SITE_NAME }}{% endblock %}
 {% block topactions %}
-  <a class="btn btn--primary btn--sm" href="{{ url_for('projects.new_project') }}">{{ t('common.new_scheme') }}</a>
+  <a class="btn btn--primary btn--sm" href="{{ url_for('projects.new_project') }}">{{ t('common.new_plot') }}</a>
 {% endblock %}
 
 {% block content %}
@@ -20,6 +20,11 @@
     <span class="chip">{{ t('today.chip_inbox', n=inbox|length) }}</span>
   </div>
 </div>
+
+{# Routines ready on any live plot, across the top of the page. #}
+<section id="ready-routines" class="abilities abilities--today{% if not ready_routines %} abilities--quiet{% endif %}" data-routines="today"{% if not ready_routines and not next_routine %} hidden{% endif %}>
+  {% include "_ready_bar.html" %}
+</section>
 
 <div class="today-grid">
   <div class="today-main">

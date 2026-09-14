@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}{% if is_new %}{{ t('scheme.title_new') }}{% else %}{{ t('scheme.title_edit') }}{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block title %}{% if is_new %}{{ t('plot.title_new') }}{% else %}{{ t('plot.title_edit') }}{% endif %} · {{ SITE_NAME }}{% endblock %}
 {% block main_class %}page page--narrow{% endblock %}
 
 {% block content %}
 <div class="card">
-  <div class="card__head"><h1>{% if is_new %}{{ t('scheme.title_new') }}{% else %}{{ t('scheme.title_edit') }}{% endif %}</h1></div>
+  <div class="card__head"><h1>{% if is_new %}{{ t('plot.title_new') }}{% else %}{{ t('plot.title_edit') }}{% endif %}</h1></div>
   <form method="post" class="form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="field">
@@ -13,11 +13,11 @@
     </div>
     <div class="field-row">
       <div class="field">
-        <label class="field__label" for="code">{{ t('scheme.code') }} <span class="muted">{{ t('common.optional') }}</span></label>
-        <input class="input" type="text" id="code" name="code" maxlength="40" value="{{ project.code or '' }}" placeholder="{{ t('scheme.code_placeholder') }}">
+        <label class="field__label" for="code">{{ t('plot.code') }} <span class="muted">{{ t('common.optional') }}</span></label>
+        <input class="input" type="text" id="code" name="code" maxlength="40" value="{{ project.code or '' }}" placeholder="{{ t('plot.code_placeholder') }}">
       </div>
       <div class="field">
-        <label class="field__label" for="phase">{{ t('scheme.phase') }}</label>
+        <label class="field__label" for="phase">{{ t('plot.phase') }}</label>
         <select class="input" id="phase" name="phase">
           {% for key, label in PHASES.items() %}<option value="{{ key }}" {% if project.phase == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
         </select>
@@ -25,22 +25,22 @@
     </div>
     <div class="field-row">
       <div class="field">
-        <label class="field__label" for="cadence_days">{{ t('scheme.tempo') }}</label>
+        <label class="field__label" for="cadence_days">{{ t('plot.tempo') }}</label>
         <select class="input" id="cadence_days" name="cadence_days">
           {% for days, label in CADENCES.items() %}<option value="{{ days }}" {% if project.cadence_days == days %}selected{% endif %}>{{ label }}</option>{% endfor %}
         </select>
       </div>
       <div class="field">
-        <label class="field__label" for="gate_points">{{ t('scheme.gate') }}</label>
+        <label class="field__label" for="gate_points">{{ t('plot.gate') }}</label>
         <input class="input" type="number" id="gate_points" name="gate_points" min="1" max="99" value="{{ project.gate_points }}">
       </div>
     </div>
     <div class="field">
       <label class="check">
         <input type="checkbox" name="focused" value="1" {% if project.focused %}checked{% endif %}>
-        {{ t('scheme.focus_label') }}
+        {{ t('plot.focus_label') }}
       </label>
-      <span class="muted small">{{ t('scheme.focus_help') }}</span>
+      <span class="muted small">{{ t('plot.focus_help') }}</span>
     </div>
     <div class="field">
       <label class="field__label" for="objective">{{ t('fields.objective_label') }}</label>
@@ -52,41 +52,41 @@
     </div>
     {% if is_new %}
     <div class="field">
-      <span class="field__label">{{ t('scheme.start_from') }}</span>
+      <span class="field__label">{{ t('plot.start_from') }}</span>
       <div class="starter-picker">
         {% for spec in starters %}
         <label class="starter">
           <input type="radio" name="starter" value="{{ spec.key }}" {% if spec.key == default_starter %}checked{% endif %}>
           <span class="starter__body">
-            <span class="starter__name">{{ spec.label }}{% if spec.custom %}<span class="tag">{{ t('scheme.yours_tag') }}</span>{% endif %}</span>
+            <span class="starter__name">{{ spec.label }}{% if spec.custom %}<span class="tag">{{ t('plot.yours_tag') }}</span>{% endif %}</span>
             <span class="muted small">{{ spec.hint }}</span>
           </span>
         </label>
         {% endfor %}
       </div>
-      <a class="link-quiet" href="{{ url_for('starters.template_list') }}">{{ t('scheme.make_templates') }}</a>
+      <a class="link-quiet" href="{{ url_for('starters.template_list') }}">{{ t('plot.make_templates') }}</a>
     </div>
     {% endif %}
     <div class="field">
-      <label class="field__label" for="repo_path">{{ t('scheme.repo') }} <span class="muted">{{ t('common.optional') }}</span></label>
-      <input class="input" type="text" id="repo_path" name="repo_path" maxlength="400" value="{{ project.repo_path or '' }}" placeholder="{{ t('scheme.repo_placeholder') }}">
+      <label class="field__label" for="repo_path">{{ t('plot.repo') }} <span class="muted">{{ t('common.optional') }}</span></label>
+      <input class="input" type="text" id="repo_path" name="repo_path" maxlength="400" value="{{ project.repo_path or '' }}" placeholder="{{ t('plot.repo_placeholder') }}">
       {% set command %}<code>flask sync-git</code>{% endset %}
-      <span class="muted small">{{ t('scheme.repo_help', command=command) }}</span>
+      <span class="muted small">{{ t('plot.repo_help', command=command) }}</span>
     </div>
     <div class="field">
-      <label class="field__label" for="description">{{ t('scheme.description') }} <span class="muted">{{ t('common.optional') }}</span></label>
+      <label class="field__label" for="description">{{ t('plot.description') }} <span class="muted">{{ t('common.optional') }}</span></label>
       <textarea class="input" id="description" name="description" rows="3">{{ project.description or '' }}</textarea>
     </div>
     <div class="form__actions">
-      <button class="btn btn--primary" type="submit">{% if is_new %}{{ t('scheme.create') }}{% else %}{{ t('common.save') }}{% endif %}</button>
+      <button class="btn btn--primary" type="submit">{% if is_new %}{{ t('plot.create') }}{% else %}{{ t('common.save') }}{% endif %}</button>
       <a class="btn btn--ghost" href="{{ url_for('projects.tree', project_id=project.id) if not is_new else url_for('dashboard.board') }}">{{ t('common.cancel') }}</a>
     </div>
   </form>
 </div>
 {% if not is_new %}
-<form method="post" action="{{ url_for('projects.delete_project', project_id=project.id) }}" class="inline-form" data-confirm="{{ t('scheme.delete_confirm') }}">
+<form method="post" action="{{ url_for('projects.delete_project', project_id=project.id) }}" class="inline-form" data-confirm="{{ t('plot.delete_confirm') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <button class="btn btn--danger" type="submit">{{ t('scheme.delete') }}</button>
+  <button class="btn btn--danger" type="submit">{{ t('plot.delete') }}</button>
 </form>
 {% endif %}
 {% endblock %}

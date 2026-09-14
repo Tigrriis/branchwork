@@ -124,7 +124,7 @@ def test_branch_form_rejects_cycle(client, db):
     r = client.post(f"/branches/{a.id}/edit", data={"name": "A", "hue": "green",
                                                     "requires_branch_id": str(b.id)},
                     follow_redirects=True)
-    assert copy_in(r.data, "plot.cycle")
+    assert copy_in(r.data, "scheme.cycle")
     db.session.refresh(a)
     assert a.requires_branch_id is None
 
@@ -180,3 +180,32 @@ def test_new_forms_render_without_inserting(client, db):
     assert client.get(f"/branches/{branch.id}/tasks/new").status_code == 200
     db.session.rollback()
     assert len(user.projects) == 1 and len(project.branches) == 1 and branch.tasks == []
+
+
+def test_tier_fill_is_full_exactly_at_the_gate(db):
+    user = make_user()
+    project = make_project(user, gate_points=3)
+    branch = make_branch(project)
+    a = make_task(branch, "A", tier=1, points_max=4, points_done=2)
+    make_task(branch, "B", tier=2, points_max=1, points_done=0)
+
+    rows = branch.tiers()
+    assert rows[0]["points"] == 2 and abs(rows[0]["fill"] - 2 / 3) < 1e-9
+    assert not rows[0]["charged"]
+    assert rows[1]["fill"] == 0.0            # closed, so nothing counts yet
+
+    a.set_points(4); db.session.commit()      # past the gate still reads as full
+    rows = branch.tiers()
+    assert rows[0]["fill"] == 1.0 and rows[0]["charged"] and rows[1]["open"]
+
+
+def test_tree_page_carries_each_tiers_fill(client, db):
+    user = make_user()
+    login(client)
+    project = make_project(user, gate_points=3)
+    branch = make_branch(project)
+    make_task(branch, "A", tier=1, points_max=3, points_done=1)
+    html = client.get(f"/projects/{project.id}").data.decode()
+    assert f'data-tier-key="{branch.id}:1" style="--fill: 0.333"' in html
+    body = client.post(f"/tasks/{branch.tasks[0].id}/points", json={"delta": 2}).get_json()
+    assert "tier--charged" in body["html"] and "--fill: 1.000" in body["html"]

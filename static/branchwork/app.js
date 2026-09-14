@@ -43,6 +43,29 @@
     });
   }
 
+  // Swap the tree in, letting each tier's fill run from its old level to its
+  // new one. The new markup arrives already at the final level, so wind each
+  // changed tier back to where it was, commit that, then let it go.
+  function swapTree(html) {
+    if (!tree) return;
+    var before = {};
+    Array.prototype.forEach.call(tree.querySelectorAll("[data-tier-key]"), function (el) {
+      before[el.dataset.tierKey] = el.style.getPropertyValue("--fill");
+    });
+    tree.innerHTML = html;
+    var moved = [];
+    Array.prototype.forEach.call(tree.querySelectorAll("[data-tier-key]"), function (el) {
+      var old = before[el.dataset.tierKey];
+      var target = el.style.getPropertyValue("--fill");
+      if (old === undefined || old === target) return;
+      el.style.setProperty("--fill", old);
+      moved.push([el, target]);
+    });
+    if (!moved.length) return;
+    void tree.offsetHeight;                   // lay out at the old levels first
+    moved.forEach(function (pair) { pair[0].style.setProperty("--fill", pair[1]); });
+  }
+
   function post(url, payload) {
     return fetch(url, {
       method: "POST",
@@ -84,7 +107,7 @@
       post("/tasks/" + id + "/points", { delta: delta })
         .then(function (res) {
           if (!res.ok) { flash(res.body.message || say("points_failed"), "error"); return; }
-          tree.innerHTML = res.body.html;
+          swapTree(res.body.html);
           updateStats(res.body);
           var again = tree.querySelector('[data-task="' + id + '"]');
           if (again) again.classList.add("is-flash");
@@ -120,10 +143,10 @@
       .then(function (res) {
         if (!res.ok) { flash(res.body.message || say("idea_failed"), "error"); return; }
         var list = document.getElementById("ideas-list");
-        if (tree) tree.innerHTML = res.body.tree;
+        swapTree(res.body.tree);
         if (list) list.innerHTML = res.body.ideas;
         updateStats(res.body);
-        flash(say("idea_added", { title: res.body.title, plot: res.body.branch, tier: res.body.tier }),
+        flash(say("idea_added", { title: res.body.title, scheme: res.body.branch, tier: res.body.tier }),
               "success");
       })
       .catch(function () { flash(say("network"), "error"); });
@@ -235,6 +258,36 @@
     if (form.dataset && form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
       e.preventDefault();
     }
+  });
+
+  // ── Routines ──────────────────────────────────────────────────────────
+  // An ability is a plain form. Take over its submit, post JSON, and swap the
+  // bar it sits in, so the cooldown restarts without a reload. Registered
+  // after the confirm handler above, which cancels an early use it was
+  // refused, so a cancelled one arrives here already prevented.
+  document.addEventListener("submit", function (e) {
+    var form = e.target;
+    if (e.defaultPrevented || !form.matches || !form.matches("form[data-routine]")) return;
+    var bar = form.closest("[data-routines]");
+    if (!bar) return;
+    e.preventDefault();
+    if (form.classList.contains("is-busy")) return;
+    form.classList.add("is-busy");
+    var id = form.dataset.routine;
+    post(form.action, { where: bar.dataset.routines })
+      .then(function (res) {
+        if (!res.ok) { flash(res.body.message || say("routine_failed"), "error"); return; }
+        bar.innerHTML = res.body.html;
+        bar.hidden = !bar.innerHTML.trim();
+        if (bar.dataset.routines === "today") {
+          bar.classList.toggle("abilities--quiet", !bar.querySelector("form[data-routine]"));
+        }
+        var again = bar.querySelector('[data-routine="' + id + '"]');
+        if (again) again.classList.add("is-used");
+        flash(say("routine_done", { title: res.body.title, n: res.body.every_days }), "success");
+      })
+      .catch(function () { flash(say("routine_failed"), "error"); })
+      .finally(function () { form.classList.remove("is-busy"); });
   });
 
   // ── Flashes ───────────────────────────────────────────────────────────
