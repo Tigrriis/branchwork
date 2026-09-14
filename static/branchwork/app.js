@@ -290,6 +290,95 @@
       .finally(function () { form.classList.remove("is-busy"); });
   });
 
+  // ── Plot switcher ─────────────────────────────────────────────────────
+  // The sidebar opens itself on hover and focus through CSS. The script adds
+  // the pin, the filter, Ctrl K, and the drawer on narrow screens.
+  var rail = document.getElementById("rail");
+  if (rail) {
+    var root = document.documentElement;
+    var railFilter = rail.querySelector("[data-rail-filter]");
+    var railPin = rail.querySelector("[data-rail-pin]");
+
+    var remember = function (pinned) {
+      try {
+        if (pinned) localStorage.setItem("rail", "pinned");
+        else localStorage.removeItem("rail");
+      } catch (e) { /* private window: the pin just lasts this page */ }
+    };
+    var showPin = function () {
+      railPin.setAttribute("aria-pressed", root.dataset.rail === "pinned" ? "true" : "false");
+    };
+    showPin();
+    railPin.addEventListener("click", function () {
+      var pinned = root.dataset.rail !== "pinned";
+      if (pinned) root.dataset.rail = "pinned";
+      else delete root.dataset.rail;
+      remember(pinned);
+      showPin();
+    });
+
+    var openRail = function () {
+      rail.classList.add("is-open");
+      document.body.classList.add("rail-open");
+    };
+    var closeRail = function () {
+      rail.classList.remove("is-open");
+      document.body.classList.remove("rail-open");
+    };
+    var findPlot = function () {
+      openRail();
+      railFilter.focus();
+      railFilter.select();
+    };
+
+    var applyRailFilter = function () {
+      var q = railFilter.value.trim().toLowerCase();
+      var shown = 0;
+      Array.prototype.forEach.call(rail.querySelectorAll("[data-rail-group]"), function (group) {
+        var any = false;
+        Array.prototype.forEach.call(group.querySelectorAll("[data-rail-item]"), function (item) {
+          var hit = !q || item.dataset.name.indexOf(q) !== -1;
+          item.hidden = !hit;
+          if (hit) { any = true; shown += 1; }
+        });
+        group.hidden = !any;
+      });
+      rail.querySelector("[data-rail-none]").hidden = !q || shown > 0;
+    };
+    railFilter.addEventListener("input", applyRailFilter);
+    railFilter.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        var first = rail.querySelector("[data-rail-item]:not([hidden])");
+        if (first) { e.preventDefault(); window.location.href = first.href; }
+      } else if (e.key === "Escape") {
+        railFilter.value = "";
+        applyRailFilter();
+        closeRail();
+        railFilter.blur();
+      }
+    });
+
+    rail.querySelector("[data-rail-search]").addEventListener("click", findPlot);
+    document.addEventListener("keydown", function (e) {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "k" || e.key === "K")) {
+        e.preventDefault();
+        findPlot();
+      }
+    });
+    document.addEventListener("click", function (e) {
+      if (e.target.closest("[data-rail-open]")) {
+        // Opened, not focused: on a phone, focusing the filter throws up the keyboard.
+        if (rail.classList.contains("is-open")) closeRail();
+        else openRail();
+      } else if (rail.classList.contains("is-open") && !rail.contains(e.target)) {
+        closeRail();
+      }
+    });
+    rail.addEventListener("focusout", function (e) {
+      if (!rail.contains(e.relatedTarget)) closeRail();
+    });
+  }
+
   // ── Flashes ───────────────────────────────────────────────────────────
   Array.prototype.forEach.call(document.querySelectorAll(".flash"), function (el) {
     setTimeout(function () { el.remove(); }, 4500);

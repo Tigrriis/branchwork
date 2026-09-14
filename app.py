@@ -33,6 +33,7 @@ from projects import projects_bp
 from routines import routines_bp
 from starters import starters_bp
 from statuses import statuses_bp
+from switcher import plot_switcher
 
 
 def create_app(overrides: dict | None = None) -> Flask:
@@ -104,6 +105,7 @@ def _register_template_helpers(app: Flask) -> None:
             "js_copy": js_copy,
             "HUES": HUES,
             "STATUS_HUES": STATUS_HUES,
+            "plot_switcher": plot_switcher,
             "CADENCES": CADENCES,
             "ICON_NAMES": list(ICONS),
             "icon": icon_svg,

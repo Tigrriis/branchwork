@@ -23,6 +23,24 @@ today = "Today"
 board = "Board"
 review = "Review"
 
+[rail]
+_screen = "Plot switcher"
+_about = "The sidebar of plots on every page once signed in. It folds to initials and opens on hover, on focus, or with Ctrl K."
+aria = "Plots"
+# The menu button that opens the sidebar on a phone
+open = "Show plots"
+find = "Find a plot"
+filter_placeholder = "Find a plot (Ctrl K)"
+pin = "Keep the sidebar open"
+focus = "Focus"
+backburner = "Backburner"
+# The dot on a plot's initials
+due_title = "Needs a touch"
+# The count on a plot's initials
+ready_title = "{n} routine(s) ready"
+none = "No plots match."
+new = "New plot"
+
 [common]
 _screen = "Shared words"
 _about = "Buttons and fragments reused on many screens. Changing one changes it everywhere."

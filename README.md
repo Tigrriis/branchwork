@@ -27,6 +27,10 @@ projects and forgets to move them along:
   Idea, Exploring, Building (capped at `WIP_BUILDING_LIMIT`), Maintaining,
   and Done, Parked and Dropped shelves. Plots store a status's key, which
   never changes, so renaming or reordering one moves nothing.
+* **The sidebar** on every signed-in page switches between live projects:
+  Focus, then Backburner, by name, with a dot on anything due and a count
+  of ready routines. It folds to initials, opens on hover or with Ctrl K
+  to filter, can be pinned open, and becomes a drawer on a phone.
 * **Review** puts every active project on one scrolling page so the whole
   scope is visible at once, and takes one decision each: keep, advance, park
   or drop. Each card edits the project's objective and next action.

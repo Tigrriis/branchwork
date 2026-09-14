@@ -1,0 +1,42 @@
+{# The plot switcher, on every signed-in page. Folds to a rail of initials and
+   opens on hover, on keyboard focus or with Ctrl K; the pin keeps it open.
+   Include with ``current_id`` set to the plot being viewed, or none. #}
+{% set groups = plot_switcher(current_id) %}
+<aside class="rail" id="rail" aria-label="{{ t('rail.aria') }}">
+  <div class="rail__top">
+    <button class="icon-btn rail__search" type="button" data-rail-search title="{{ t('rail.find') }}" aria-label="{{ t('rail.find') }}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+    </button>
+    <input class="input input--xs rail__filter" type="search" data-rail-filter autocomplete="off"
+           placeholder="{{ t('rail.filter_placeholder') }}" aria-label="{{ t('rail.find') }}">
+    <button class="icon-btn rail__pin" type="button" data-rail-pin aria-pressed="false" title="{{ t('rail.pin') }}" aria-label="{{ t('rail.pin') }}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 7 3 3H7l3-3z"></path><path d="M12 13v8"></path></svg>
+    </button>
+  </div>
+  <nav class="rail__list">
+    {% for group in groups %}
+    <div class="rail__group rail__group--{{ group.key }}" data-rail-group>
+      <div class="rail__label">{{ group.label }}</div>
+      {% for row in group.rows %}
+      {% set p = row.project %}
+      <a class="rail__item{% if row.current %} is-current{% endif %}" href="{{ url_for('projects.tree', project_id=p.id) }}"
+         data-rail-item data-name="{{ p.name|lower }}" title="{{ p.name }}"{% if row.current %} aria-current="page"{% endif %}>
+        <span class="rail__chip hue--{{ p.phase_hue }}" aria-hidden="true">
+          {{ row.initials }}
+          {% if p.is_due %}<span class="rail__due" title="{{ t('rail.due_title') }}"></span>{% endif %}
+          {% if row.ready %}<span class="rail__ready" title="{{ t('rail.ready_title', n=row.ready) }}">{{ row.ready }}</span>{% endif %}
+        </span>
+        <span class="rail__name">{{ p.name }}</span>
+        {% if p.is_due %}<span class="visually-hidden">{{ t('rail.due_title') }}</span>{% endif %}
+        {% if row.ready %}<span class="visually-hidden">{{ t('rail.ready_title', n=row.ready) }}</span>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+    {% endfor %}
+    <p class="rail__none muted small" data-rail-none hidden>{{ t('rail.none') }}</p>
+    <a class="rail__item rail__item--new" href="{{ url_for('projects.new_project') }}" title="{{ t('rail.new') }}">
+      <span class="rail__chip rail__chip--new" aria-hidden="true">+</span>
+      <span class="rail__name">{{ t('rail.new') }}</span>
+    </a>
+  </nav>
+</aside>
