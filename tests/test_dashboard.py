@@ -4,7 +4,10 @@ import re
 import subprocess
 from datetime import date, datetime, timedelta, timezone
 
-from conftest import copy_in, copy_prefix_in, login, make_branch, make_project, make_task, make_user
+from conftest import (
+    copy_in, copy_prefix_in, login, make_branch, make_project, make_task, make_user,
+    post_statuses, status_rows,
+)
 from copytext import tx
 from gitsync import sync_project
 from models import InboxItem, Task
@@ -79,7 +82,7 @@ def test_today_lists_due_and_missing_action(client, db):
 
 def test_wip_limit_on_building(client, db):
     user = make_user()
-    user.wip_building_limit = 2
+    user.status("building").wip_limit = 2
     db.session.commit()
     login(client)
     for i in range(2):
@@ -87,7 +90,7 @@ def test_wip_limit_on_building(client, db):
     db.session.commit()
     third = make_project(user)
     r = client.post(f"/projects/{third.id}/phase", data={"phase": "building"}, follow_redirects=True)
-    assert copy_prefix_in(r.data, "board.building_full")
+    assert copy_prefix_in(r.data, "board.status_full")
     db.session.refresh(third)
     assert third.phase == "idea"
     # moving within building (no-op) or elsewhere is fine
@@ -187,7 +190,7 @@ def test_review_shows_every_project_at_once_and_marks_decided(client, db):
     assert "Alpha" in html and "Beta" in html
     assert html.count("is-decided") == 1
 
-    client.post(f"/review/{b.id}", data={"decision": "drop", "done": str(a.id)})
+    client.post(f"/review/{b.id}", data={"decision": "close:dropped", "done": str(a.id)})
     db.session.refresh(b)
     assert b.phase == "dropped"
     # Dropped, so no longer active: one project left under review, and it is
@@ -299,22 +302,30 @@ def test_starters_are_internally_consistent():
                 assert 1 <= points <= 20 and title
 
 
-def test_wip_cap_is_a_per_user_setting(client, db):
+def _set_cap(client, user, key, cap):
+    rows = status_rows(user)
+    for row, status in zip(rows, user.statuses):
+        if status.key == key:
+            row[4] = str(cap)
+    return post_statuses(client, rows)
+
+
+def test_wip_cap_is_a_per_status_setting(client, db):
     user = make_user()
     login(client)
-    assert user.wip_building_limit == 3          # the default for a new account
+    assert user.status("building").wip_limit == 3      # the default for a new account
 
-    # Raising it on the account page lets a fourth project into Building.
+    # Raising it in plot statuses lets a fourth project into Building.
     for _ in range(3):
         p = make_project(user); p.phase = "building"
     db.session.commit()
     fourth = make_project(user)
     r = client.post(f"/projects/{fourth.id}/phase", data={"phase": "building"}, follow_redirects=True)
-    assert copy_prefix_in(r.data, "board.building_full")
+    assert copy_prefix_in(r.data, "board.status_full")
 
-    client.post("/account", data={"display_name": "", "wip_building_limit": "5"})
-    db.session.refresh(user)
-    assert user.wip_building_limit == 5
+    _set_cap(client, user, "building", 5)
+    db.session.expire_all()
+    assert user.status("building").wip_limit == 5
     client.post(f"/projects/{fourth.id}/phase", data={"phase": "building"})
     db.session.refresh(fourth)
     assert fourth.phase == "building"
@@ -323,17 +334,17 @@ def test_wip_cap_is_a_per_user_setting(client, db):
 def test_wip_cap_of_zero_turns_it_off(client, db):
     user = make_user()
     login(client)
-    client.post("/account", data={"display_name": "", "wip_building_limit": "0"})
-    db.session.refresh(user)
-    assert user.wip_building_limit == 0
+    _set_cap(client, user, "building", 0)
+    db.session.expire_all()
+    assert user.status("building").wip_limit == 0
     for _ in range(6):
         p = make_project(user)
         client.post(f"/projects/{p.id}/phase", data={"phase": "building"})
     db.session.expire_all()
     assert sum(1 for p in user.projects if p.phase == "building") == 6
-    # The board says so rather than showing a "6 / 0" counter.
+    # The board shows a plain count rather than a "6 / 0" counter.
     html = client.get("/board").data.decode()
-    assert copy_in(html, "board.no_cap") and "6 / 0" not in html
+    assert "6 / 0" not in html and "is-full" not in html
 
 
 def test_lowering_the_cap_does_not_evict_projects(client, db):
@@ -342,22 +353,22 @@ def test_lowering_the_cap_does_not_evict_projects(client, db):
     for _ in range(3):
         p = make_project(user); p.phase = "building"
     db.session.commit()
-    client.post("/account", data={"display_name": "", "wip_building_limit": "1"})
+    _set_cap(client, user, "building", 1)
     db.session.expire_all()
     assert sum(1 for p in user.projects if p.phase == "building") == 3
     # ...but nothing new gets in until it is back under the cap.
     extra = make_project(user)
     r = client.post(f"/projects/{extra.id}/phase", data={"phase": "building"}, follow_redirects=True)
-    assert copy_prefix_in(r.data, "board.building_full")
+    assert copy_prefix_in(r.data, "board.status_full")
 
 
-def test_account_rejects_a_nonsense_cap(client, db):
+def test_statuses_page_rejects_a_nonsense_cap(client, db):
     user = make_user()
     login(client)
     for value, expected in (("-4", 0), ("999", 20), ("banana", 20)):
-        client.post("/account", data={"display_name": "", "wip_building_limit": value})
-        db.session.refresh(user)
-        assert user.wip_building_limit == expected, value
+        _set_cap(client, user, "building", value)
+        db.session.expire_all()
+        assert user.status("building").wip_limit == expected, value
 
 
 # ── Per-project ideas ───────────────────────────────────────────────────────

@@ -2,7 +2,7 @@
 
 Today answers "what am I neglecting": projects past their cadence, parked
 projects whose date has come, projects with no next action, and the inbox.
-The board is every project by phase, with a WIP limit on Building. Review
+The board is every project by status, with any caps set on them. Review
 walks the active projects one by one and asks: keep, advance, park or drop.
 """
 from datetime import date, datetime, timedelta, timezone
@@ -15,9 +15,7 @@ from flask_login import current_user, login_required
 
 from copytext import tx
 from extensions import db
-from models import (
-    ACTIVE_PHASES, CADENCES, PHASES, InboxItem, Project,
-)
+from models import CADENCES, InboxItem, Project
 from routines import next_routine, ready_routines
 
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -133,35 +131,40 @@ def set_focus(project_id: int):
 @login_required
 def board():
     projects = list(current_user.projects)
-    columns = [(key, PHASES[key], sorted((p for p in projects if p.phase == key),
-                                          key=lambda p: p.days_since_touch))
-               for key in ACTIVE_PHASES]
-    shelves = [(key, PHASES[key], [p for p in projects if p.phase == key])
-               for key in ("parked", "done", "dropped")]
-    return render_template("board.html", columns=columns, shelves=shelves,
-                           wip_limit=current_user.wip_building_limit)
+    statuses = list(current_user.statuses)
+    # A plot whose status has somehow gone shows in the first column rather
+    # than vanishing from the board.
+    known = {s.key for s in statuses}
+    home = current_user.default_status.key
+
+    def key_of(p):
+        return p.phase if p.phase in known else home
+
+    columns = [(s, sorted((p for p in projects if key_of(p) == s.key),
+                          key=lambda p: p.days_since_touch))
+               for s in statuses if s.is_active]
+    shelves = [(s, [p for p in projects if key_of(p) == s.key])
+               for s in statuses if not s.is_active]
+    # Where the last column's advance arrow goes.
+    finish = next((s for s in statuses if s.is_closed), None)
+    return render_template("board.html", columns=columns, shelves=shelves, finish=finish)
 
 
-def _building_count(exclude: Project) -> int:
-    return sum(1 for p in current_user.projects if p.phase == "building" and p.id != exclude.id)
-
-
-def _set_phase(project: Project, phase: str, *, park_until: date | None = None,
+def _set_phase(project: Project, key: str, *, park_until: date | None = None,
                kind: str = "phase") -> bool:
-    """Move a project; enforce the WIP limit; record the event. False if refused."""
-    if phase not in PHASES:
+    """Move a plot to one of the user's statuses, enforcing that status's cap
+    and recording the event. False if refused."""
+    status = current_user.status(key)
+    if status is None:
         return False
-    # 0 means the user has turned the cap off on their account page.
-    limit = current_user.wip_building_limit
-    if limit and phase == "building" and project.phase != "building" and _building_count(project) >= limit:
-        names = ", ".join(p.name for p in current_user.projects if p.phase == "building")
-        flash(tx("board.building_full", limit=limit, names=names), "error")
-        return False
-    old = project.phase
-    project.phase = phase
-    project.parked_until = park_until if phase == "parked" else None
-    if old != phase:
-        project.record(kind, note=f"{PHASES.get(old, old)} → {PHASES[phase]}")
+    limit = status.wip_limit if status.is_active else 0      # 0 means no cap
+    if limit and project.phase != key:
+        already = [p for p in current_user.projects if p.phase == key and p.id != project.id]
+        if len(already) >= limit:
+            flash(tx("board.status_full", status=status.name, limit=limit,
+                     names=", ".join(p.name for p in already)), "error")
+            return False
+    project.change_phase(status, park_until=park_until, kind=kind)
     return True
 
 
@@ -170,7 +173,9 @@ def _set_phase(project: Project, phase: str, *, park_until: date | None = None,
 def set_phase(project_id: int):
     project = _project(project_id)
     phase = request.form.get("phase") or ""
-    until = _parse_date(request.form.get("parked_until")) if phase == "parked" else None
+    status = current_user.status(phase)
+    parking = status is not None and status.is_parked
+    until = _parse_date(request.form.get("parked_until")) if parking else None
     if _set_phase(project, phase, park_until=until):
         db.session.commit()
         flash(tx("board.phase_moved", name=project.name, phase=project.phase_label), "success")
@@ -295,14 +300,18 @@ def review_decide(project_id: int):
     project.objective = (request.form.get("objective") or "").strip()[:300] or None
     project.next_action = (request.form.get("next_action") or "").strip()[:200] or None
     ok = True
-    if decision == "advance" and project.next_phase:
-        ok = _set_phase(project, project.next_phase, kind="review")
-    elif decision == "park":
-        ok = _set_phase(project, "parked", park_until=_parse_date(request.form.get("parked_until")), kind="review")
-    elif decision == "drop":
-        ok = _set_phase(project, "dropped", kind="review")
+    parking = current_user.parked_status
+    if decision == "advance" and project.next_status is not None:
+        ok = _set_phase(project, project.next_status.key, kind="review")
+    elif decision == "park" and parking is not None:
+        ok = _set_phase(project, parking.key, park_until=_parse_date(request.form.get("parked_until")),
+                        kind="review")
+    elif decision.startswith("close:"):
+        # Only onto a closed status: the buttons offer nothing else.
+        target = current_user.status(decision.split(":", 1)[1])
+        ok = target is not None and target.is_closed and _set_phase(project, target.key, kind="review")
     elif decision == "unpark":
-        ok = _set_phase(project, "exploring", kind="review")
+        ok = _set_phase(project, project.resume_phase, kind="review")
     else:
         project.record("review", note="Reviewed, kept as is")
     if ok:

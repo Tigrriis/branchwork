@@ -15,7 +15,7 @@
     <div class="prow__main">
       <div class="prow__head">
         <a class="prow__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
-        <span class="phase phase--{{ p.phase }}">{{ p.phase_label }}</span>
+        <span class="phase hue--{{ p.phase_hue }}">{{ p.phase_label }}</span>
         {% set age %}{% if p.days_since_touch == 0 %}{{ t('common.touched_today') }}{% else %}{{ t('common.days_ago', n=p.days_since_touch) }}{% endif %}{% endset %}
         <span class="prow__age {% if p.is_due %}is-due{% endif %}">{{ t('focus.age_cadence', age=age, cadence=p.cadence_label|lower) }}</span>
       </div>
@@ -64,7 +64,7 @@
     <div class="prow__main">
       <div class="prow__head">
         <a class="prow__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
-        <span class="phase phase--{{ p.phase }}">{{ p.phase_label }}</span>
+        <span class="phase hue--{{ p.phase_hue }}">{{ p.phase_label }}</span>
         <span class="prow__age muted">{% if p.days_since_touch == 0 %}{{ t('common.touched_today') }}{% else %}{{ t('common.days_ago', n=p.days_since_touch) }}{% endif %}</span>
       </div>
       {% if p.next_action %}<div class="muted small">→ {{ p.next_action }}</div>{% endif %}

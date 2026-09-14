@@ -20,7 +20,7 @@
   <div class="tree-head__title">
     <h1>{{ project.name }}</h1>
     {% if project.code %}<span class="muted">{{ t('tree.code', code=project.code) }}</span>{% endif %}
-    <span class="phase phase--{{ project.phase }}">{{ project.phase_label }}</span>
+    <span class="phase hue--{{ project.phase_hue }}">{{ project.phase_label }}</span>
     <span class="{% if project.is_due %}is-due{% else %}muted{% endif %} small">{% if project.days_since_touch == 0 %}{{ t('common.touched_today') }}{% else %}{{ t('tree.since_touch', n=project.days_since_touch) }}{% endif %}</span>
     <a class="link-quiet" href="{{ url_for('projects.edit_project', project_id=project.id) }}">{{ t('common.edit') }}</a>
   </div>

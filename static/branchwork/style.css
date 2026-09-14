@@ -262,14 +262,10 @@ select.input { appearance: none; }
 .chip { padding: 5px 10px; border-radius: 999px; background: var(--card2); color: var(--muted); font-size: 12px; font-weight: 700; }
 .chip--warn { color: var(--part); background: rgba(240, 147, 43, 0.12); }
 .phase { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; background: var(--card2); color: var(--fg2); white-space: nowrap; }
-.phase--idea { color: #c3a8ff; background: rgba(155, 124, 240, 0.14); }
-.phase--exploring { color: #8fb8ff; background: rgba(91, 141, 239, 0.14); }
-.phase--building { color: #7ee39a; background: rgba(63, 207, 99, 0.14); }
-.phase--maintaining { color: #7fe0d8; background: rgba(60, 197, 184, 0.14); }
-.phase--done { color: var(--muted); background: var(--card2); }
-.phase--parked { color: #f3c46b; background: rgba(224, 165, 58, 0.14); }
-.phase--dropped { color: var(--danger); background: rgba(240, 104, 78, 0.12); }
-.phase--branch { color: var(--hue, var(--fg2)); background: var(--card2); }
+/* A status pill takes its colour from the status's hue. */
+.phase[class*="hue--"] { color: color-mix(in srgb, var(--hue) 62%, #ffffff); background: color-mix(in srgb, var(--hue) 14%, transparent); }
+.phase.hue--grey { color: var(--muted); background: var(--card2); }
+.phase.phase--branch { color: var(--hue, var(--fg2)); background: var(--card2); }
 .is-due { color: var(--part); font-weight: 700; }
 .input--sm { height: 36px; font-size: 13px; }
 .input--xs { height: 30px; padding: 0 8px; font-size: 12px; }
@@ -308,12 +304,12 @@ select.input { appearance: none; }
 .review-link:hover { filter: brightness(1.1); }
 
 /* ── Board ────────────────────────────────────────────────────────────── */
-.board { display: grid; grid-template-columns: repeat(4, minmax(240px, 1fr)); gap: 16px; align-items: start; }
+.board { display: grid; grid-template-columns: repeat(var(--board-cols, 4), minmax(230px, 1fr)); gap: 16px; align-items: start; overflow-x: auto; }
 .bcol { border-radius: var(--radius-lg); background: var(--card); border: 1px solid var(--line); }
 .bcol__head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--line); }
 .bcol__name { font-weight: 800; }
-.bcol--idea .bcol__name { color: #c3a8ff; } .bcol--exploring .bcol__name { color: #8fb8ff; }
-.bcol--building .bcol__name { color: #7ee39a; } .bcol--maintaining .bcol__name { color: #7fe0d8; }
+.bcol[class*="hue--"] .bcol__name { color: color-mix(in srgb, var(--hue) 62%, #ffffff); }
+.bcol.hue--grey .bcol__name { color: var(--fg2); }
 .bcol__count { font-size: 12px; font-weight: 700; color: var(--muted); }
 .bcol__count.is-full { color: var(--part); }
 .bcol__body { display: flex; flex-direction: column; gap: 10px; padding: 12px; min-height: 120px; }
@@ -606,4 +602,23 @@ body.is-dragging-project .lane.is-drop {
 @media (prefers-reduced-motion: reduce) {
   .tier::before { transition: none; }
   .ability--ready .ability__key, .ability.is-used .ability__key { animation: none; }
+}
+
+/* ── Plot statuses settings ───────────────────────────────────────────── */
+.page--medium { max-width: 800px; }
+.status-help { margin: -8px 0 18px; max-width: 72ch; }
+.status-rows { display: flex; flex-direction: column; gap: 8px; }
+.status-row {
+  display: grid; align-items: center; gap: 8px;
+  grid-template-columns: 40px minmax(0, 1fr) 112px 112px 72px 60px;
+}
+.status-row__count { justify-content: center; min-width: 34px; font-variant-numeric: tabular-nums; }
+.status-row__moves { display: flex; gap: 2px; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+@media (max-width: 720px) {
+  .status-row { grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr); }
+  .status-row--head { display: none; }
 }

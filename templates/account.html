@@ -12,15 +12,6 @@
       <input class="input" type="text" id="display_name" name="display_name" maxlength="80" value="{{ current_user.display_name or '' }}">
     </div>
     <fieldset class="fieldset">
-      <legend>{{ t('account.wip_legend') }}</legend>
-      <div class="field">
-        <label class="field__label" for="wip_building_limit">{{ t('account.wip_label') }}</label>
-        <input class="input" type="number" id="wip_building_limit" name="wip_building_limit"
-               min="0" max="{{ config.MAX_WIP_BUILDING_LIMIT }}" value="{{ current_user.wip_building_limit }}">
-        <span class="muted small">{{ t('account.wip_help') }}</span>
-      </div>
-    </fieldset>
-    <fieldset class="fieldset">
       <legend>{{ t('account.password_legend') }}</legend>
       <div class="field">
         <label class="field__label" for="current_password">{{ t('account.current_password') }}</label>
@@ -35,6 +26,13 @@
       <button class="btn btn--primary" type="submit">{{ t('common.save') }}</button>
     </div>
   </form>
+</div>
+<div class="card settings-link">
+  <div>
+    <strong>{{ t('account.statuses_heading') }}</strong>
+    <div class="muted small">{{ t('account.statuses_help') }}</div>
+  </div>
+  <a class="btn btn--ghost btn--sm" href="{{ url_for('statuses.edit_statuses') }}">{{ t('account.statuses_manage') }}</a>
 </div>
 <div class="card settings-link">
   <div>

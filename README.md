@@ -19,11 +19,14 @@ projects and forgets to move them along:
   recede and stop counting towards the "needs a touch" nagging. Focus is
   independent of phase: a project can be well into Building and still not be
   what you are touching this weekend.
-* **Board** shows every project by phase: Idea, Exploring, Building,
-  Maintaining, with Parked, Done and Dropped shelves. Building is capped
-  so a fourth build has to wait. Each person sets their own cap on the
-  account page (0 turns it off); `WIP_BUILDING_LIMIT` only seeds the
-  value a brand-new account starts with.
+* **Board** shows every project by status. Each account edits its own
+  statuses under Account, Plot statuses: active ones are the columns, in
+  the order Advance walks; a parked one is a shelf with a return date;
+  closed ones are shelves for finished or abandoned work. Any active status
+  can carry a cap, so a fourth build has to wait. New accounts start with
+  Idea, Exploring, Building (capped at `WIP_BUILDING_LIMIT`), Maintaining,
+  and Done, Parked and Dropped shelves. Plots store a status's key, which
+  never changes, so renaming or reordering one moves nothing.
 * **Review** puts every active project on one scrolling page so the whole
   scope is visible at once, and takes one decision each: keep, advance, park
   or drop. Each card edits the project's objective and next action.

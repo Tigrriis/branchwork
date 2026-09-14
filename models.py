@@ -23,8 +23,9 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
+from flask import current_app, has_app_context
 from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -66,12 +67,19 @@ STATE_FULL = "full"       # every point earned
 STATE_PART = "part"       # some points earned
 STATE_EMPTY = "empty"     # none yet
 
-# Project lifecycle. The first four are "active" and appear on the board's
-# main columns; the rest are shelves. ``PHASE_ADVANCE`` is the path the
-# review page's "advance" button walks.
-PHASES = _Labels("phase", ("idea", "exploring", "building", "maintaining", "done", "parked", "dropped"))
-ACTIVE_PHASES = ("idea", "exploring", "building", "maintaining")
-PHASE_ADVANCE = ["idea", "exploring", "building", "maintaining", "done"]
+# Plot statuses belong to each account (``Status``); these are what a new
+# account starts with, named from the catalogue's [phase] table at creation
+# and the user's to change after that. Kinds: ``active`` statuses are the
+# board's columns, walked in order by "advance"; a ``parked`` status is a
+# shelf with a return date; ``closed`` ones hold finished or abandoned plots.
+STATUS_KINDS = ("active", "parked", "closed")
+DEFAULT_STATUSES = (
+    ("idea", "violet", "active"), ("exploring", "blue", "active"),
+    ("building", "green", "active"), ("maintaining", "teal", "active"),
+    ("done", "grey", "closed"), ("parked", "amber", "parked"), ("dropped", "red", "closed"),
+)
+# A status may also be grey, which suits a shelf; a scheme may not.
+STATUS_HUES = _Labels("hue", ("green", "blue", "red", "amber", "violet", "teal", "grey"))
 
 # How often a project expects to be touched. 0 means no tempo (never "due").
 CADENCES = _Labels("cadence", (7, 14, 30, 90, 0))
@@ -97,16 +105,35 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     display_name = db.Column(db.String(80), nullable=True)
-    # How many projects may sit in Building at once before the board refuses
-    # to move another one in. 0 turns the cap off. Per user rather than per
-    # deployment: the cap exists to impose personal discipline, so the person
-    # it applies to is the one who gets to move it.
-    wip_building_limit = db.Column(db.Integer, nullable=False, default=3, server_default="3")
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
 
     projects = db.relationship(
         "Project", backref="owner", order_by="Project.created_at",
         cascade="all, delete-orphan")
+    statuses = db.relationship(
+        "Status", backref="user", order_by="Status.position, Status.id",
+        cascade="all, delete-orphan")
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Every account starts with the default statuses, so nothing else
+        # has to cope with an account that has none.
+        if not self.statuses:
+            self.statuses = default_statuses()
+
+    def status(self, key: str | None) -> Status | None:
+        return next((s for s in self.statuses if s.key == key), None)
+
+    @property
+    def default_status(self) -> Status:
+        """Where a new plot starts. The settings page never allows an
+        account with no active status, so there is always one."""
+        return next(s for s in self.statuses if s.is_active)
+
+    @property
+    def parked_status(self) -> Status | None:
+        """The status the review's Park button uses, if the account has one."""
+        return next((s for s in self.statuses if s.is_parked), None)
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
@@ -150,6 +177,9 @@ class Project(db.Model):
     objective = db.Column(db.String(300), nullable=True)
     next_action = db.Column(db.String(200), nullable=True)
     parked_until = db.Column(db.Date, nullable=True)
+    # The active status a plot was in when it went onto a shelf, so picking
+    # it back up returns it there instead of to the start.
+    shelved_from = db.Column(db.String(20), nullable=True)
     # Local folder with a git history; ``flask sync-git`` turns its commits
     # into activity so "last touched" stays honest without manual logging.
     repo_path = db.Column(db.String(400), nullable=True)
@@ -168,19 +198,67 @@ class Project(db.Model):
 
     # ── Tempo ───────────────────────────────────────────────────────────────
     @property
+    def status(self) -> Status | None:
+        """This plot's status from its owner's set; ``phase`` holds the key."""
+        return self.owner.status(self.phase) if self.owner is not None else None
+
+    @property
     def is_active(self) -> bool:
-        return self.phase in ACTIVE_PHASES
+        status = self.status
+        return status is not None and status.is_active
+
+    @property
+    def is_parked(self) -> bool:
+        status = self.status
+        return status is not None and status.is_parked
 
     @property
     def phase_label(self) -> str:
-        return PHASES.get(self.phase, self.phase)
+        status = self.status
+        return status.name if status is not None else self.phase
 
     @property
-    def next_phase(self) -> str | None:
-        if self.phase in PHASE_ADVANCE:
-            i = PHASE_ADVANCE.index(self.phase)
-            return PHASE_ADVANCE[i + 1] if i + 1 < len(PHASE_ADVANCE) else None
-        return "exploring"   # parked / dropped come back in at exploring
+    def phase_hue(self) -> str:
+        status = self.status
+        return status.hue if status is not None else "grey"
+
+    @property
+    def next_status(self) -> Status | None:
+        """Where "advance" goes: the next active status, and past the last one
+        the first closed status. From a shelf, the way back."""
+        if self.owner is None:
+            return None
+        status = self.status
+        if status is None or not status.is_active:
+            return self.owner.status(self.resume_phase)
+        statuses = list(self.owner.statuses)
+        later = statuses[statuses.index(status) + 1:]
+        return (next((s for s in later if s.is_active), None)
+                or next((s for s in statuses if s.is_closed), None))
+
+    @property
+    def resume_phase(self) -> str:
+        """The key a shelved plot is picked back up into: the active status it
+        left, if that still exists, else the first active one."""
+        back = self.owner.status(self.shelved_from)
+        if back is not None and back.is_active:
+            return back.key
+        return self.owner.default_status.key
+
+    def change_phase(self, status: Status, *, park_until: date | None = None,
+                     kind: str = "phase", record: bool = True) -> None:
+        """Move to a status, remembering where a shelved plot came from."""
+        old = self.status
+        if status.is_active:
+            self.shelved_from = None
+        elif old is not None and old.is_active:
+            self.shelved_from = old.key
+        self.parked_until = park_until if status.is_parked else None
+        if status.key != self.phase:
+            before = old.name if old is not None else self.phase
+            self.phase = status.key
+            if record:
+                self.record(kind, note=f"{before} → {status.name}")
 
     @property
     def touched_at(self) -> datetime:
@@ -204,7 +282,7 @@ class Project(db.Model):
 
     @property
     def parked_expired(self) -> bool:
-        return (self.phase == "parked" and self.parked_until is not None
+        return (self.is_parked and self.parked_until is not None
                 and self.parked_until <= _utcnow().date())
 
     @property
@@ -256,6 +334,47 @@ class Project(db.Model):
 
     def count_state(self, state: str) -> int:
         return sum(1 for t in self.tasks if t.state == state)
+
+
+def default_statuses() -> list[Status]:
+    """A fresh copy of the starting set, named from the catalogue."""
+    cap = current_app.config.get("DEFAULT_WIP_BUILDING_LIMIT", 3) if has_app_context() else 3
+    return [Status(key=key, name=tx(f"phase.{key}"), hue=hue, kind=kind, position=position,
+                   wip_limit=cap if key == "building" else 0)
+            for position, (key, hue, kind) in enumerate(DEFAULT_STATUSES)]
+
+
+class Status(db.Model):
+    """One of an account's plot statuses: a board column or a shelf.
+
+    ``key`` is what ``Project.phase`` stores and it never changes, so
+    renaming, recolouring or reordering a status leaves its plots where they
+    are. ``wip_limit`` caps how many plots may sit in an active status at
+    once; 0 means no cap.
+    """
+    __tablename__ = "statuses"
+    __table_args__ = (db.UniqueConstraint("user_id", "key", name="uq_statuses_user_key"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    key = db.Column(db.String(20), nullable=False)
+    name = db.Column(db.String(40), nullable=False)
+    hue = db.Column(db.String(20), nullable=False, default="grey", server_default="grey")
+    kind = db.Column(db.String(10), nullable=False, default="active", server_default="active")
+    position = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    wip_limit = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+
+    @property
+    def is_active(self) -> bool:
+        return self.kind == "active"
+
+    @property
+    def is_parked(self) -> bool:
+        return self.kind == "parked"
+
+    @property
+    def is_closed(self) -> bool:
+        return self.kind == "closed"
 
 
 class Branch(db.Model):

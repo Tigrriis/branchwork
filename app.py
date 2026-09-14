@@ -2,7 +2,7 @@
 Villainy: plan large, multi-stranded plots as a skill tree.
 
   /                      Today: projects due for a touch, the inbox
-  /board                 every project by phase (Idea → Maintaining, shelves)
+  /board                 every project by status: columns and shelves
   /review                the weekly review: keep / advance / park / drop
   /projects/<id>         the tree (branches as columns, tasks in tiers)
   /projects/<id>/list    the same tasks as a table
@@ -28,10 +28,11 @@ from demo import demo_bp
 from gitsync import gitsync_bp
 from extensions import csrf, db, login_manager, migrate
 from icons import ICONS, icon_svg
-from models import CADENCES, HUES, PHASES
+from models import CADENCES, HUES, STATUS_HUES
 from projects import projects_bp
 from routines import routines_bp
 from starters import starters_bp
+from statuses import statuses_bp
 
 
 def create_app(overrides: dict | None = None) -> Flask:
@@ -54,6 +55,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     app.register_blueprint(demo_bp)
     app.register_blueprint(gitsync_bp)
     app.register_blueprint(starters_bp)
+    app.register_blueprint(statuses_bp)
 
     _register_asset_versioning(app)
     _register_template_helpers(app)
@@ -101,7 +103,7 @@ def _register_template_helpers(app: Flask) -> None:
             "t": t,
             "js_copy": js_copy,
             "HUES": HUES,
-            "PHASES": PHASES,
+            "STATUS_HUES": STATUS_HUES,
             "CADENCES": CADENCES,
             "ICON_NAMES": list(ICONS),
             "icon": icon_svg,

@@ -20,7 +20,7 @@ from flask_login import current_user, login_required
 from copytext import tx
 from extensions import db
 from icons import DEFAULT_ICON, ICONS
-from models import CADENCES, HUES, PHASES, Branch, InboxItem, Project, Task
+from models import CADENCES, HUES, Branch, InboxItem, Project, Task
 from starters import DEFAULT_STARTER, apply_starter, choices_for
 
 projects_bp = Blueprint("projects", __name__)
@@ -92,9 +92,12 @@ def _read_project_form(project: Project) -> bool:
     project.objective = (request.form.get("objective") or "").strip()[:300] or None
     project.next_action = (request.form.get("next_action") or "").strip()[:200] or None
     project.repo_path = (request.form.get("repo_path") or "").strip()[:400] or None
-    phase = request.form.get("phase") or project.phase or "idea"
-    if phase in PHASES and phase != project.phase:
-        project.phase = phase
+    status = current_user.status(request.form.get("phase") or project.phase)
+    if status is not None and status.key != project.phase:
+        if project.id is None:
+            project.phase = status.key          # new, so nothing to shelve from
+        else:
+            project.change_phase(status, park_until=project.parked_until, record=False)
     return True
 
 
@@ -109,7 +112,7 @@ def new_project():
     # focused=True so the form renders with the box ticked: creating a project
     # is an act of attention, and unticking it is one click.
     project = Project(owner_id=current_user.id, gate_points=current_app.config["DEFAULT_GATE_POINTS"],
-                      phase="idea", cadence_days=14, focused=True)
+                      phase=current_user.default_status.key, cadence_days=14, focused=True)
     if request.method == "POST" and _read_project_form(project):
         db.session.add(project)
         for branch in apply_starter(project, request.form.get("starter") or "blank"):

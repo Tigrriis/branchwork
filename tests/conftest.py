@@ -96,3 +96,16 @@ def make_task(branch: Branch, title="Task", tier=1, points_max=1, points_done=0)
     _db.session.add(task)
     _db.session.commit()
     return task
+
+
+def status_rows(user) -> list[list[str]]:
+    """The statuses settings form as it would post: one editable row per status,
+    [id, name, hue, kind, cap]."""
+    return [[str(s.id), s.name, s.hue, s.kind, str(s.wip_limit)] for s in user.statuses]
+
+
+def post_statuses(client, rows, **extra):
+    fields = ("status_id", "status_name", "status_hue", "status_kind", "status_cap")
+    data = {field: [row[i] for row in rows] for i, field in enumerate(fields)}
+    data.update(extra)
+    return client.post("/settings/statuses", data=data, follow_redirects=True)

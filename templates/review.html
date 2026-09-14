@@ -27,8 +27,8 @@
     <div>
       <a class="review-card__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
       <div class="review-card__meta">
-        <span class="phase phase--{{ p.phase }}">{{ p.phase_label }}</span>
-        <span class="muted">{% if p.phase == 'parked' %}{{ t('review.parked_until', date=p.parked_until.strftime('%d %b')) }}{% else %}{{ p.cadence_label|lower }}{% endif %}</span>
+        <span class="phase hue--{{ p.phase_hue }}">{{ p.phase_label }}</span>
+        <span class="muted">{% if p.is_parked and p.parked_until %}{{ t('review.parked_until', date=p.parked_until.strftime('%d %b')) }}{% else %}{{ p.cadence_label|lower }}{% endif %}</span>
         <span class="{% if p.is_due %}is-due{% else %}muted{% endif %}">
           {% if p.days_since_touch == 0 %}{{ t('common.touched_today') }}{% else %}{{ t('review.last_touched', n=p.days_since_touch) }}{% endif %}
         </span>
@@ -64,20 +64,27 @@
       <input class="input" type="text" id="next-{{ p.id }}" name="next_action" maxlength="200"
              value="{{ p.next_action or '' }}" placeholder="{{ t('fields.next_placeholder') }}">
     </div>
+    {% set parking = current_user.parked_status %}
+    {% if parking %}
     <div class="field">
       <label class="field__label" for="parked-{{ p.id }}">{{ t('fields.park_until_label') }}</label>
       <input class="input input--sm" type="date" id="parked-{{ p.id }}" name="parked_until" value="{{ (today.toordinal() + 30)|to_date }}">
     </div>
+    {% endif %}
     <div class="review-actions">
-      {% if p.phase == 'parked' %}
+      {% set advance = p.next_status %}
+      {% if p.is_parked %}
         <button class="btn btn--primary" name="decision" value="unpark">{{ t('review.unpark') }}</button>
         <button class="btn btn--ghost" name="decision" value="park">{{ t('review.keep_parked') }}</button>
       {% else %}
         <button class="btn btn--primary" name="decision" value="keep">{{ t('review.keep') }}</button>
-        {% if p.next_phase %}<button class="btn" name="decision" value="advance">{{ t('review.advance', phase=PHASES[p.next_phase]) }}</button>{% endif %}
-        <button class="btn btn--ghost" name="decision" value="park">{{ t('review.park') }}</button>
+        {% if advance %}<button class="btn" name="decision" value="advance">{{ t('review.advance', phase=advance.name) }}</button>{% endif %}
+        {% if parking %}<button class="btn btn--ghost" name="decision" value="park">{{ t('review.park') }}</button>{% endif %}
       {% endif %}
-      <button class="btn btn--danger" name="decision" value="drop" formnovalidate>{{ t('review.drop') }}</button>
+      {# Every closed status is one click away, except the one Advance already reaches. #}
+      {% for s in current_user.statuses if s.is_closed and not (advance and advance.key == s.key) %}
+        <button class="btn {% if loop.last %}btn--danger{% else %}btn--ghost{% endif %}" name="decision" value="close:{{ s.key }}" formnovalidate>{{ t('review.close', phase=s.name) }}</button>
+      {% endfor %}
     </div>
   </form>
 </div>

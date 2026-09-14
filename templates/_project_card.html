@@ -1,4 +1,4 @@
-{# One plot on the board. Pass project, and prev/next phase keys (or none). #}
+{# One plot on the board. Pass project, and the prev/next statuses (or none). #}
 <article class="pcard {% if project.is_due %}pcard--due{% endif %}">
   <div class="pcard__top">
     <a class="pcard__name" href="{{ url_for('projects.tree', project_id=project.id) }}">
@@ -18,14 +18,14 @@
     <span class="pcard__moves">
       {% if prev %}
       <form method="post" action="{{ url_for('dashboard.set_phase', project_id=project.id) }}" class="inline-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="{{ prev }}">
-        <button class="icon-btn" title="{{ t('card.back_to', phase=PHASES[prev]) }}">‹</button>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="{{ prev.key }}">
+        <button class="icon-btn" title="{{ t('card.back_to', phase=prev.name) }}">‹</button>
       </form>
       {% endif %}
       {% if next %}
       <form method="post" action="{{ url_for('dashboard.set_phase', project_id=project.id) }}" class="inline-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="{{ next }}">
-        <button class="icon-btn" title="{{ t('card.advance_to', phase=PHASES[next]) }}">›</button>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="{{ next.key }}">
+        <button class="icon-btn" title="{{ t('card.advance_to', phase=next.name) }}">›</button>
       </form>
       {% endif %}
     </span>

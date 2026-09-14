@@ -40,11 +40,11 @@
         </div>
         <div class="due-row__actions">
           <form method="post" action="{{ url_for('dashboard.set_phase', project_id=p.id) }}" class="inline-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="exploring">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="{{ p.resume_phase }}">
             <button class="btn btn--sm">{{ t('common.pick_up') }}</button>
           </form>
           <form method="post" action="{{ url_for('dashboard.set_phase', project_id=p.id) }}" class="inline-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="parked">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="{{ p.phase }}">
             <input type="hidden" name="parked_until" value="{{ (today.toordinal() + 30)|to_date }}">
             <button class="btn btn--ghost btn--sm">{{ t('today.park_more') }}</button>
           </form>

@@ -10,29 +10,25 @@
   <h1>{{ t('board.heading') }}</h1>
   <span class="muted">
     {{ t('board.about') }}
-    {% if wip_limit %}
-      {{ t('board.capped', limit=wip_limit) }}
-      <a class="link-quiet" href="{{ url_for('auth.account') }}">{{ t('board.change_cap') }}</a>
-    {% else %}
-      {{ t('board.no_cap') }} <a class="link-quiet" href="{{ url_for('auth.account') }}">{{ t('board.set_cap') }}</a>
-    {% endif %}
+    <a class="link-quiet" href="{{ url_for('statuses.edit_statuses') }}">{{ t('board.edit_statuses') }}</a>
   </span>
 </div>
 
-<div class="board">
-  {% for key, label, projects in columns %}
+{# One column per active status, in the account's order. #}
+<div class="board" style="--board-cols: {{ columns|length }}">
+  {% for status, projects in columns %}
   {% set loop_i = loop.index0 %}
-  <section class="bcol bcol--{{ key }}">
+  <section class="bcol hue--{{ status.hue }}">
     <header class="bcol__head">
-      <span class="bcol__name">{{ label }}</span>
-      <span class="bcol__count {% if key == 'building' and wip_limit and projects|length >= wip_limit %}is-full{% endif %}">
-        {{ projects|length }}{% if key == 'building' and wip_limit %} / {{ wip_limit }}{% endif %}
+      <span class="bcol__name">{{ status.name }}</span>
+      <span class="bcol__count {% if status.wip_limit and projects|length >= status.wip_limit %}is-full{% endif %}">
+        {{ projects|length }}{% if status.wip_limit %} / {{ status.wip_limit }}{% endif %}
       </span>
     </header>
     <div class="bcol__body">
       {% for project in projects %}
         {% set prev = columns[loop_i - 1][0] if loop_i > 0 else none %}
-        {% set next = columns[loop_i + 1][0] if loop_i + 1 < columns|length else 'done' %}
+        {% set next = columns[loop_i + 1][0] if loop_i + 1 < columns|length else finish %}
         {% include "_project_card.html" %}
       {% else %}
         <div class="bcol__empty muted small">{{ t('common.nothing_here') }}</div>
@@ -43,18 +39,18 @@
 </div>
 
 <div class="shelves">
-  {% for key, label, projects in shelves %}
-  <details class="shelf" {% if projects and key == 'parked' %}open{% endif %}>
-    <summary class="shelf__head"><span class="phase phase--{{ key }}">{{ label }}</span> <span class="muted">{{ projects|length }}</span></summary>
+  {% for status, projects in shelves %}
+  <details class="shelf" {% if projects and status.is_parked %}open{% endif %}>
+    <summary class="shelf__head"><span class="phase hue--{{ status.hue }}">{{ status.name }}</span> <span class="muted">{{ projects|length }}</span></summary>
     <div class="shelf__body">
       {% for p in projects %}
       <div class="shelf-row">
         <a class="due-row__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
-        {% if key == 'parked' and p.parked_until %}<span class="muted small">{{ t('board.parked_until', date=p.parked_until.strftime('%d %b %Y')) }}</span>{% endif %}
+        {% if status.is_parked and p.parked_until %}<span class="muted small">{{ t('board.parked_until', date=p.parked_until.strftime('%d %b %Y')) }}</span>{% endif %}
         <span class="muted small">{{ t('common.pts', done=p.points_done, max=p.points_max) }}</span>
         <form method="post" action="{{ url_for('dashboard.set_phase', project_id=p.id) }}" class="inline-form">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="exploring">
-          <button class="btn btn--ghost btn--sm">{% if key == 'done' %}{{ t('board.reopen') }}{% else %}{{ t('common.pick_up') }}{% endif %}</button>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="{{ p.resume_phase }}">
+          <button class="btn btn--ghost btn--sm">{% if status.is_closed %}{{ t('board.reopen') }}{% else %}{{ t('common.pick_up') }}{% endif %}</button>
         </form>
       </div>
       {% else %}

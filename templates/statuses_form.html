@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ t('statuses.title') }} · {{ SITE_NAME }}{% endblock %}
+{% block main_class %}page page--medium{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__head">
+    <h1>{{ t('statuses.heading') }}</h1>
+    <a class="link-quiet" href="{{ url_for('auth.account') }}">{{ t('statuses.back_account') }}</a>
+  </div>
+  <p class="muted small status-help">{{ t('statuses.help') }}</p>
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {# First in the form, so pressing Enter in a field saves rather than
+       pressing the first move arrow. #}
+    <button class="visually-hidden" type="submit" tabindex="-1">{{ t('statuses.save') }}</button>
+    <div class="status-rows">
+      <div class="status-row status-row--head" aria-hidden="true">
+        <span></span>
+        <span class="field__label">{{ t('common.name') }}</span>
+        <span class="field__label">{{ t('statuses.colour') }}</span>
+        <span class="field__label">{{ t('statuses.kind') }}</span>
+        <span class="field__label">{{ t('statuses.cap') }}</span>
+        <span></span>
+      </div>
+      {% for i in range(statuses|length + blanks) %}
+      {% set s = statuses[i] if i < statuses|length else none %}
+      {% set n = counts.get(s.key, 0) if s else 0 %}
+      <div class="status-row">
+        <span class="phase hue--{{ s.hue if s else 'grey' }} status-row__count"
+              {% if s %}title="{{ t('statuses.count_title', n=n) }}"{% endif %}>{% if s %}{{ n }}{% else %}+{% endif %}</span>
+        <input type="hidden" name="status_id" value="{{ s.id if s else '' }}">
+        <input class="input input--sm" type="text" name="status_name" maxlength="40"
+               value="{{ s.name if s else '' }}"
+               {% if not s %}placeholder="{{ t('statuses.new_placeholder') }}"{% endif %}
+               aria-label="{{ t('common.name') }}">
+        <select class="input input--sm" name="status_hue" aria-label="{{ t('statuses.colour') }}">
+          {% for key, label in STATUS_HUES.items() %}
+          <option value="{{ key }}" {% if (s.hue if s else 'grey') == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select class="input input--sm" name="status_kind" aria-label="{{ t('statuses.kind') }}">
+          <option value="active" {% if not s or s.kind == 'active' %}selected{% endif %}>{{ t('statuses.kind_active') }}</option>
+          <option value="parked" {% if s and s.kind == 'parked' %}selected{% endif %}>{{ t('statuses.kind_parked') }}</option>
+          <option value="closed" {% if s and s.kind == 'closed' %}selected{% endif %}>{{ t('statuses.kind_closed') }}</option>
+        </select>
+        <input class="input input--sm" type="number" name="status_cap" min="0" max="{{ max_cap }}"
+               value="{{ s.wip_limit if s else 0 }}" aria-label="{{ t('statuses.cap') }}">
+        <span class="status-row__moves">
+          {% if s %}
+          <button class="icon-btn" type="submit" name="move" value="{{ i }}:up" title="{{ t('statuses.move_up') }}" {% if i == 0 %}disabled{% endif %}>↑</button>
+          <button class="icon-btn" type="submit" name="move" value="{{ i }}:down" title="{{ t('statuses.move_down') }}" {% if i + 1 >= statuses|length %}disabled{% endif %}>↓</button>
+          {% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="form__actions">
+      <button class="btn btn--primary" type="submit">{{ t('statuses.save') }}</button>
+      <a class="btn btn--ghost" href="{{ url_for('auth.account') }}">{{ t('common.cancel') }}</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

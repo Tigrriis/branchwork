@@ -19,7 +19,7 @@
       <div class="field">
         <label class="field__label" for="phase">{{ t('plot.phase') }}</label>
         <select class="input" id="phase" name="phase">
-          {% for key, label in PHASES.items() %}<option value="{{ key }}" {% if project.phase == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          {% for s in current_user.statuses %}<option value="{{ s.key }}" {% if project.phase == s.key %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
         </select>
       </div>
     </div>
