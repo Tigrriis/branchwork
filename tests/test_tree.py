@@ -149,10 +149,10 @@ def test_new_task_defaults_to_next_tier(client, db):
     r = client.get(f"/branches/{branch.id}/tasks/new")
     assert b'name="tier" min="1" max="50" value="2"' in r.data
     client.post(f"/branches/{branch.id}/tasks/new?tier=2",
-                data={"title": "B", "icon": "hammer", "tier": "2", "points_max": "3", "points_done": "0"})
+                data={"title": "B", "icon": "bomb", "tier": "2", "points_max": "3", "points_done": "0"})
     db.session.refresh(branch)
     assert [t.tier for t in branch.tasks] == [1, 2]
-    assert branch.tasks[1].icon == "hammer" and branch.tasks[1].points_max == 3
+    assert branch.tasks[1].icon == "bomb" and branch.tasks[1].points_max == 3
 
 
 def test_tree_page_renders_tiles_and_locks(client, db):

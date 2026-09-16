@@ -19,7 +19,7 @@ from flask_login import current_user, login_required
 
 from copytext import tx
 from extensions import db
-from icons import DEFAULT_ICON, ICONS
+from icons import DEFAULT_ICON, clean_icon
 from models import CADENCES, HUES, Branch, InboxItem, Project, Task
 from starters import DEFAULT_STARTER, apply_starter, choices_for
 
@@ -285,9 +285,8 @@ def _read_task_form(task: Task, project: Project, default_branch: Branch | None 
             task.position = len([t for t in target.tasks if t.tier == task.tier])
     elif task.branch is None and default_branch is not None:
         task.branch = default_branch
-    icon = request.form.get("icon") or DEFAULT_ICON
     task.title = title
-    task.icon = icon if icon in ICONS else DEFAULT_ICON
+    task.icon = clean_icon(request.form.get("icon"))
     task.tier = _int(request.form.get("tier"), task.tier or 1, 1, 50)
     task.points_max = _int(request.form.get("points_max"), 1, 1,
                            current_app.config["MAX_POINTS_PER_TASK"])

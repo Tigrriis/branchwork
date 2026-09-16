@@ -27,7 +27,7 @@ from dashboard import dashboard_bp
 from demo import demo_bp
 from gitsync import gitsync_bp
 from extensions import csrf, db, login_manager, migrate
-from icons import ICONS, icon_svg
+from icons import icon_names, icon_svg
 from models import CADENCES, HUES, STATUS_HUES
 from projects import projects_bp
 from routines import routines_bp
@@ -107,7 +107,7 @@ def _register_template_helpers(app: Flask) -> None:
             "STATUS_HUES": STATUS_HUES,
             "plot_switcher": plot_switcher,
             "CADENCES": CADENCES,
-            "ICON_NAMES": list(ICONS),
+            "ICON_NAMES": icon_names(),
             "icon": icon_svg,
         }
 

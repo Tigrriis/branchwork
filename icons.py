@@ -1,53 +1,123 @@
-"""Task icons: a small stroke set on a 24px grid, rendered inline as SVG.
+"""Machination icons: SVG files in static/branchwork/img/machination_icons/.
 
-Keyed by a short name stored on ``Task.icon``. Adding one is a matter of
-adding an entry here; the task form lists them all as a picker.
+Each file is one icon, named by its filename (``bomb.svg`` is ``bomb``), and
+that name is what ``Task.icon`` and ``Routine.icon`` store. Adding an icon is
+dropping a file into the folder: the pickers list whatever is there, and a
+new or changed file is picked up without a restart.
+
+Icons are drawn inline rather than as ``<img>`` so they take the colour of
+wherever they sit. Anything drawn in white (``#fff`` or ``white``) becomes
+``currentColor``, which is how a tile's icon still dims before it has points;
+any other colour is kept as drawn.
 """
+import os
+import re
+import time
+
 from markupsafe import Markup
 
-ICONS: dict[str, str] = {
-    "check": '<path d="M5 12.5l4.5 4.5L19 7"></path>',
-    "doc": '<path d="M6 3h8l5 5v13H6z"></path><path d="M14 3v5h5M9 13h7M9 17h7"></path>',
-    "layout": '<rect x="3" y="3" width="18" height="18" rx="1"></rect><path d="M3 10h18M10 10v11"></path>',
-    "pencil": '<path d="M4 20l4-1L19 8l-3-3L5 16z"></path><path d="M13 7l3 3"></path>',
-    "ruler": '<rect x="2" y="9" width="20" height="7" rx="1"></rect><path d="M6 9v3M10 9v3M14 9v3M18 9v3"></path>',
-    "sign": '<path d="M3 17c3-7 6-7 7 0s4 6 7-3"></path><path d="M3 21h18"></path>',
-    "flag": '<path d="M5 21V4M5 4h13l-3 4 3 4H5"></path>',
-    "wrench": '<path d="M14 6a4 4 0 0 0-5 5l-5 5 4 4 5-5a4 4 0 0 0 5-5l-3 3-2-2z"></path>',
-    "list": '<path d="M8 6h13M8 12h13M8 18h13M3 6h1M3 12h1M3 18h1"></path>',
-    "key": '<circle cx="8" cy="12" r="4"></circle><path d="M12 12h9M18 12v3M15 12v2"></path>',
-    "seal": '<circle cx="12" cy="9" r="5"></circle><path d="M8 13l-1 8 5-3 5 3-1-8"></path>',
-    "fire": '<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-6 1 1 2 2 3 1z"></path>',
-    "calendar": '<rect x="3" y="5" width="18" height="16" rx="1"></rect><path d="M3 10h18M8 3v4M16 3v4"></path>',
-    "hardhat": '<path d="M4 15a8 8 0 0 1 16 0"></path><path d="M2 15h20M12 7v3"></path>',
-    "home": '<path d="M3 11l9-7 9 7M6 10v10h12V10"></path>',
-    "users": '<circle cx="9" cy="8" r="3"></circle><path d="M3 20a6 6 0 0 1 12 0M16 4a3 3 0 0 1 0 6M21 20a6 6 0 0 0-5-5.9"></path>',
-    "trophy": '<path d="M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 21h8"></path>',
-    "hammer": '<path d="M14 4l6 6-3 3-6-6z"></path><path d="M11 7l-7 7 3 3 7-7"></path>',
-    "truck": '<path d="M3 17V7h11v10M14 11h4l3 3v3"></path><circle cx="7" cy="18" r="2"></circle><circle cx="17" cy="18" r="2"></circle>',
-    "mail": '<rect x="3" y="5" width="18" height="14" rx="1"></rect><path d="M3 7l9 6 9-6"></path>',
-    "phone": '<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z"></path>',
-    "cash": '<rect x="2" y="6" width="20" height="12" rx="1"></rect><circle cx="12" cy="12" r="3"></circle><path d="M6 12h.01M18 12h.01"></path>',
-    "chart": '<path d="M3 21h18M6 17V10M11 17V5M16 17v-7M21 17V8"></path>',
-    "gear": '<circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"></path>',
-    "box": '<path d="M12 2l9 5v10l-9 5-9-5V7z"></path><path d="M3 7l9 5 9-5M12 12v10"></path>',
-    "bolt": '<path d="M13 2L4 14h7l-1 8 9-12h-7z"></path>',
-    "shield": '<path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"></path><path d="M9 12l2 2 4-4"></path>',
-    "camera": '<path d="M4 8h3l2-3h6l2 3h3v12H4z"></path><circle cx="12" cy="13" r="3.5"></circle>',
-    "globe": '<circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"></path>',
-    "refresh": '<path d="M20 11a8 8 0 0 0-14.5-4.5L3 9"></path><path d="M3 4v5h5"></path><path d="M4 13a8 8 0 0 0 14.5 4.5L21 15"></path><path d="M21 20v-5h-5"></path>',
-    "clock": '<circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path>',
-    "star": '<path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9L6.5 20l1-6.2L3 9.6l6.2-.9z"></path>',
-}
+ICON_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "static", "branchwork", "img", "machination_icons")
+DEFAULT_ICON = "bomb"
 
-DEFAULT_ICON = "check"
+# Names fit Task.icon (String(30)) and are safe in ids and attributes.
+_NAME = re.compile(r"[a-z0-9_-]{1,30}")
+_WHITE = re.compile(r"((?:fill|stroke)\s*(?::\s*|=\s*[\"']))(#fff(?:fff)?|white)\b", re.I)
+# The files are ours, but they go straight into every page, so anything that
+# could run is refused rather than trusted.
+_UNSAFE = re.compile(r"<\s*(?:script|foreignObject)\b|\son\w+\s*=|javascript:", re.I)
+
+_cache: dict = {"checked": 0.0, "signature": None, "icons": {}}
 
 
-def icon_svg(name: str, size: int = 32, stroke_width: float = 1.7, cls: str = "") -> Markup:
-    """Inline SVG for an icon name; unknown names fall back to a tick."""
-    body = ICONS.get(name) or ICONS[DEFAULT_ICON]
-    klass = f' class="{cls}"' if cls else ""
+def _signature() -> tuple:
+    try:
+        return tuple(sorted((e.name, e.stat().st_mtime_ns) for e in os.scandir(ICON_DIR)
+                            if e.is_file() and e.name.lower().endswith(".svg")))
+    except FileNotFoundError:
+        return ()
+
+
+def _parse(name: str, text: str):
+    """``(viewBox, root style, inner markup)``, or None if the file won't do."""
+    if _UNSAFE.search(text):
+        return None
+    start = text.find("<svg")
+    end = text.find(">", start) if start >= 0 else -1
+    close = text.rfind("</svg>")
+    if start < 0 or end < 0 or close < end:
+        return None
+    root = text[start:end]
+    view_box = re.search(r'viewBox\s*=\s*"([^"]+)"', root)
+    if not view_box:
+        return None
+    style = re.search(r'\sstyle\s*=\s*"([^"]*)"', root)
+    body = _WHITE.sub(lambda m: m.group(1) + "currentColor", text[end + 1:close])
+    # The icon's name goes in front of every id, so two icons on one page
+    # never answer to each other's gradients or clip paths.
+    prefix = f"mi-{name}-"
+    body = re.sub(r'\bid="([^"]+)"', lambda m: f'id="{prefix}{m.group(1)}"', body)
+    body = re.sub(r"url\(#([^)]+)\)", lambda m: f"url(#{prefix}{m.group(1)})", body)
+    body = re.sub(r'((?:xlink:)?href)="#([^"]+)"', lambda m: f'{m.group(1)}="#{prefix}{m.group(2)}"', body)
+    return view_box.group(1), (style.group(1) if style else ""), body
+
+
+def _icons() -> dict:
+    """The current set, re-read at most once a second and only if the folder changed."""
+    now = time.monotonic()
+    if now - _cache["checked"] < 1.0:
+        return _cache["icons"]
+    _cache["checked"] = now
+    signature = _signature()
+    if signature != _cache["signature"]:
+        icons = {}
+        for filename, _mtime in signature:
+            name = filename[:-4].lower()
+            if not _NAME.fullmatch(name):
+                continue
+            with open(os.path.join(ICON_DIR, filename), encoding="utf-8") as handle:
+                parsed = _parse(name, handle.read())
+            if parsed is not None:
+                icons[name] = parsed
+        _cache.update(signature=signature, icons=icons)
+    return _cache["icons"]
+
+
+def refresh() -> None:
+    """Forget the cached set, so the next call reads the folder again."""
+    _cache.update(checked=0.0, signature=None, icons={})
+
+
+def icon_names() -> list[str]:
+    """Every icon, in filename order: the order the pickers show them."""
+    return list(_icons())
+
+
+def has_icon(name: str | None) -> bool:
+    return bool(name) and name in _icons()
+
+
+def default_icon() -> str | None:
+    icons = _icons()
+    return DEFAULT_ICON if DEFAULT_ICON in icons else next(iter(icons), None)
+
+
+def clean_icon(name: str | None) -> str:
+    """A name worth storing: the one given if it exists, else the default."""
+    return name if has_icon(name) else (default_icon() or DEFAULT_ICON)
+
+
+def icon_svg(name: str | None, size: int = 32, cls: str = "") -> Markup:
+    """Inline SVG for an icon name. An unknown name draws the default icon,
+    so a task saved under a retired name still shows something."""
+    icons = _icons()
+    entry = icons.get(name or "") or icons.get(default_icon() or "")
+    if entry is None:
+        return Markup("")
+    view_box, style, body = entry
+    klass = f"micon {cls}".strip()
+    style_attr = f' style="{style}"' if style else ""
     return Markup(
-        f'<svg{klass} width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" '
-        f'stroke="currentColor" stroke-width="{stroke_width}" stroke-linecap="round" '
-        f'stroke-linejoin="round" aria-hidden="true">{body}</svg>')
+        f'<svg class="{klass}" width="{size}" height="{size}" viewBox="{view_box}" fill="none"'
+        f'{style_attr} aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">'
+        f"{body}</svg>")

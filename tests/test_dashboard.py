@@ -288,7 +288,7 @@ def test_business_starter_seeds_unchained_areas_with_mapping_tasks(client, db):
 
 def test_starters_are_internally_consistent():
     """Every seeded task names a real branch and a real icon."""
-    from icons import ICONS
+    from icons import has_icon
     from models import HUES
     from starters import STARTERS
 
@@ -298,7 +298,7 @@ def test_starters_are_internally_consistent():
         for branch_name, tasks in (spec.get("tasks") or {}).items():
             assert branch_name in names, f"{key}: no branch {branch_name!r}"
             for title, icon, points in tasks:
-                assert icon in ICONS, f"{key}: unknown icon {icon!r}"
+                assert has_icon(icon), f"{key}: unknown icon {icon!r}"
                 assert 1 <= points <= 20 and title
 
 

@@ -122,16 +122,16 @@ def test_routine_form_creates_edits_and_deletes(client, db):
     assert p.routines == []                 # rendering the form inserts nothing
 
     client.post(f"/projects/{p.id}/routines/new",
-                data={"title": "Site walk", "every_days": "14", "icon": "hardhat", "last_done": ""})
+                data={"title": "Site walk", "every_days": "14", "icon": "bomb", "last_done": ""})
     r = Routine.query.one()
-    assert (r.title, r.every_days, r.icon, r.last_done_at) == ("Site walk", 14, "hardhat", None)
+    assert (r.title, r.every_days, r.icon, r.last_done_at) == ("Site walk", 14, "bomb", None)
 
     three_days_ago = _ago(3).date().isoformat()
     client.post(f"/routines/{r.id}/edit",
                 data={"title": "Site walk", "every_days": "14", "icon": "nonsense",
                       "last_done": three_days_ago})
     db.session.refresh(r)
-    assert r.icon == "refresh" and r.days_left == 11
+    assert r.icon == "bomb" and r.days_left == 11
     # Correcting the date is bookkeeping, not work on the plot.
     assert not any(e.kind == "routine" for e in p.events)
 

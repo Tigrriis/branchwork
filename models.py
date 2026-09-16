@@ -30,6 +30,7 @@ from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from copytext import tx
+from icons import DEFAULT_ICON
 from extensions import db, login_manager
 
 
@@ -508,7 +509,7 @@ class Task(db.Model):
     tier = db.Column(db.Integer, nullable=False, default=1, server_default="1")
     position = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     title = db.Column(db.String(120), nullable=False)
-    icon = db.Column(db.String(30), nullable=False, default="check", server_default="check")
+    icon = db.Column(db.String(30), nullable=False, default=DEFAULT_ICON, server_default=DEFAULT_ICON)
     points_max = db.Column(db.Integer, nullable=False, default=1, server_default="1")
     points_done = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     notes = db.Column(db.Text, nullable=True)
@@ -559,7 +560,7 @@ class Routine(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False, index=True)
     title = db.Column(db.String(120), nullable=False)
-    icon = db.Column(db.String(30), nullable=False, default="refresh", server_default="refresh")
+    icon = db.Column(db.String(30), nullable=False, default=DEFAULT_ICON, server_default=DEFAULT_ICON)
     every_days = db.Column(db.Integer, nullable=False, default=7, server_default="7")
     position = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     last_done_at = db.Column(db.DateTime(timezone=True), nullable=True)

@@ -182,6 +182,13 @@ node design/gen_icons.mjs
 `design/logo1.af` is the Affinity source. Node is design-time tooling only;
 the Flask app never touches it.
 
+Machination icons are SVG files in `static/branchwork/img/machination_icons/`,
+one per icon and named by the file (`bomb.svg` is `bomb`). Draw them in
+white on a small square canvas: white is swapped for the colour of wherever
+the icon sits, so a tile's icon still dims before it has points, and any
+other colour stays as drawn. A new file shows up in the pickers without a
+restart. The Affinity sources live in `design/machinations_icons/`.
+
 ## Keeping git activity honest
 
 Set a project's repository folder on its edit page, then run this whenever

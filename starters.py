@@ -16,6 +16,7 @@ from flask_login import current_user, login_required
 
 from copytext import tx
 from extensions import db
+from icons import DEFAULT_ICON
 from models import HUES, Branch, Project, Task, Template, TemplateBranch
 
 starters_bp = Blueprint("starters", __name__)
@@ -51,11 +52,11 @@ STARTERS: dict[str, dict] = {
         # tier 2 opens by itself. Deliberately one task per area, not a
         # pre-filled backlog of guesses about someone else's business.
         "tasks": {
-            "Sales & marketing": [("Map how work is won today", "chart", 3)],
-            "Delivery": [("Map how a job runs start to finish", "truck", 3)],
-            "Finance & admin": [("Map the money in and out", "cash", 3)],
-            "People": [("Map who does what, and what only you can do", "users", 3)],
-            "Systems & tools": [("List every tool in use and what it is for", "gear", 3)],
+            "Sales & marketing": [("Map how work is won today", DEFAULT_ICON, 3)],
+            "Delivery": [("Map how a job runs start to finish", DEFAULT_ICON, 3)],
+            "Finance & admin": [("Map the money in and out", DEFAULT_ICON, 3)],
+            "People": [("Map who does what, and what only you can do", DEFAULT_ICON, 3)],
+            "Systems & tools": [("List every tool in use and what it is for", DEFAULT_ICON, 3)],
         },
     },
 }
@@ -108,7 +109,7 @@ def _apply_custom(project: Project, raw_id: str) -> list[Branch]:
         return []
     made: list[Branch] = []
     for pos, spec in enumerate(template.branches):
-        tasks = [(title, "check", points) for title, points in spec.tasks()]
+        tasks = [(title, DEFAULT_ICON, points) for title, points in spec.tasks()]
         made.append(_make(project, spec.name, spec.hue, pos,
                           made[-1] if made else None, spec.waits, tasks))
     return made

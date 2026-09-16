@@ -19,12 +19,12 @@ from flask_login import current_user, login_required
 
 from copytext import tx
 from extensions import db
-from icons import ICONS
+from icons import DEFAULT_ICON, clean_icon
 from models import Project, Routine, _aware
 
 routines_bp = Blueprint("routines", __name__)
 
-DEFAULT_ROUTINE_ICON = "refresh"
+DEFAULT_ROUTINE_ICON = DEFAULT_ICON
 
 
 # ── Where routines show up ──────────────────────────────────────────────────
@@ -97,9 +97,8 @@ def _read_form(routine: Routine) -> bool:
     if not title:
         flash(tx("routine.title_required"), "error")
         return False
-    icon = request.form.get("icon") or DEFAULT_ROUTINE_ICON
     routine.title = title
-    routine.icon = icon if icon in ICONS else DEFAULT_ROUTINE_ICON
+    routine.icon = clean_icon(request.form.get("icon"))
     routine.every_days = _int(request.form.get("every_days"), routine.every_days or 7, 1, 365)
 
     raw = (request.form.get("last_done") or "").strip()

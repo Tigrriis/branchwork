@@ -12,6 +12,7 @@ import click
 from flask import Blueprint
 
 from extensions import db
+from icons import DEFAULT_ICON
 from models import Branch, InboxItem, Project, Routine, Task, User
 
 demo_bp = Blueprint("demo", __name__, cli_group=None)
@@ -21,16 +22,16 @@ DEMO = {
     "code": "2026-014",
     "branches": [
         {"name": "Design", "hue": "green", "tiers": [
-            [("Brief & survey", "doc", 3, 3), ("Concept layouts", "layout", 2, 2), ("Detailed drawings", "pencil", 4, 2)],
-            [("Site measure-up", "ruler", 1, 1), ("Client brief signed", "sign", 1, 1), ("Option A / B review", "flag", 2, 2)],
-            [("Services coordination", "wrench", 2, 0), ("Issue for tender", "list", 1, 0)]]},
+            [("Brief & survey", DEFAULT_ICON, 3, 3), ("Concept layouts", DEFAULT_ICON, 2, 2), ("Detailed drawings", DEFAULT_ICON, 4, 2)],
+            [("Site measure-up", DEFAULT_ICON, 1, 1), ("Client brief signed", DEFAULT_ICON, 1, 1), ("Option A / B review", DEFAULT_ICON, 2, 2)],
+            [("Services coordination", DEFAULT_ICON, 2, 0), ("Issue for tender", DEFAULT_ICON, 1, 0)]]},
         {"name": "Approvals", "hue": "blue", "tiers": [
-            [("Landlord consent", "key", 1, 1), ("Building permit", "seal", 3, 2)],
-            [("Fire engineering report", "fire", 2, 2), ("Certifier lodgement", "calendar", 1, 0)]]},
+            [("Landlord consent", DEFAULT_ICON, 1, 1), ("Building permit", DEFAULT_ICON, 3, 2)],
+            [("Fire engineering report", DEFAULT_ICON, 2, 2), ("Certifier lodgement", DEFAULT_ICON, 1, 0)]]},
         {"name": "Construction", "hue": "red", "requires": "Approvals", "tiers": [
-            [("Tender & award", "list", 3, 0), ("Site works", "hardhat", 5, 0), ("Handover", "home", 2, 0)],
-            [("Shortlist contractors", "users", 2, 0), ("Award contract", "trophy", 1, 0), ("Demolition", "hammer", 2, 0)],
-            [("Fit-out & services", "truck", 4, 0)]]},
+            [("Tender & award", DEFAULT_ICON, 3, 0), ("Site works", DEFAULT_ICON, 5, 0), ("Handover", DEFAULT_ICON, 2, 0)],
+            [("Shortlist contractors", DEFAULT_ICON, 2, 0), ("Award contract", DEFAULT_ICON, 1, 0), ("Demolition", DEFAULT_ICON, 2, 0)],
+            [("Fit-out & services", DEFAULT_ICON, 4, 0)]]},
     ],
 }
 
@@ -53,10 +54,10 @@ EXTRA_PROJECTS = [
 
 DEMO_ROUTINES = [
     # title, icon, every N days, days since last done (None: never done)
-    ("Site walk", "hardhat", 7, 9),
-    ("Client update", "mail", 14, 5),
-    ("Progress claim", "cash", 30, 26),
-    ("Check the programme", "calendar", 7, None),
+    ("Site walk", DEFAULT_ICON, 7, 9),
+    ("Client update", DEFAULT_ICON, 14, 5),
+    ("Progress claim", DEFAULT_ICON, 30, 26),
+    ("Check the programme", DEFAULT_ICON, 7, None),
 ]
 
 

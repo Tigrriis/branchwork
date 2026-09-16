@@ -2,7 +2,7 @@
    the page and again by POST /tasks/<id>/points, which swaps it in place. #}
 {% for branch in project.branches %}
 <section class="col col--{{ branch.hue }} {% if branch.is_locked %}col--locked{% endif %}" data-branch="{{ branch.id }}">
-  <div class="col__wm">{{ icon(branch.tasks[0].icon if branch.tasks else 'flag', 220, 1) }}</div>
+  <div class="col__wm">{{ icon(branch.tasks[0].icon if branch.tasks else none, 220) }}</div>
   <div class="col__body">
     {% if branch.is_locked %}
     <div class="tier-note">
