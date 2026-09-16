@@ -168,9 +168,11 @@ Split by whether a browser fetches the file:
 Binaries stay in git history forever, so commit SVG and small PNGs freely
 and keep large or layered originals out of the repo.
 
-`img/logo.svg` is the mark, used for the header and as the SVG favicon. The
-PNG and ICO versions are generated from it and committed, so this only runs
-when the logo changes:
+`img/logo.svg` is the mark, drawn bare in the header on the dark top bar.
+Everything a browser tab or home screen shows is generated from it and
+committed: `favicon.svg`, the PNG and ICO favicons, and the touch icon,
+all with the mark on the app's dark ground so its white lines still show
+on a light tab strip. This only runs when the logo changes:
 
 ```bash
 npm install
