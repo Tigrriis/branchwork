@@ -53,6 +53,7 @@
       before[el.dataset.tierKey] = el.style.getPropertyValue("--fill");
     });
     tree.innerHTML = html;
+    drawThreads();
     var moved = [];
     Array.prototype.forEach.call(tree.querySelectorAll("[data-tier-key]"), function (el) {
       var old = before[el.dataset.tierKey];
@@ -124,7 +125,8 @@
 
   var KINDS = {
     idea: { handle: ".idea", zone: ".tier__row, .tier-add" },
-    project: { handle: ".prow", zone: "[data-focus-zone]" }
+    project: { handle: ".prow", zone: "[data-focus-zone]" },
+    thread: { handle: ".tile__thread", zone: ".tile[data-task]" }
   };
 
   function zoneFor(node) {
@@ -188,7 +190,7 @@
     var handle = e.target.closest(KINDS[kind].handle);
     drag = {
       kind: kind,
-      id: handle.dataset.idea || handle.dataset.project,
+      id: handle.dataset.idea || handle.dataset.project || handle.dataset.threadFrom,
       from: handle.closest("[data-focus-zone]")
     };
     e.dataTransfer.effectAllowed = "move";
@@ -227,6 +229,8 @@
     clearZones();
     if (moving.kind === "idea") {
       promoteIdea(moving.id, zone.dataset.branch, zone.dataset.tier);
+    } else if (moving.kind === "thread") {
+      threadTasks(moving.id, zone.dataset.task);
     } else if (zone !== moving.from) {        // dropping back home is a no-op
       setFocus(moving.id, zone.dataset.focusZone === "1");
     }
@@ -377,6 +381,83 @@
     rail.addEventListener("focusout", function (e) {
       if (!rail.contains(e.relatedTarget)) closeRail();
     });
+  }
+
+  // ── Threads ───────────────────────────────────────────────────────────
+  // Curved arrows between tiles. The server says which pairs are threaded;
+  // where the tiles actually sit is only known here, so the shapes are
+  // measured from the laid-out tree and written into the overlay.
+  function drawThreads() {
+    if (!tree) return;
+    var svg = tree.querySelector(".threads");
+    if (!svg) return;
+    var width = tree.scrollWidth, height = tree.scrollHeight;
+    svg.setAttribute("width", width);
+    svg.setAttribute("height", height);
+    svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+    var frame = tree.getBoundingClientRect();
+
+    function boxOf(id) {
+      var box = tree.querySelector('.tile[data-task="' + id + '"] .tile__box');
+      if (!box) return null;
+      var r = box.getBoundingClientRect();
+      return {
+        left: r.left - frame.left + tree.scrollLeft,
+        top: r.top - frame.top + tree.scrollTop,
+        w: r.width, h: r.height
+      };
+    }
+
+    Array.prototype.forEach.call(svg.querySelectorAll("path[data-from]"), function (path) {
+      var a = boxOf(path.dataset.from), b = boxOf(path.dataset.to);
+      if (!a || !b) { path.removeAttribute("d"); return; }
+      var gap = 7;
+      var ax = a.left + a.w / 2, ay = a.top + a.h / 2;
+      var bx = b.left + b.w / 2, by = b.top + b.h / 2;
+      var sx, sy, ex, ey, c1x, c1y, c2x, c2y;
+      if (Math.abs(bx - ax) > (a.w + b.w) / 2) {
+        // Different columns: leave by the side and arrive at the far side.
+        var right = bx > ax;
+        sx = right ? a.left + a.w + gap : a.left - gap;
+        ex = right ? b.left - gap : b.left + b.w + gap;
+        sy = ay; ey = by;
+        var bend = Math.min(180, Math.max(48, Math.abs(ex - sx) * 0.5));
+        c1x = right ? sx + bend : sx - bend; c1y = sy;
+        c2x = right ? ex - bend : ex + bend; c2y = ey;
+      } else {
+        // Same column: bow out to the side so the line clears the tiles.
+        var down = by > ay;
+        sy = down ? a.top + a.h + gap : a.top - gap;
+        ey = down ? b.top - gap : b.top + b.h + gap;
+        sx = ax; ex = bx;
+        var drop = Math.min(140, Math.max(40, Math.abs(ey - sy) * 0.6));
+        c1x = sx + 52; c1y = down ? sy + drop : sy - drop;
+        c2x = ex + 52; c2y = down ? ey - drop : ey + drop;
+      }
+      path.setAttribute("d", "M" + sx + " " + sy + " C" + c1x + " " + c1y + " " +
+                        c2x + " " + c2y + " " + ex + " " + ey);
+    });
+  }
+
+  function threadTasks(fromId, toId) {
+    if (!fromId || !toId || String(fromId) === String(toId)) return;
+    post("/tasks/" + fromId + "/threads", { to: Number(toId) })
+      .then(function (res) {
+        if (!res.ok) { flash(res.body.message || say("thread_failed"), "error"); return; }
+        swapTree(res.body.html);
+      })
+      .catch(function () { flash(say("network"), "error"); });
+  }
+
+  if (tree) {
+    drawThreads();
+    var redraw = null;
+    var laterDraw = function () {
+      if (redraw) cancelAnimationFrame(redraw);
+      redraw = requestAnimationFrame(function () { redraw = null; drawThreads(); });
+    };
+    window.addEventListener("resize", laterDraw);
+    if (window.ResizeObserver) new ResizeObserver(laterDraw).observe(tree);
   }
 
   // ── Flashes ───────────────────────────────────────────────────────────

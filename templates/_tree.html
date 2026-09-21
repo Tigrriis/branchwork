@@ -1,5 +1,27 @@
 {# The tree itself: one column per scheme, tiers stacked inside. Rendered on
    the page and again by POST /tasks/<id>/points, which swaps it in place. #}
+{# One curved arrow per thread, on an overlay over the tree: a column is one
+   opaque block, so an arrow drawn under it would only show in the gaps. Only
+   the tree knows where the tiles ended up, so the page script measures them
+   and fills in each path. Nothing here takes the pointer -- a tile's own
+   clicks are worth more than a shortcut for removing a thread, which the
+   machination form does. #}
+<svg class="threads" aria-hidden="true" width="0" height="0">
+  <defs>
+    <marker id="thread-head" class="thread-head" viewBox="0 0 10 10" refX="8" refY="5"
+            markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z"/></marker>
+    <marker id="thread-head-ready" class="thread-head thread-head--ready" viewBox="0 0 10 10" refX="8" refY="5"
+            markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z"/></marker>
+  </defs>
+  {% for thread in project.threads %}
+  <path class="thread{% if thread.ready %} thread--ready{% endif %}" data-thread="{{ thread.id }}"
+        data-from="{{ thread.from_task_id }}" data-to="{{ thread.to_task_id }}"
+        marker-end="url(#thread-head{% if thread.ready %}-ready{% endif %})">
+    <title>{{ t('thread.arrow_title', from=thread.source.title, to=thread.target.title) }}</title>
+  </path>
+  {% endfor %}
+</svg>
+
 {% for branch in project.branches %}
 <section class="col col--{{ branch.hue }} {% if branch.is_locked %}col--locked{% endif %}" data-branch="{{ branch.id }}">
   <div class="col__wm">{{ icon(branch.tasks[0].icon if branch.tasks else none, 220) }}</div>
@@ -28,6 +50,10 @@
           </button>
           <span class="tile__plate">{{ task.points_done }}/{{ task.points_max }}</span>
           <a class="tile__label" href="{{ url_for('projects.edit_task', task_id=task.id) }}">{{ task.title }}</a>
+          <button type="button" class="tile__thread" draggable="true" data-thread-from="{{ task.id }}"
+                  title="{{ t('thread.drag_title') }}" aria-label="{{ t('thread.drag_title') }}">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9 15l6-6"></path><path d="M13 5l2-2a4 4 0 0 1 6 6l-2 2"></path><path d="M11 19l-2 2a4 4 0 0 1-6-6l2-2"></path></svg>
+          </button>
         </div>
         {% endfor %}
         <a class="tile tile--add" href="{{ url_for('projects.new_task', branch_id=branch.id, tier=row.tier) }}" title="{{ t('tree.add_to_tier_title', tier=row.tier) }}">

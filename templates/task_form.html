@@ -53,6 +53,26 @@
       <label class="field__label" for="notes">{{ t('machination.notes') }} <span class="muted">{{ t('common.optional') }}</span></label>
       <textarea class="input" id="notes" name="notes" rows="3">{{ task.notes or '' }}</textarea>
     </div>
+    {% if not is_new and project.tasks|length > 1 %}
+    <fieldset class="fieldset">
+      <legend>{{ t('thread.form_legend') }}</legend>
+      <p class="muted small">{{ t('thread.form_help') }}</p>
+      <div class="field">
+        <label class="field__label" for="follows">{{ t('thread.follows') }}</label>
+        <select class="input" id="follows" name="follows">
+          <option value="">{{ t('thread.pick') }}</option>
+          {% for other in project.tasks if other.id != task.id %}
+          <option value="{{ other.id }}">{{ other.branch.name }} · {{ other.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if task.threads_in or task.threads_out %}
+      <div class="thread-rows">
+        {% for thread in task.threads_in + task.threads_out %}{% include "_thread_row.html" %}{% endfor %}
+      </div>
+      {% endif %}
+    </fieldset>
+    {% endif %}
     <div class="form__actions">
       <button class="btn btn--primary" type="submit">{% if is_new %}{{ t('machination.add') }}{% else %}{{ t('common.save') }}{% endif %}</button>
       <a class="btn btn--ghost" href="{{ url_for('projects.tree', project_id=project.id) }}">{{ t('common.cancel') }}</a>
@@ -60,6 +80,13 @@
   </form>
 </div>
 {% if not is_new %}
+{# Outside the machination's form, so its remove buttons can point at them. #}
+{% for thread in task.threads_in + task.threads_out %}
+<form id="unthread-{{ thread.id }}" method="post" action="{{ url_for('threads.delete_thread', thread_id=thread.id) }}" hidden>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="next" value="{{ url_for('projects.edit_task', task_id=task.id) }}">
+</form>
+{% endfor %}
 <form method="post" action="{{ url_for('projects.delete_task', task_id=task.id) }}" class="inline-form" data-confirm="{{ t('machination.delete_confirm') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <button class="btn btn--danger" type="submit">{{ t('machination.delete') }}</button>

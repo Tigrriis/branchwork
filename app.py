@@ -34,6 +34,7 @@ from routines import routines_bp
 from starters import starters_bp
 from statuses import statuses_bp
 from switcher import plot_switcher
+from threads import threads_bp
 
 
 def create_app(overrides: dict | None = None) -> Flask:
@@ -57,6 +58,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     app.register_blueprint(gitsync_bp)
     app.register_blueprint(starters_bp)
     app.register_blueprint(statuses_bp)
+    app.register_blueprint(threads_bp)
 
     _register_asset_versioning(app)
     _register_template_helpers(app)

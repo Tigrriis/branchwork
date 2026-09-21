@@ -1,0 +1,7 @@
+{# One thread on the machination form, either way round, with its remove
+   button. The button belongs to a form further down the page, since this
+   sits inside the machination's own form. #}
+<div class="thread-row">
+  <span class="thread-row__text">{{ t('thread.arrow_title', from=thread.source.title, to=thread.target.title) }}</span>
+  <button class="icon-btn" type="submit" form="unthread-{{ thread.id }}" title="{{ t('thread.remove') }}">×</button>
+</div>

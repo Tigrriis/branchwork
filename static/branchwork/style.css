@@ -153,7 +153,7 @@ select.input { appearance: none; }
 .points { display: flex; align-items: center; gap: 10px; margin-left: 12px; color: var(--fg); }
 .hint { margin: 14px 0 0; font-size: 12px; }
 
-.tree { display: flex; gap: 24px; align-items: stretch; overflow-x: auto; padding-bottom: 8px; }
+.tree { position: relative; display: flex; gap: 24px; align-items: stretch; overflow-x: auto; padding-bottom: 8px; }
 
 .col {
   position: relative; flex: 0 0 400px; min-height: 420px;
@@ -718,3 +718,41 @@ html[data-rail="pinned"] .rail { box-shadow: none; }
 @media (prefers-reduced-motion: reduce) {
   .rail, .rail__filter, .rail__pin, .rail__label, .rail__name, body.has-rail .frame { transition: none; }
 }
+
+/* ── Threads: the sequence arrows across a tree ───────────────────────── */
+/* Over the tree, since each column is an opaque block: an arrow drawn under
+   them would only show in the gaps. It takes no pointer events, so a tile
+   underneath still gets every click. */
+.threads { position: absolute; top: 0; left: 0; z-index: 3; overflow: visible; pointer-events: none; }
+.thread {
+  fill: none; stroke: var(--muted); stroke-width: 2; stroke-dasharray: 6 6;
+  opacity: 0.8; pointer-events: none;
+}
+.thread--ready { stroke: var(--full); stroke-dasharray: none; opacity: 1; }
+.thread-head > path { fill: var(--muted); }
+.thread-head--ready > path { fill: var(--full); }
+
+/* The handle you drag from one tile to another. */
+.tile__thread {
+  position: absolute; top: -5px; right: 3px; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; padding: 0; border-radius: 999px;
+  background: var(--card); border: 1px solid var(--line2); color: var(--muted);
+  cursor: grab; opacity: 0; transition: opacity 0.15s ease;
+}
+.tile:hover .tile__thread, .tile__thread:focus-visible { opacity: 1; }
+.tile__thread:hover { color: var(--fg); border-color: var(--muted); }
+.tile__thread:active { cursor: grabbing; }
+body.is-dragging-thread .tile[data-task] {
+  outline: 1px dashed var(--line2); outline-offset: 3px; border-radius: var(--radius-sm);
+}
+body.is-dragging-thread .tile[data-task].is-drop { outline: 2px dashed var(--accent); }
+body.is-dragging-thread .tile__thread { opacity: 1; }
+
+/* The same threads as a list, on the machination form. */
+.thread-rows { display: flex; flex-direction: column; gap: 4px; }
+.thread-row {
+  display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 10px;
+  border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line);
+}
+.thread-row__text { flex: 1; min-width: 0; font-size: 13px; color: var(--fg2); }

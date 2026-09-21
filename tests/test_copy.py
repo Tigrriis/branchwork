@@ -26,6 +26,9 @@ def _referenced():
     js = _read("static/branchwork/app.js")
     keys = set(re.findall(r"\bt\('([a-z_0-9.]+)'", templates))
     keys |= set(re.findall(r'\btx\("([a-z_0-9.]+)"', python))
+    # A key also travels as a plain string when it is handed around before
+    # anyone renders it, the way a refusal reaches whoever flashes it.
+    keys |= {k for k in copytext.catalogue() if f'"{k}"' in python}
     keys |= {k for k in copytext.catalogue() if k.startswith("js.") and f'"{k[3:]}"' in js}
     # t('state.' ~ task.state) captures as "state.": a computed prefix, not a key.
     return {k for k in keys if not k.endswith(".")}

@@ -456,6 +456,26 @@ need_active = "Keep at least one active status: the board needs a column."
 # After deleting a status that still had plots in it
 moved = "{n} plot(s) moved to {name}."
 
+[thread]
+_screen = "Plot · Threads"
+_about = "Threads tie one machination to another, usually in a different scheme, and draw a curved arrow across the tree."
+# Hover text on the handle at the corner of a machination tile
+drag_title = "Drag onto another machination to thread them"
+# Hover text on an arrow, and how a thread reads in lists
+arrow_title = "{from} → {to}"
+form_legend = "Sequence"
+form_help = "Thread this machination to another to show what follows what. The arrow curves across the tree and lights up once the first one is finished. It does not lock anything, and this is where a thread is removed."
+follows = "Comes after"
+pick = "Nothing yet — pick one"
+remove = "Unthread"
+added = "Threaded “{from}” → “{to}”."
+removed = "Thread removed."
+same = "A machination cannot come after itself."
+not_in_plot = "That machination is not in this plot."
+exists = "Those two are threaded already."
+loop = "That would bend the sequence into a loop."
+limit = "This plot has reached the thread limit."
+
 [templates]
 _screen = "Plot templates"
 _about = "The list of templates under Account, and its pop-up messages."
@@ -568,3 +588,4 @@ focused = "{name} is in focus."
 backburnered = "{name} is on the backburner."
 routine_done = "“{title}” done. Ready again in {n}d."
 routine_failed = "Could not mark that routine done."
+thread_failed = "Could not thread those two."

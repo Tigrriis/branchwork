@@ -22,6 +22,7 @@ from extensions import db
 from icons import DEFAULT_ICON, clean_icon
 from models import CADENCES, HUES, Branch, InboxItem, Project, Task
 from starters import DEFAULT_STARTER, apply_starter, choices_for
+from threads import thread_tasks
 
 projects_bp = Blueprint("projects", __name__)
 
@@ -295,6 +296,19 @@ def _read_task_form(task: Task, project: Project, default_branch: Branch | None 
     return True
 
 
+def _thread_from_form(project: Project, task: Task) -> None:
+    """The form's "comes after" picker, applied once the machination has an
+    id. A refusal is flashed and the rest of the save still stands."""
+    follows = (request.form.get("follows") or "").strip()
+    if not follows:
+        return
+    error = thread_tasks(project, follows, task)
+    if error:
+        flash(tx(error), "error")
+    else:
+        db.session.commit()
+
+
 @projects_bp.route("/branches/<int:branch_id>/tasks/new", methods=["GET", "POST"])
 @login_required
 def new_task(branch_id: int):
@@ -311,6 +325,7 @@ def new_task(branch_id: int):
         db.session.flush()
         project.record("task", task=task, note=f"Added {task.title}")
         db.session.commit()
+        _thread_from_form(project, task)
         flash(tx("machination.added", title=task.title), "success")
         return redirect(url_for("projects.tree", project_id=project.id))
     return render_template("task_form.html", project=project, task=task, branch=branch, is_new=True)
@@ -323,6 +338,7 @@ def edit_task(task_id: int):
     project = task.branch.project
     if request.method == "POST" and _read_task_form(task, project):
         db.session.commit()
+        _thread_from_form(project, task)
         flash(tx("machination.saved"), "success")
         return redirect(url_for("projects.tree", project_id=project.id))
     return render_template("task_form.html", project=project, task=task, branch=task.branch, is_new=False)

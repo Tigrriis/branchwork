@@ -196,6 +196,9 @@ class Project(db.Model):
     routines = db.relationship(
         "Routine", backref="project", order_by="Routine.position, Routine.id",
         cascade="all, delete-orphan")
+    threads = db.relationship(
+        "Thread", backref="project", order_by="Thread.id",
+        cascade="all, delete-orphan")
 
     # ── Tempo ───────────────────────────────────────────────────────────────
     @property
@@ -545,6 +548,40 @@ class Task(db.Model):
 
     def adjust(self, delta: int) -> None:
         self.set_points((self.points_done or 0) + delta)
+
+
+class Thread(db.Model):
+    """A sequence link between two machinations: this one, then that one.
+
+    Usually the two sit in different schemes, which is the point: the columns
+    show what belongs together, and a thread shows what follows what. It is
+    drawn as a curved arrow across the tree, dashed while the first
+    machination is unfinished and solid once it is complete.
+
+    Deliberately not a gate. Tier gates and scheme locks decide what can be
+    worked on; a thread only says what the order is.
+    """
+    __tablename__ = "threads"
+    __table_args__ = (db.UniqueConstraint("from_task_id", "to_task_id", name="uq_threads_pair"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False, index=True)
+    from_task_id = db.Column(db.Integer, db.ForeignKey("tasks.id", ondelete="CASCADE"),
+                             nullable=False, index=True)
+    to_task_id = db.Column(db.Integer, db.ForeignKey("tasks.id", ondelete="CASCADE"),
+                           nullable=False, index=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
+
+    source = db.relationship("Task", foreign_keys=[from_task_id],
+                             backref=db.backref("threads_out", cascade="all, delete-orphan"))
+    target = db.relationship("Task", foreign_keys=[to_task_id],
+                             backref=db.backref("threads_in", cascade="all, delete-orphan"))
+
+    @property
+    def ready(self) -> bool:
+        """Is the machination this leads from finished? That is what the
+        arrow's two looks mean."""
+        return self.source.state == STATE_FULL
 
 
 class Routine(db.Model):
