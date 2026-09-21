@@ -724,13 +724,20 @@ html[data-rail="pinned"] .rail { box-shadow: none; }
    them would only show in the gaps. It takes no pointer events, so a tile
    underneath still gets every click. */
 .threads { position: absolute; top: 0; left: 0; z-index: 3; overflow: visible; pointer-events: none; }
+/* Orange while the sequence is unfinished, green once both ends are done.
+   The glow is a drop-shadow in the same colour, so the arrow reads over a
+   tinted column and over a tile alike. */
 .thread {
-  fill: none; stroke: var(--muted); stroke-width: 2; stroke-dasharray: 6 6;
-  opacity: 0.8; pointer-events: none;
+  fill: none; stroke: var(--part); stroke-width: 3; stroke-linecap: round;
+  pointer-events: none;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--part) 65%, transparent));
 }
-.thread--ready { stroke: var(--full); stroke-dasharray: none; opacity: 1; }
-.thread-head > path { fill: var(--muted); }
-.thread-head--ready > path { fill: var(--full); }
+.thread--done {
+  stroke: var(--full);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--full) 65%, transparent));
+}
+.thread-head > path { fill: var(--part); }
+.thread-head--done > path { fill: var(--full); }
 
 /* The handle you drag from one tile to another. */
 .tile__thread {

@@ -19,18 +19,24 @@ def test_threading_two_machinations_across_schemes(client, db):
     assert res.status_code == 200
     thread = Thread.query.one()
     assert (thread.from_task_id, thread.to_task_id) == (brief.id, dig.id)
-    assert thread.project_id == project.id and not thread.ready
+    assert thread.project_id == project.id and not thread.done
 
     # The answer carries the re-rendered tree, with the arrow in it.
     html = res.get_json()["html"]
     assert f'data-from="{brief.id}" data-to="{dig.id}"' in html
-    assert "thread--ready" not in html
+    assert "thread--done" not in html
 
-    # Finishing the first machination lights the arrow up.
+    # One end finished is still an unfinished sequence: the arrow stays orange.
     brief.set_points(2)
     db.session.commit()
-    assert Thread.query.one().ready
-    assert "thread--ready" in client.get(f"/projects/{project.id}").data.decode()
+    assert not Thread.query.one().done
+    assert "thread--done" not in client.get(f"/projects/{project.id}").data.decode()
+
+    # Both ends finished turns it green.
+    dig.set_points(dig.points_max)
+    db.session.commit()
+    assert Thread.query.one().done
+    assert "thread--done" in client.get(f"/projects/{project.id}").data.decode()
 
 
 def test_a_thread_refuses_itself_a_loop_a_repeat_and_another_plot(client, db):

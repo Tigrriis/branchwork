@@ -69,8 +69,8 @@ Each tier fills with its branch's colour as its points add up, and is full
 at exactly the gate points that open the tier below.
 
 **Threads** tie one task to another, usually in a different branch, and draw
-a curved arrow across the tree: dashed while the first task is unfinished,
-solid once it is done. They say what follows what and lock nothing, since
+a bold glowing arrow across the tree: orange while the sequence is unfinished,
+green once both of its tasks are done. They say what follows what and lock nothing, since
 the gates and locks above already decide what can be worked on. Drag the
 handle at a tile's corner onto another tile to thread them, or use "comes
 after" on the task form, which is also where one is removed. The arrows are

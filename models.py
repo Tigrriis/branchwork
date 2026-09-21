@@ -555,8 +555,8 @@ class Thread(db.Model):
 
     Usually the two sit in different schemes, which is the point: the columns
     show what belongs together, and a thread shows what follows what. It is
-    drawn as a curved arrow across the tree, dashed while the first
-    machination is unfinished and solid once it is complete.
+    drawn as a bold curved arrow across the tree: orange until both ends are
+    finished, green once they are.
 
     Deliberately not a gate. Tier gates and scheme locks decide what can be
     worked on; a thread only says what the order is.
@@ -578,10 +578,10 @@ class Thread(db.Model):
                              backref=db.backref("threads_in", cascade="all, delete-orphan"))
 
     @property
-    def ready(self) -> bool:
-        """Is the machination this leads from finished? That is what the
-        arrow's two looks mean."""
-        return self.source.state == STATE_FULL
+    def done(self) -> bool:
+        """Both ends finished, which is what turns the arrow green. One end
+        alone leaves the sequence unfinished, so it stays orange."""
+        return self.source.state == STATE_FULL and self.target.state == STATE_FULL
 
 
 class Routine(db.Model):
