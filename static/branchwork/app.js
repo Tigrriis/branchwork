@@ -384,9 +384,30 @@
   }
 
   // ── Threads ───────────────────────────────────────────────────────────
-  // Curved arrows between tiles. The server says which pairs are threaded;
-  // where the tiles actually sit is only known here, so the shapes are
-  // measured from the laid-out tree and written into the overlay.
+  // The server says which pairs are threaded; where the tiles actually sit is
+  // only known here, so the shapes are measured from the laid-out tree.
+  // Arrows are routed through the space that holds no tiles: the band above
+  // or below a row of tiles, and the gutter between two schemes. The corners
+  // are rounded off, so what reads on the page is a curve that goes around
+  // the tiles rather than through them.
+  function roundedPath(points, radius) {
+    var pts = points.filter(function (p, i) {
+      return i === 0 || Math.abs(p.x - points[i - 1].x) > 0.5 || Math.abs(p.y - points[i - 1].y) > 0.5;
+    });
+    if (pts.length < 2) return "";
+    var d = "M" + pts[0].x + " " + pts[0].y;
+    for (var i = 1; i < pts.length - 1; i++) {
+      var prev = pts[i - 1], here = pts[i], next = pts[i + 1];
+      var into = Math.sqrt(Math.pow(here.x - prev.x, 2) + Math.pow(here.y - prev.y, 2));
+      var away = Math.sqrt(Math.pow(next.x - here.x, 2) + Math.pow(next.y - here.y, 2));
+      var r = Math.min(radius, into / 2, away / 2);
+      d += " L" + (here.x + (prev.x - here.x) * (r / into)) + " " + (here.y + (prev.y - here.y) * (r / into));
+      d += " Q" + here.x + " " + here.y + " " +
+           (here.x + (next.x - here.x) * (r / away)) + " " + (here.y + (next.y - here.y) * (r / away));
+    }
+    return d + " L" + pts[pts.length - 1].x + " " + pts[pts.length - 1].y;
+  }
+
   function drawThreads() {
     if (!tree) return;
     var svg = tree.querySelector(".threads");
@@ -397,45 +418,110 @@
     svg.setAttribute("viewBox", "0 0 " + width + " " + height);
     var frame = tree.getBoundingClientRect();
 
-    function boxOf(id) {
-      var box = tree.querySelector('.tile[data-task="' + id + '"] .tile__box');
-      if (!box) return null;
-      var r = box.getBoundingClientRect();
+    // Measured in the tree's own content box, so the arrows stay with the
+    // tiles when it is scrolled sideways.
+    function boxOf(el) {
+      if (!el) return null;
+      var r = el.getBoundingClientRect();
       return {
         left: r.left - frame.left + tree.scrollLeft,
+        right: r.right - frame.left + tree.scrollLeft,
         top: r.top - frame.top + tree.scrollTop,
-        w: r.width, h: r.height
+        bottom: r.bottom - frame.top + tree.scrollTop,
+        cx: r.left + r.width / 2 - frame.left + tree.scrollLeft,
+        cy: r.top + r.height / 2 - frame.top + tree.scrollTop
       };
     }
+    function tileOf(id) { return tree.querySelector('.tile[data-task="' + id + '"]'); }
 
+    // The clear band on one side of a tile's row: half way to the next row,
+    // or a little clear of the tiles when there is no next row.
+    function laneNear(tile, down) {
+      var col = tile.closest(".col");
+      var rows = Array.prototype.slice.call(col.querySelectorAll(".tier__row"));
+      var row = tile.closest(".tier__row");
+      var here = boxOf(row);
+      var beside = rows[rows.indexOf(row) + (down ? 1 : -1)];
+      var edge = beside ? boxOf(beside) : null;
+      if (down) return edge ? (here.bottom + edge.top) / 2 : here.bottom + 24;
+      return edge ? (edge.bottom + here.top) / 2 : here.top - 16;
+    }
+
+    // Two passes: work out every route first, then spread the ones that would
+    // share a band, so parallel threads do not lie on top of each other.
+    var routes = [];
     Array.prototype.forEach.call(svg.querySelectorAll("path[data-from]"), function (path) {
-      var a = boxOf(path.dataset.from), b = boxOf(path.dataset.to);
-      if (!a || !b) { path.removeAttribute("d"); return; }
-      var gap = 7;
-      var ax = a.left + a.w / 2, ay = a.top + a.h / 2;
-      var bx = b.left + b.w / 2, by = b.top + b.h / 2;
-      var sx, sy, ex, ey, c1x, c1y, c2x, c2y;
-      if (Math.abs(bx - ax) > (a.w + b.w) / 2) {
-        // Different columns: leave by the side and arrive at the far side.
-        var right = bx > ax;
-        sx = right ? a.left + a.w + gap : a.left - gap;
-        ex = right ? b.left - gap : b.left + b.w + gap;
-        sy = ay; ey = by;
-        var bend = Math.min(180, Math.max(48, Math.abs(ex - sx) * 0.5));
-        c1x = right ? sx + bend : sx - bend; c1y = sy;
-        c2x = right ? ex - bend : ex + bend; c2y = ey;
-      } else {
-        // Same column: bow out to the side so the line clears the tiles.
-        var down = by > ay;
-        sy = down ? a.top + a.h + gap : a.top - gap;
-        ey = down ? b.top - gap : b.top + b.h + gap;
-        sx = ax; ex = bx;
-        var drop = Math.min(140, Math.max(40, Math.abs(ey - sy) * 0.6));
-        c1x = sx + 52; c1y = down ? sy + drop : sy - drop;
-        c2x = ex + 52; c2y = down ? ey - drop : ey + drop;
+      var fromTile = tileOf(path.dataset.from), toTile = tileOf(path.dataset.to);
+      if (!fromTile || !toTile) { path.removeAttribute("d"); return; }
+      var a = boxOf(fromTile.querySelector(".tile__box"));
+      var b = boxOf(toTile.querySelector(".tile__box"));
+      var aRow = fromTile.closest(".tier__row"), bRow = toTile.closest(".tier__row");
+      var aCol = fromTile.closest(".col"), bCol = toTile.closest(".col");
+      var toTheRight = b.cx >= a.cx;
+      // Arrows leave and arrive at a tile's side: the plate and the label sit
+      // under it, and running through those reads as a mistake.
+      var edgeA = toTheRight ? a.right : a.left;
+      var edgeB = toTheRight ? b.left : b.right;
+      var outA = toTheRight ? 1 : -1;
+      var sameRow = aRow === bRow || Math.abs(boxOf(aRow).top - boxOf(bRow).top) < 4;
+
+      if (sameRow && Math.abs(edgeB - edgeA) < 52) {
+        // Neighbours in a row: straight across the gap between them.
+        routes.push({ path: path, points: [{ x: edgeA + outA * 2, y: a.cy },
+                                           { x: edgeB - outA * 3, y: b.cy }], lane: null });
+        return;
       }
-      path.setAttribute("d", "M" + sx + " " + sy + " C" + c1x + " " + c1y + " " +
-                        c2x + " " + c2y + " " + ex + " " + ey);
+
+      var laneA, laneB;
+      if (sameRow) {
+        laneA = laneB = laneNear(fromTile, true);
+      } else {
+        var down = boxOf(bRow).top > boxOf(aRow).top;
+        laneA = laneNear(fromTile, down);
+        laneB = laneNear(toTile, !down);
+      }
+      // Down the gap beside the tile, not through its neighbour.
+      var gapA = edgeA + outA * 8, gapB = edgeB - outA * 8;
+      var cross = null;
+      if (Math.abs(laneA - laneB) > 4) {
+        // Crossing between two bands happens where there are no tiles: the
+        // gutter beside the scheme being entered, or one scheme's own margin.
+        if (aCol !== bCol) {
+          var from = boxOf(aCol), to = boxOf(bCol);
+          cross = to.left > from.right ? to.left - 12 : to.right + 12;
+        } else {
+          var col = boxOf(aCol);
+          cross = (a.left - col.left) > (col.right - a.right) ? col.left + 14 : col.right - 14;
+        }
+      }
+      routes.push({
+        path: path, lane: laneA, cross: cross,
+        build: function (nudge) {
+          var here = laneA + nudge, there = laneB + nudge;
+          var points = [{ x: edgeA + outA * 2, y: a.cy }, { x: gapA, y: a.cy }, { x: gapA, y: here }];
+          if (cross !== null) points.push({ x: cross, y: here }, { x: cross, y: there });
+          points.push({ x: gapB, y: there }, { x: gapB, y: b.cy }, { x: edgeB - outA * 3, y: b.cy });
+          return points;
+        }
+      });
+    });
+
+    var bands = {};
+    routes.forEach(function (route) {
+      if (route.lane === null) return;
+      var key = Math.round(route.lane / 10);
+      (bands[key] = bands[key] || []).push(route);
+    });
+    Object.keys(bands).forEach(function (key) {
+      var sharing = bands[key];
+      sharing.forEach(function (route, i) {
+        route.nudge = (i - (sharing.length - 1) / 2) * 7;
+      });
+    });
+
+    routes.forEach(function (route) {
+      var points = route.points || route.build(route.nudge || 0);
+      route.path.setAttribute("d", roundedPath(points, 18));
     });
   }
 
