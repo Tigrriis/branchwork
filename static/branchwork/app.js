@@ -429,7 +429,8 @@
         top: r.top - frame.top + tree.scrollTop,
         bottom: r.bottom - frame.top + tree.scrollTop,
         cx: r.left + r.width / 2 - frame.left + tree.scrollLeft,
-        cy: r.top + r.height / 2 - frame.top + tree.scrollTop
+        cy: r.top + r.height / 2 - frame.top + tree.scrollTop,
+        h: r.height
       };
     }
     function tileOf(id) { return tree.querySelector('.tile[data-task="' + id + '"]'); }
@@ -447,8 +448,8 @@
       return edge ? (edge.bottom + here.top) / 2 : here.top - 16;
     }
 
-    // Two passes: work out every route first, then spread the ones that would
-    // share a band, so parallel threads do not lie on top of each other.
+    // Three passes: work out every route, then spread the ones that would
+    // share a band or meet at the same point on a tile, then draw.
     var routes = [];
     Array.prototype.forEach.call(svg.querySelectorAll("path[data-from]"), function (path) {
       var fromTile = tileOf(path.dataset.from), toTile = tileOf(path.dataset.to);
@@ -464,11 +465,19 @@
       var edgeB = toTheRight ? b.left : b.right;
       var outA = toTheRight ? 1 : -1;
       var sameRow = aRow === bRow || Math.abs(boxOf(aRow).top - boxOf(bRow).top) < 4;
+      var route = {
+        path: path, a: a, b: b,
+        leaves: path.dataset.from + (toTheRight ? ":right" : ":left"),
+        arrives: path.dataset.to + (toTheRight ? ":left" : ":right")
+      };
 
       if (sameRow && Math.abs(edgeB - edgeA) < 52) {
         // Neighbours in a row: straight across the gap between them.
-        routes.push({ path: path, points: [{ x: edgeA + outA * 2, y: a.cy },
-                                           { x: edgeB - outA * 3, y: b.cy }], lane: null });
+        route.lane = null;
+        route.build = function (nudge, from, to) {
+          return [{ x: edgeA + outA * 2, y: a.cy + from }, { x: edgeB - outA * 3, y: b.cy + to }];
+        };
+        routes.push(route);
         return;
       }
 
@@ -494,16 +503,17 @@
           cross = (a.left - col.left) > (col.right - a.right) ? col.left + 14 : col.right - 14;
         }
       }
-      routes.push({
-        path: path, lane: laneA, cross: cross,
-        build: function (nudge) {
-          var here = laneA + nudge, there = laneB + nudge;
-          var points = [{ x: edgeA + outA * 2, y: a.cy }, { x: gapA, y: a.cy }, { x: gapA, y: here }];
-          if (cross !== null) points.push({ x: cross, y: here }, { x: cross, y: there });
-          points.push({ x: gapB, y: there }, { x: gapB, y: b.cy }, { x: edgeB - outA * 3, y: b.cy });
-          return points;
-        }
-      });
+      route.lane = laneA;
+      route.build = function (nudge, from, to) {
+        var here = laneA + nudge, there = laneB + nudge;
+        var points = [{ x: edgeA + outA * 2, y: a.cy + from }, { x: gapA, y: a.cy + from },
+                      { x: gapA, y: here }];
+        if (cross !== null) points.push({ x: cross, y: here }, { x: cross, y: there });
+        points.push({ x: gapB, y: there }, { x: gapB, y: b.cy + to },
+                    { x: edgeB - outA * 3, y: b.cy + to });
+        return points;
+      };
+      routes.push(route);
     });
 
     var bands = {};
@@ -513,15 +523,35 @@
       (bands[key] = bands[key] || []).push(route);
     });
     Object.keys(bands).forEach(function (key) {
-      var sharing = bands[key];
-      sharing.forEach(function (route, i) {
-        route.nudge = (i - (sharing.length - 1) / 2) * 7;
+      bands[key].forEach(function (route, i) {
+        route.nudge = (i - (bands[key].length - 1) / 2) * 7;
+      });
+    });
+
+    // A tile's own side: what leaves sits a little above the middle and what
+    // arrives a little below, so the two never meet in one line.
+    var ends = {};
+    routes.forEach(function (route) {
+      (ends[route.leaves] = ends[route.leaves] || []).push({ route: route, leaving: true });
+      (ends[route.arrives] = ends[route.arrives] || []).push({ route: route, leaving: false });
+    });
+    Object.keys(ends).forEach(function (key) {
+      [true, false].forEach(function (leaving) {
+        var same = ends[key].filter(function (end) { return end.leaving === leaving; });
+        same.forEach(function (end, i) {
+          var box = leaving ? end.route.a : end.route.b;
+          var room = Math.max(0, box.h / 2 - 12);
+          var step = (i - (same.length - 1) / 2) * 8;
+          var offset = (leaving ? -5 : 5) + step;
+          offset = Math.max(-room, Math.min(room, offset));
+          if (leaving) end.route.from = offset; else end.route.to = offset;
+        });
       });
     });
 
     routes.forEach(function (route) {
-      var points = route.points || route.build(route.nudge || 0);
-      route.path.setAttribute("d", roundedPath(points, 18));
+      route.path.setAttribute("d",
+        roundedPath(route.build(route.nudge || 0, route.from || 0, route.to || 0), 18));
     });
   }
 
