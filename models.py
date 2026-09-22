@@ -430,8 +430,8 @@ class Branch(db.Model):
 
     @property
     def is_sealed(self) -> bool:
-        """Claimed ultimate: the scheme is finished with, and its points hold
-        still until the claim is taken back."""
+        """Claimed ultimate: the scheme reads as finished with. A look, not
+        a lock: leftover machinations can still be ticked off."""
         return self.ultimate is not None and self.ultimate.achieved
 
     @property
@@ -566,9 +566,8 @@ class Task(db.Model):
 
     @property
     def editable(self) -> bool:
-        """Points may change only on an open tier of an unlocked branch, and
-        not once the branch's ultimate is claimed."""
-        return not self.branch.is_sealed and self.branch.tier_open(self.tier)
+        """Points may change only on an open tier of an unlocked branch."""
+        return self.branch.tier_open(self.tier)
 
     def set_points(self, value: int) -> None:
         # Column defaults only apply at flush, so a brand-new task may still

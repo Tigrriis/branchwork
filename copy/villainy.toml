@@ -330,7 +330,7 @@ opens_when = "Opens when {name} is complete"
 needs_points = "Needs {gate} points in the tier above · {have}/{gate}"
 above_locked = "Tier above is still locked"
 # Shown at the top of a scheme whose ultimate is claimed
-sealed = "Complete: the ultimate is claimed. Take it back to change anything."
+sealed = "Complete: the ultimate is claimed."
 
 [ideas]
 _screen = "Plot · Ideas"
@@ -436,7 +436,6 @@ added = "Machination “{title}” added."
 saved = "Machination saved."
 deleted = "Machination deleted."
 locked = "This machination is on a locked tier."
-sealed = "This scheme is complete. Take its ultimate back to change points."
 
 [ultimate]
 _screen = "Ultimate form"

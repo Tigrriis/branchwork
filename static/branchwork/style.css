@@ -700,13 +700,13 @@ body.is-dragging-project .lane.is-drop {
   from { transform: scale(0.9); opacity: 1; } to { transform: scale(2.6); opacity: 0; }
 }
 
-/* A sealed scheme: its ultimate is claimed, so the tiers go quiet, nothing
-   more can be added from the tree, and the column's edge takes its colour. */
+/* A sealed scheme: its ultimate is claimed, so the tiers step back and the
+   column's edge takes its colour. A look only: leftovers still tick, and
+   the tiers come forward again under the pointer. */
 .col--sealed { border-color: var(--tint-wm, var(--full)); }
 .col--sealed .col__body > .tier-note--sealed { padding: 14px 16px 0; color: var(--tint-fg, var(--fg)); }
-.col--sealed .tier, .col--sealed .tier-add { opacity: 0.5; }
-.col--sealed .tier-add, .col--sealed .tile--add { display: none; }
-.col--sealed .tile__box { cursor: default; }
+.col--sealed .tier, .col--sealed .tier-add { opacity: 0.55; transition: opacity 0.15s; }
+.col--sealed .tier:hover, .col--sealed .tier:focus-within, .col--sealed .tier-add:hover { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
   .tier::before { transition: none; }

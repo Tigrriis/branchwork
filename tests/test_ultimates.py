@@ -182,32 +182,28 @@ def test_tree_shows_the_lock_reason_on_a_closed_ultimate(client, db):
     assert "<button type=\"button\" class=\"ultimate__box\" disabled" in html
 
 
-def test_claiming_seals_the_scheme_until_taken_back(client, db):
+def test_claiming_seals_the_look_but_leftovers_still_tick(client, db):
     user = make_user()
     login(client)
     project = make_project(user)
     branch = make_branch(project)
-    a = make_task(branch, "A", points_max=3, points_done=3)
+    make_task(branch, "A", points_max=3, points_done=3)
     b = make_task(branch, "B", points_max=2, points_done=1)
     ultimate = make_ultimate(branch)
-    assert ultimate.open and not branch.is_sealed and b.editable
+    assert ultimate.open and not branch.is_sealed
 
     html = client.get(f"/projects/{project.id}").data.decode()
     assert "ultimate--open" in html and "col--sealed" not in html
 
+    # Sealed is a look: the note and the class, with the tiles still live.
     _claim(client, ultimate)
-    assert branch.is_sealed and not a.editable and not b.editable
+    assert branch.is_sealed and b.editable
     html = client.get(f"/projects/{project.id}").data.decode()
-    assert "col--sealed" in html and "tile--live" not in html
-    assert html.count('class="tile__box" disabled') == 2
-    assert tx("gate.sealed") in html
-
-    res = client.post(f"/tasks/{b.id}/points", json={"delta": 1})
-    assert res.status_code == 409
-    assert res.get_json() == {"error": "sealed", "message": tx("machination.sealed")}
-    assert b.points_done == 1
+    assert "col--sealed" in html and tx("gate.sealed") in html
+    assert html.count("tile--live") == 2 and 'class="tile__box" disabled' not in html
+    assert client.post(f"/tasks/{b.id}/points", json={"delta": 1}).status_code == 200
+    assert b.points_done == 2
 
     _claim(client, ultimate, achieved=False)
-    assert not branch.is_sealed and b.editable
-    assert client.post(f"/tasks/{b.id}/points", json={"delta": 1}).status_code == 200
+    assert not branch.is_sealed
     assert "col--sealed" not in client.get(f"/projects/{project.id}").data.decode()

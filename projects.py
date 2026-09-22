@@ -375,9 +375,8 @@ def task_points(task_id: int):
     project = task.branch.project
     payload = request.get_json(silent=True) or {}
     if not task.editable:
-        sealed = task.branch.is_sealed
-        return jsonify({"error": "sealed" if sealed else "locked",
-                        "message": tx("machination.sealed" if sealed else "machination.locked")}), 409
+        return jsonify({"error": "locked",
+                        "message": tx("machination.locked")}), 409
     before = task.points_done
     if "set" in payload:
         task.set_points(_int(payload.get("set"), task.points_done, 0, task.points_max))
