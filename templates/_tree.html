@@ -11,7 +11,7 @@
   {# The head rides in the middle of the line rather than at its end, where
      it would crowd the tile it points at. The page script places it. #}
   <g class="thread{% if thread.started %} thread--started{% endif %}{% if thread.done %} thread--done{% endif %}" data-thread="{{ thread.id }}">
-    <path class="thread__line" data-from="{{ thread.from_task_id }}" data-to="{{ thread.to_task_id }}">
+    <path class="thread__line" data-from="{{ thread.from_task_id }}" {% if thread.to_ultimate_id %}data-to-ultimate="{{ thread.to_ultimate_id }}"{% else %}data-to="{{ thread.to_task_id }}"{% endif %}>
       <title>{{ t('thread.arrow_title', from=thread.source.title, to=thread.target.title) }}</title>
     </path>
     <path class="thread__arrow" d="M-4 -3.6L4.4 0L-4 3.6Z"></path>
@@ -20,10 +20,16 @@
 </svg>
 
 {% for branch in project.branches %}
-<section class="col col--{{ branch.hue }} {% if branch.is_locked %}col--locked{% endif %}" data-branch="{{ branch.id }}">
+<section class="col col--{{ branch.hue }} {% if branch.is_locked %}col--locked{% endif %}{% if branch.is_sealed %} col--sealed{% endif %}" data-branch="{{ branch.id }}">
   <div class="col__wm">{{ icon(branch.tasks[0].icon if branch.tasks else none, 220) }}</div>
   <div class="col__body">
-    {% if branch.is_locked %}
+    {% if branch.is_sealed %}
+    {# Claimed ultimate: the scheme is done with, and holds still. #}
+    <div class="tier-note tier-note--sealed">
+      <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      {{ t('gate.sealed') }}
+    </div>
+    {% elif branch.is_locked %}
     <div class="tier-note">
       <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"></rect><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg>
       {{ branch.lock_reason }}
@@ -41,8 +47,8 @@
       {% endif %}
       <div class="tier__row" data-branch="{{ branch.id }}" data-tier="{{ row.tier }}">
         {% for task in row.tasks %}
-        <div class="tile tile--{{ task.state }} {% if row.open %}tile--live{% endif %}" data-task="{{ task.id }}" title="{{ task.title }}{% if task.notes %} — {{ task.notes }}{% endif %}">
-          <button type="button" class="tile__box" {% if not row.open %}disabled{% endif %} aria-label="{{ t('tree.tile_aria', title=task.title, done=task.points_done, max=task.points_max) }}">
+        <div class="tile tile--{{ task.state }} {% if row.open and not branch.is_sealed %}tile--live{% endif %}" data-task="{{ task.id }}" title="{{ task.title }}{% if task.notes %} — {{ task.notes }}{% endif %}">
+          <button type="button" class="tile__box" {% if not row.open or branch.is_sealed %}disabled{% endif %} aria-label="{{ t('tree.tile_aria', title=task.title, done=task.points_done, max=task.points_max) }}">
             {{ icon(task.icon, 32) }}
           </button>
           <span class="tile__plate">{{ task.points_done }}/{{ task.points_max }}</span>
@@ -84,6 +90,7 @@
         <span class="ultimate__aura" aria-hidden="true"></span>
         <span class="ultimate__ring" aria-hidden="true"></span>
         <span class="ultimate__icon">{{ icon(ult.icon, 40) }}</span>
+        <span class="ultimate__tick" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
       </button>
       <a class="ultimate__label" href="{{ url_for('ultimates.edit_ultimate', branch_id=branch.id) }}">{{ ult.title }}</a>
     </div>

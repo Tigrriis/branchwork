@@ -53,10 +53,11 @@
       <label class="field__label" for="notes">{{ t('machination.notes') }} <span class="muted">{{ t('common.optional') }}</span></label>
       <textarea class="input" id="notes" name="notes" rows="3">{{ task.notes or '' }}</textarea>
     </div>
-    {% if not is_new and project.tasks|length > 1 %}
+    {% if not is_new and (project.tasks|length > 1 or project.ultimates) %}
     <fieldset class="fieldset">
       <legend>{{ t('thread.form_legend') }}</legend>
       <p class="muted small">{{ t('thread.form_help') }}</p>
+      {% if project.tasks|length > 1 %}
       <div class="field">
         <label class="field__label" for="follows">{{ t('thread.follows') }}</label>
         <select class="input" id="follows" name="follows">
@@ -66,6 +67,18 @@
           {% endfor %}
         </select>
       </div>
+      {% endif %}
+      {% if project.ultimates %}
+      <div class="field">
+        <label class="field__label" for="leads_to">{{ t('thread.leads_to') }}</label>
+        <select class="input" id="leads_to" name="leads_to">
+          <option value="">{{ t('thread.pick') }}</option>
+          {% for ult in project.ultimates %}
+          <option value="{{ ult.id }}">{{ ult.branch.name }} · {{ ult.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
       {% if task.threads_in or task.threads_out %}
       <div class="thread-rows">
         {% for thread in task.threads_in + task.threads_out %}{% include "_thread_row.html" %}{% endfor %}

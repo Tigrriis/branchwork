@@ -6,9 +6,9 @@ It is a statement about order, not a gate: nothing is locked by a thread,
 because tier gates and scheme locks already do that job and a hidden third
 rule would be one too many.
 
-Threads are made by dragging a tile's handle onto another tile, or from the
-"comes after" picker on the machination form, and removed by clicking the
-arrow or from the same form.
+Threads are made by dragging a tile's handle onto another tile or onto a
+scheme's ultimate, or from the pickers on the machination and ultimate
+forms, and removed from those forms. An ultimate only ever ends a thread.
 """
 from flask import (
     Blueprint, abort, current_app, flash, jsonify, redirect, render_template,
@@ -18,7 +18,7 @@ from flask_login import current_user, login_required
 
 from copytext import tx
 from extensions import db
-from models import Project, Task, Thread
+from models import Project, Task, Thread, Ultimate
 
 threads_bp = Blueprint("threads", __name__)
 
@@ -41,12 +41,16 @@ def _thread(thread_id: int) -> Thread:
 
 # ── The rule ────────────────────────────────────────────────────────────────
 
-def _loops(project: Project, source: Task, target: Task) -> bool:
+def _loops(project: Project, source: Task, target: Task | Ultimate) -> bool:
     """Would threading source → target close a loop? True if target already
-    leads back to source, following the threads that exist."""
+    leads back to source, following the threads that exist. Nothing leads
+    on from an ultimate, so a thread into one never loops."""
+    if isinstance(target, Ultimate):
+        return False
     onward: dict[int, list[int]] = {}
     for thread in project.threads:
-        onward.setdefault(thread.from_task_id, []).append(thread.to_task_id)
+        if thread.to_task_id is not None:
+            onward.setdefault(thread.from_task_id, []).append(thread.to_task_id)
     seen, stack = set(), [target.id]
     while stack:
         node = stack.pop()
@@ -59,18 +63,31 @@ def _loops(project: Project, source: Task, target: Task) -> bool:
     return False
 
 
-def thread_tasks(project: Project, source_id, target: Task) -> str | None:
+def find_target(project: Project, task_id=None, ultimate_id=None) -> Task | Ultimate | None:
+    """The machination or ultimate a thread is to end at, if it is in this
+    plot. One id or the other; anything else is nothing."""
+    task_id, ultimate_id = str(task_id or ""), str(ultimate_id or "")
+    if ultimate_id.isdigit():
+        ultimate = db.session.get(Ultimate, int(ultimate_id))
+        return ultimate if ultimate and ultimate.branch.project_id == project.id else None
+    if task_id.isdigit():
+        task = db.session.get(Task, int(task_id))
+        return task if task and task.branch.project_id == project.id else None
+    return None
+
+
+def thread_tasks(project: Project, source_id, target: Task | Ultimate) -> str | None:
     """Thread source → target, adding it to the session. Returns a copy key
     naming the refusal, or None once it is made."""
     source_id = str(source_id or "")
     source = db.session.get(Task, int(source_id)) if source_id.isdigit() else None
     if source is None or source.branch.project_id != project.id:
         return "thread.not_in_plot"
-    if source.id == target.id:
+    if source is target:
         return "thread.same"
     if len(project.threads) >= current_app.config["MAX_THREADS_PER_PROJECT"]:
         return "thread.limit"
-    if any(t.from_task_id == source.id and t.to_task_id == target.id for t in project.threads):
+    if any(t.from_task_id == source.id and t.target is target for t in project.threads):
         return "thread.exists"
     if _loops(project, source, target):
         return "thread.loop"
@@ -87,14 +104,15 @@ def _tree(project: Project):
 @threads_bp.route("/tasks/<int:task_id>/threads", methods=["POST"])
 @login_required
 def add_thread(task_id: int):
-    """Thread this machination to another: ``{"to": id}``. The tile drag posts
-    JSON and gets the re-rendered tree back, the way points do."""
+    """Thread this machination to another, ``{"to": id}``, or into a scheme's
+    ultimate, ``{"to_ultimate": id}``. The tile drag posts JSON and gets the
+    re-rendered tree back, the way points do."""
     source = _task(task_id)
     project = source.branch.project
     payload = request.get_json(silent=True) or {}
-    raw = payload.get("to", request.form.get("to"))
-    target = db.session.get(Task, int(raw)) if str(raw or "").isdigit() else None
-    if target is None or target.branch.project_id != project.id:
+    target = find_target(project, task_id=payload.get("to", request.form.get("to")),
+                         ultimate_id=payload.get("to_ultimate", request.form.get("to_ultimate")))
+    if target is None:
         message = tx("thread.not_in_plot")
         if request.get_json(silent=True) is None:
             flash(message, "error")

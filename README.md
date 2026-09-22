@@ -81,10 +81,15 @@ A branch can end in an **ultimate**: its end goal, drawn as a round disc
 below every tier, so a new tier always slides in above it. It opens by the
 tier rule (the last tier holds enough points to open another) and is claimed
 with a click rather than pointed; shift-click or right-click takes it back.
-Claimed, it lights up in the branch's colour with a breathing halo. A branch
-with an ultimate is not complete, and so cannot unlock the branches that wait
-on it, until the ultimate is claimed. Set it from the "+ Set the ultimate"
-link under a branch's tiers, which is also where it is edited or removed.
+Reached, it lights up in the branch's colour with a breathing halo and an
+orbiting arc; claimed, it becomes a solid disc with a tick and the branch is
+sealed: its tiers go quiet and their points hold still until the claim is
+taken back. A branch with an ultimate is not complete, and so cannot unlock
+the branches that wait on it, until the ultimate is claimed. Set it from the
+"+ Set the ultimate" link under a branch's tiers, which is also where it is
+edited or removed. Threads can end at an ultimate, so tasks in other branches
+can lead into it: drop a tile's handle on the disc, or use "leads to" on the
+task form or "comes after" on the ultimate's.
 
 ## Run locally
 

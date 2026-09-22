@@ -329,6 +329,10 @@ class Project(db.Model):
         return [t for b in self.branches for t in b.tasks]
 
     @property
+    def ultimates(self) -> list[Ultimate]:
+        return [b.ultimate for b in self.branches if b.ultimate is not None]
+
+    @property
     def points_max(self) -> int:
         return sum(b.points_max for b in self.branches)
 
@@ -423,6 +427,12 @@ class Branch(db.Model):
         if not self.tasks or self.points_done < self.points_max:
             return False
         return self.ultimate is None or self.ultimate.achieved
+
+    @property
+    def is_sealed(self) -> bool:
+        """Claimed ultimate: the scheme is finished with, and its points hold
+        still until the claim is taken back."""
+        return self.ultimate is not None and self.ultimate.achieved
 
     @property
     def is_locked(self) -> bool:
@@ -556,8 +566,9 @@ class Task(db.Model):
 
     @property
     def editable(self) -> bool:
-        """Points may change only on an open tier of an unlocked branch."""
-        return self.branch.tier_open(self.tier)
+        """Points may change only on an open tier of an unlocked branch, and
+        not once the branch's ultimate is claimed."""
+        return not self.branch.is_sealed and self.branch.tier_open(self.tier)
 
     def set_points(self, value: int) -> None:
         # Column defaults only apply at flush, so a brand-new task may still
@@ -628,7 +639,8 @@ class Ultimate(db.Model):
 
 
 class Thread(db.Model):
-    """A sequence link between two machinations: this one, then that one.
+    """A sequence link from a machination to what comes after it: another
+    machination, or a scheme's ultimate.
 
     Usually the two sit in different schemes, which is the point: the columns
     show what belongs together, and a thread shows what follows what. It is
@@ -638,22 +650,48 @@ class Thread(db.Model):
 
     Deliberately not a gate. Tier gates and scheme locks decide what can be
     worked on; a thread only says what the order is.
+
+    Exactly one of ``to_task_id`` and ``to_ultimate_id`` is set. An ultimate
+    only ever ends a thread: nothing comes after the end goal.
     """
     __tablename__ = "threads"
-    __table_args__ = (db.UniqueConstraint("from_task_id", "to_task_id", name="uq_threads_pair"),)
+    __table_args__ = (
+        db.UniqueConstraint("from_task_id", "to_task_id", name="uq_threads_pair"),
+        db.UniqueConstraint("from_task_id", "to_ultimate_id", name="uq_threads_ultimate_pair"),
+        db.CheckConstraint("(to_task_id IS NULL) <> (to_ultimate_id IS NULL)",
+                           name="ck_threads_one_target"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False, index=True)
     from_task_id = db.Column(db.Integer, db.ForeignKey("tasks.id", ondelete="CASCADE"),
                              nullable=False, index=True)
     to_task_id = db.Column(db.Integer, db.ForeignKey("tasks.id", ondelete="CASCADE"),
-                           nullable=False, index=True)
+                           nullable=True, index=True)
+    to_ultimate_id = db.Column(db.Integer, db.ForeignKey("ultimates.id", ondelete="CASCADE"),
+                               nullable=True, index=True)
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
 
     source = db.relationship("Task", foreign_keys=[from_task_id],
                              backref=db.backref("threads_out", cascade="all, delete-orphan"))
-    target = db.relationship("Task", foreign_keys=[to_task_id],
-                             backref=db.backref("threads_in", cascade="all, delete-orphan"))
+    target_task = db.relationship("Task", foreign_keys=[to_task_id],
+                                  backref=db.backref("threads_in", cascade="all, delete-orphan"))
+    target_ultimate = db.relationship(
+        "Ultimate", foreign_keys=[to_ultimate_id],
+        backref=db.backref("threads_in", cascade="all, delete-orphan"))
+
+    @property
+    def target(self) -> Task | Ultimate:
+        """Whichever end this thread has. Both kinds carry a title and a
+        branch, which is all the tree and the forms ask of it."""
+        return self.target_ultimate if self.to_ultimate_id or self.target_ultimate else self.target_task
+
+    @target.setter
+    def target(self, value) -> None:
+        if isinstance(value, Ultimate):
+            self.target_ultimate, self.target_task = value, None
+        else:
+            self.target_task, self.target_ultimate = value, None
 
     @property
     def started(self) -> bool:
@@ -665,7 +703,12 @@ class Thread(db.Model):
     def done(self) -> bool:
         """Both ends finished, which is what turns the arrow green. One end
         alone leaves the sequence unfinished, so it stays orange."""
-        return self.started and self.target.state == STATE_FULL
+        if not self.started:
+            return False
+        target = self.target
+        if isinstance(target, Ultimate):
+            return target.achieved
+        return target.state == STATE_FULL
 
 
 class Routine(db.Model):

@@ -180,3 +180,34 @@ def test_tree_shows_the_lock_reason_on_a_closed_ultimate(client, db):
     assert "ultimate--closed" in html
     assert tx("gate.needs_points", gate=3, have=1) in html
     assert "<button type=\"button\" class=\"ultimate__box\" disabled" in html
+
+
+def test_claiming_seals_the_scheme_until_taken_back(client, db):
+    user = make_user()
+    login(client)
+    project = make_project(user)
+    branch = make_branch(project)
+    a = make_task(branch, "A", points_max=3, points_done=3)
+    b = make_task(branch, "B", points_max=2, points_done=1)
+    ultimate = make_ultimate(branch)
+    assert ultimate.open and not branch.is_sealed and b.editable
+
+    html = client.get(f"/projects/{project.id}").data.decode()
+    assert "ultimate--open" in html and "col--sealed" not in html
+
+    _claim(client, ultimate)
+    assert branch.is_sealed and not a.editable and not b.editable
+    html = client.get(f"/projects/{project.id}").data.decode()
+    assert "col--sealed" in html and "tile--live" not in html
+    assert html.count('class="tile__box" disabled') == 2
+    assert tx("gate.sealed") in html
+
+    res = client.post(f"/tasks/{b.id}/points", json={"delta": 1})
+    assert res.status_code == 409
+    assert res.get_json() == {"error": "sealed", "message": tx("machination.sealed")}
+    assert b.points_done == 1
+
+    _claim(client, ultimate, achieved=False)
+    assert not branch.is_sealed and b.editable
+    assert client.post(f"/tasks/{b.id}/points", json={"delta": 1}).status_code == 200
+    assert "col--sealed" not in client.get(f"/projects/{project.id}").data.decode()

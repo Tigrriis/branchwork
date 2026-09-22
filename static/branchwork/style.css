@@ -606,8 +606,9 @@ body.is-dragging-project .lane.is-drop {
 /* A scheme's end goal, below every tier and pinned to the foot of the
    column, so the finish lines up across schemes. Round where the tiles are
    square, so it reads as a different kind of thing: dashed and dim until
-   the last tier is full, then solid and clickable, then lit in the scheme's
-   own colour once it is claimed. */
+   the last tier is full, then lit in the scheme's own colour and calling to
+   be claimed, then a solid disc with a tick once it is, which seals the
+   scheme. */
 .ultimate {
   position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center; gap: 6px;
   margin-top: auto; padding: 14px 16px 10px; border-top: 1px solid var(--tint-edge, var(--line));
@@ -622,6 +623,11 @@ body.is-dragging-project .lane.is-drop {
 .ultimate__box:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .ultimate__icon { position: relative; z-index: 1; display: flex; }
 .ultimate__aura, .ultimate__ring { position: absolute; border-radius: 50%; pointer-events: none; display: none; }
+.ultimate__tick {
+  position: absolute; z-index: 3; right: -4px; bottom: -2px; display: none; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--tint-bg, var(--card));
+  background: var(--tint-wm, var(--full)); color: var(--on-accent);
+}
 .ultimate__label {
   max-width: 160px; font-size: 12px; font-weight: 700; line-height: 1.2; text-align: center;
   color: var(--fg2); text-decoration: none; overflow: hidden;
@@ -629,27 +635,24 @@ body.is-dragging-project .lane.is-drop {
 }
 .ultimate__label:hover { text-decoration: underline; color: var(--fg); }
 .ultimate--closed .ultimate__box, .ultimate--closed .ultimate__label { opacity: 0.45; }
-.ultimate--open .ultimate__box { border-style: solid; border-color: var(--tint-wm, var(--full)); color: var(--fg); }
-.ultimate--open .ultimate__box:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--tint-wm, var(--full)) 35%, transparent);
-}
-.ultimate--open .ultimate__box:active { transform: scale(0.97); }
-/* Claimed: the disc fills with the scheme's colour and breathes, a soft
-   halo pulses behind it and a bright arc circles the rim. */
-.ultimate--achieved .ultimate__box {
+/* Reached: the tier above is full and the ultimate comes alive. The disc
+   fills with the scheme's colour and breathes, a soft halo pulses behind it
+   and a bright arc circles the rim, until it is claimed. */
+.ultimate--open .ultimate__box {
   border-style: solid; border-color: var(--tint-wm, var(--full)); color: var(--fg);
   background: radial-gradient(circle at 50% 30%,
     color-mix(in srgb, var(--tint-wm, var(--full)) 48%, var(--card2)),
     color-mix(in srgb, var(--tint-wm, var(--full)) 14%, var(--card2)) 72%);
   animation: ultimate-breathe 3s ease-in-out infinite;
 }
-.ultimate--achieved .ultimate__aura {
+.ultimate--open .ultimate__box:hover { transform: translateY(-1px); }
+.ultimate--open .ultimate__box:active { transform: scale(0.97); }
+.ultimate--open .ultimate__aura {
   display: block; inset: -26px; z-index: -1;
   background: radial-gradient(circle, color-mix(in srgb, var(--tint-wm, var(--full)) 70%, transparent), transparent 68%);
   filter: blur(8px); animation: ultimate-aura 3s ease-in-out infinite;
 }
-.ultimate--achieved .ultimate__ring {
+.ultimate--open .ultimate__ring {
   display: block; inset: -7px; z-index: 2;
   background: conic-gradient(from 0deg, transparent 0 55%,
     color-mix(in srgb, var(--tint-wm, var(--full)) 45%, white) 78%, transparent 100%);
@@ -657,9 +660,23 @@ body.is-dragging-project .lane.is-drop {
   mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
   animation: ultimate-orbit 4s linear infinite;
 }
+.ultimate--open .ultimate__label, .ultimate--open .ultimate__kicker { color: var(--tint-fg, var(--fg)); }
+/* Claimed: a solid disc in the scheme's colour with a tick, a steady glow,
+   and the rest of the scheme goes quiet behind it. */
+.ultimate--achieved .ultimate__box {
+  border-style: solid; border-color: var(--tint-wm, var(--full));
+  background: var(--tint-wm, var(--full)); color: var(--on-accent);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--tint-wm, var(--full)) 60%, transparent);
+}
+.ultimate--achieved .ultimate__aura {
+  display: block; inset: -22px; z-index: -1; opacity: 0.8;
+  background: radial-gradient(circle, color-mix(in srgb, var(--tint-wm, var(--full)) 55%, transparent), transparent 68%);
+  filter: blur(8px);
+}
+.ultimate--achieved .ultimate__tick { display: flex; }
 .ultimate--achieved .ultimate__label, .ultimate--achieved .ultimate__kicker { color: var(--tint-fg, var(--fg)); }
 /* The moment it is claimed: a ring bursts out of the disc, once. */
-.ultimate.is-lit .ultimate__box { animation: ultimate-ignite 0.6s ease-out, ultimate-breathe 3s ease-in-out 0.6s infinite; }
+.ultimate.is-lit .ultimate__box { animation: ultimate-ignite 0.6s ease-out; }
 .ultimate.is-lit .ultimate__box::after {
   content: ""; position: absolute; inset: -2px; border-radius: 50%; pointer-events: none;
   border: 3px solid var(--tint-wm, var(--full)); animation: ultimate-burst 0.8s ease-out forwards;
@@ -683,10 +700,18 @@ body.is-dragging-project .lane.is-drop {
   from { transform: scale(0.9); opacity: 1; } to { transform: scale(2.6); opacity: 0; }
 }
 
+/* A sealed scheme: its ultimate is claimed, so the tiers go quiet, nothing
+   more can be added from the tree, and the column's edge takes its colour. */
+.col--sealed { border-color: var(--tint-wm, var(--full)); }
+.col--sealed .col__body > .tier-note--sealed { padding: 14px 16px 0; color: var(--tint-fg, var(--fg)); }
+.col--sealed .tier, .col--sealed .tier-add { opacity: 0.5; }
+.col--sealed .tier-add, .col--sealed .tile--add { display: none; }
+.col--sealed .tile__box { cursor: default; }
+
 @media (prefers-reduced-motion: reduce) {
   .tier::before { transition: none; }
   .ability--ready .ability__key, .ability.is-used .ability__key { animation: none; }
-  .ultimate--achieved .ultimate__box, .ultimate--achieved .ultimate__aura, .ultimate--achieved .ultimate__ring,
+  .ultimate--open .ultimate__box, .ultimate--open .ultimate__aura, .ultimate--open .ultimate__ring,
   .ultimate.is-lit .ultimate__box, .ultimate.is-lit .ultimate__box::after { animation: none; }
 }
 
@@ -844,6 +869,7 @@ body.is-dragging-thread .tile[data-task] {
 }
 body.is-dragging-thread .tile[data-task].is-drop { outline: 2px dashed var(--accent); }
 body.is-dragging-thread .tile__thread { opacity: 1; }
+body.is-dragging-thread .ultimate[data-ultimate].is-drop .ultimate__box { outline: 2px dashed var(--accent); outline-offset: 4px; }
 
 /* The same threads as a list, on the machination form. */
 .thread-rows { display: flex; flex-direction: column; gap: 4px; }

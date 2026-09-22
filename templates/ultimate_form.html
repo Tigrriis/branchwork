@@ -30,6 +30,26 @@
       <label class="field__label" for="notes">{{ t('ultimate.notes') }} <span class="muted">{{ t('common.optional') }}</span></label>
       <textarea class="input" id="notes" name="notes" rows="3">{{ ultimate.notes or '' }}</textarea>
     </div>
+    {% if not is_new and project.tasks %}
+    <fieldset class="fieldset">
+      <legend>{{ t('thread.form_legend') }}</legend>
+      <p class="muted small">{{ t('ultimate.form_help') }}</p>
+      <div class="field">
+        <label class="field__label" for="follows">{{ t('thread.follows') }}</label>
+        <select class="input" id="follows" name="follows">
+          <option value="">{{ t('thread.pick') }}</option>
+          {% for other in project.tasks %}
+          <option value="{{ other.id }}">{{ other.branch.name }} · {{ other.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if ultimate.threads_in %}
+      <div class="thread-rows">
+        {% for thread in ultimate.threads_in %}{% include "_thread_row.html" %}{% endfor %}
+      </div>
+      {% endif %}
+    </fieldset>
+    {% endif %}
     <div class="form__actions">
       <button class="btn btn--primary" type="submit">{% if is_new %}{{ t('ultimate.set') }}{% else %}{{ t('common.save') }}{% endif %}</button>
       <a class="btn btn--ghost" href="{{ url_for('projects.tree', project_id=project.id) }}">{{ t('common.cancel') }}</a>
@@ -37,6 +57,13 @@
   </form>
 </div>
 {% if not is_new %}
+{# Outside the ultimate's form, so its remove buttons can point at them. #}
+{% for thread in ultimate.threads_in %}
+<form id="unthread-{{ thread.id }}" method="post" action="{{ url_for('threads.delete_thread', thread_id=thread.id) }}" hidden>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="next" value="{{ url_for('ultimates.edit_ultimate', branch_id=branch.id) }}">
+</form>
+{% endfor %}
 <form method="post" action="{{ url_for('ultimates.delete_ultimate', ultimate_id=ultimate.id) }}" class="inline-form" data-confirm="{{ t('ultimate.delete_confirm') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <button class="btn btn--danger" type="submit">{{ t('ultimate.delete') }}</button>

@@ -15,6 +15,7 @@ from copytext import tx
 from extensions import db
 from icons import DEFAULT_ICON, clean_icon
 from models import Branch, Ultimate
+from threads import thread_tasks
 
 ultimates_bp = Blueprint("ultimates", __name__)
 
@@ -46,6 +47,19 @@ def _read_form(ultimate: Ultimate) -> bool:
     return True
 
 
+def _thread_from_form(project, ultimate: Ultimate) -> None:
+    """The form's "comes after" picker: a machination that leads into this
+    ultimate. A refusal is flashed and the save still stands."""
+    follows = (request.form.get("follows") or "").strip()
+    if not follows:
+        return
+    error = thread_tasks(project, follows, ultimate)
+    if error:
+        flash(tx(error), "error")
+    else:
+        db.session.commit()
+
+
 # ── Routes ──────────────────────────────────────────────────────────────────
 
 @ultimates_bp.route("/branches/<int:branch_id>/ultimate", methods=["GET", "POST"])
@@ -63,6 +77,7 @@ def edit_ultimate(branch_id: int):
             ultimate.branch = branch
             db.session.add(ultimate)
         db.session.commit()
+        _thread_from_form(project, ultimate)
         flash(tx("ultimate.added" if is_new else "ultimate.saved"), "success")
         return redirect(url_for("projects.tree", project_id=project.id))
     return render_template("ultimate_form.html", project=project, branch=branch,

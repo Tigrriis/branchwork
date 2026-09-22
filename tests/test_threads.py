@@ -1,6 +1,6 @@
 """Threads: sequence links between machinations, and the rules that hold."""
-from conftest import copy_in, login, make_branch, make_project, make_task, make_user
-from models import Task, Thread
+from conftest import copy_in, login, make_branch, make_project, make_task, make_ultimate, make_user
+from models import Task, Thread, Ultimate
 
 
 def _thread(client, source, target):
@@ -139,3 +139,84 @@ def test_a_refused_thread_from_the_form_says_so(client, db):
                     follow_redirects=True)
     assert copy_in(r.data, "thread.same")
     assert Thread.query.count() == 0
+
+
+def _thread_into(client, source, ultimate):
+    return client.post(f"/tasks/{source.id}/threads", json={"to_ultimate": ultimate.id})
+
+
+def test_a_machination_threads_into_an_ultimate(client, db):
+    user = make_user()
+    login(client)
+    project = make_project(user)
+    design, build = make_branch(project, "Design"), make_branch(project, "Build", "red")
+    brief = make_task(design, "Brief", points_max=2)
+    dig = make_task(build, "Dig", points_max=3)
+    keys = make_ultimate(build, "Keys handed over")
+
+    res = _thread_into(client, brief, keys)
+    assert res.status_code == 200
+    thread = Thread.query.one()
+    assert (thread.from_task_id, thread.to_task_id, thread.to_ultimate_id) == (brief.id, None, keys.id)
+    assert thread.target is keys and keys.threads_in == [thread]
+    assert not thread.started and not thread.done
+    html = res.get_json()["html"]
+    assert f'data-from="{brief.id}" data-to-ultimate="{keys.id}"' in html
+    assert "data-to=" not in html
+
+    # Repeats and other plots are refused like any thread; an ultimate never
+    # leads on, so it cannot close a loop.
+    assert copy_in(_thread_into(client, brief, keys).get_json()["message"], "thread.exists")
+    far = make_ultimate(make_branch(make_project(user)), "Far away")
+    assert copy_in(_thread_into(client, brief, far).get_json()["message"], "thread.not_in_plot")
+    assert _thread(client, dig, brief).status_code == 200
+    assert Thread.query.count() == 2
+
+    # Under way once the near end is done, green once the ultimate is claimed.
+    brief.set_points(2); db.session.commit()
+    thread = db.session.get(Thread, thread.id)
+    assert thread.started and not thread.done
+    dig.set_points(3); keys.set_achieved(True); db.session.commit()
+    assert db.session.get(Thread, thread.id).done
+    assert "thread--done" in client.get(f"/projects/{project.id}").data.decode()
+
+    # The ultimate takes its threads with it; the other thread stays.
+    client.post(f"/ultimates/{keys.id}/delete")
+    assert Thread.query.count() == 1 and Thread.query.one().to_task_id == brief.id
+
+
+def test_the_forms_thread_into_an_ultimate_both_ways(client, db):
+    user = make_user()
+    login(client)
+    project = make_project(user)
+    design, build = make_branch(project, "Design"), make_branch(project, "Build", "red")
+    brief = make_task(design, "Brief")
+    dig = make_task(build, "Dig")
+    keys = make_ultimate(build, "Keys handed over")
+
+    # "Leads to" on the machination form.
+    form = client.get(f"/tasks/{brief.id}/edit").data.decode()
+    assert copy_in(form, "thread.leads_to") and f'value="{keys.id}"' in form
+    client.post(f"/tasks/{brief.id}/edit", data={"title": "Brief", "icon": "bomb", "tier": "1",
+                                                 "points_max": "1", "points_done": "0",
+                                                 "leads_to": str(keys.id)})
+    thread = Thread.query.one()
+    assert (thread.from_task_id, thread.to_ultimate_id) == (brief.id, keys.id)
+    assert f'id="unthread-{thread.id}"' in client.get(f"/tasks/{brief.id}/edit").data.decode()
+
+    # "Comes after" on the ultimate form, which also lists and removes.
+    form = client.get(f"/branches/{build.id}/ultimate").data.decode()
+    assert copy_in(form, "thread.follows") and f'id="unthread-{thread.id}"' in form
+    client.post(f"/branches/{build.id}/ultimate",
+                data={"title": "Keys handed over", "icon": "bomb", "follows": str(dig.id)})
+    assert Thread.query.count() == 2
+    assert {t.from_task_id for t in keys.threads_in} == {brief.id, dig.id}
+    client.post(f"/threads/{thread.id}/delete", data={"next": f"/branches/{build.id}/ultimate"},
+                follow_redirects=True)
+    assert Thread.query.count() == 1
+
+    # A refusal from the ultimate form is flashed and the save still stands.
+    r = client.post(f"/branches/{build.id}/ultimate",
+                    data={"title": "Handover", "icon": "bomb", "follows": str(dig.id)},
+                    follow_redirects=True)
+    assert copy_in(r.data, "thread.exists") and Ultimate.query.one().title == "Handover"

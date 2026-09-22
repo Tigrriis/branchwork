@@ -161,7 +161,7 @@
   var KINDS = {
     idea: { handle: ".idea", zone: ".tier__row, .tier-add" },
     project: { handle: ".prow", zone: "[data-focus-zone]" },
-    thread: { handle: ".tile__thread", zone: ".tile[data-task]" }
+    thread: { handle: ".tile__thread", zone: ".tile[data-task], .ultimate[data-ultimate]" }
   };
 
   function zoneFor(node) {
@@ -265,7 +265,7 @@
     if (moving.kind === "idea") {
       promoteIdea(moving.id, zone.dataset.branch, zone.dataset.tier);
     } else if (moving.kind === "thread") {
-      threadTasks(moving.id, zone.dataset.task);
+      threadTasks(moving.id, zone.dataset.task, zone.dataset.ultimate);
     } else if (zone !== moving.from) {        // dropping back home is a no-op
       setFocus(moving.id, zone.dataset.focusZone === "1");
     }
@@ -469,6 +469,7 @@
       };
     }
     function tileOf(id) { return tree.querySelector('.tile[data-task="' + id + '"]'); }
+    function discOf(id) { return tree.querySelector('.ultimate[data-ultimate="' + id + '"]'); }
 
     // The clear band on one side of a tile's row: half way to the next row,
     // or a little clear of the tiles when there is no next row.
@@ -488,7 +489,12 @@
     var routes = [];
     Array.prototype.forEach.call(svg.querySelectorAll(".thread__line"), function (path) {
       var arrow = path.parentNode.querySelector(".thread__arrow");
-      var fromTile = tileOf(path.dataset.from), toTile = tileOf(path.dataset.to);
+      // A thread ends at another tile or at a scheme's ultimate, which sits
+      // alone under the tiers, so it is reached along its own centre line
+      // rather than through a band between rows.
+      var intoDisc = !!path.dataset.toUltimate;
+      var fromTile = tileOf(path.dataset.from);
+      var toTile = intoDisc ? discOf(path.dataset.toUltimate) : tileOf(path.dataset.to);
       if (!fromTile || !toTile) {
         path.removeAttribute("d");
         arrow.setAttribute("hidden", "hidden");
@@ -496,8 +502,8 @@
       }
       arrow.removeAttribute("hidden");
       var a = boxOf(fromTile.querySelector(".tile__box"));
-      var b = boxOf(toTile.querySelector(".tile__box"));
-      var aRow = fromTile.closest(".tier__row"), bRow = toTile.closest(".tier__row");
+      var b = boxOf(toTile.querySelector(intoDisc ? ".ultimate__box" : ".tile__box"));
+      var aRow = fromTile.closest(".tier__row"), bRow = intoDisc ? null : toTile.closest(".tier__row");
       var aCol = fromTile.closest(".col"), bCol = toTile.closest(".col");
       var toTheRight = b.cx >= a.cx;
       // Arrows leave and arrive at a tile's side: the plate and the label sit
@@ -505,11 +511,11 @@
       var edgeA = toTheRight ? a.right : a.left;
       var edgeB = toTheRight ? b.left : b.right;
       var outA = toTheRight ? 1 : -1;
-      var sameRow = aRow === bRow || Math.abs(boxOf(aRow).top - boxOf(bRow).top) < 4;
+      var sameRow = !intoDisc && (aRow === bRow || Math.abs(boxOf(aRow).top - boxOf(bRow).top) < 4);
       var route = {
         path: path, arrow: arrow, a: a, b: b,
         leaves: path.dataset.from + (toTheRight ? ":right" : ":left"),
-        arrives: path.dataset.to + (toTheRight ? ":left" : ":right")
+        arrives: (intoDisc ? "u" + path.dataset.toUltimate : path.dataset.to) + (toTheRight ? ":left" : ":right")
       };
 
       if (sameRow && Math.abs(edgeB - edgeA) < 52) {
@@ -525,6 +531,9 @@
       var laneA, laneB;
       if (sameRow) {
         laneA = laneB = laneNear(fromTile, true);
+      } else if (intoDisc) {
+        laneA = laneNear(fromTile, b.top > boxOf(aRow).top);
+        laneB = b.cy;
       } else {
         var down = boxOf(bRow).top > boxOf(aRow).top;
         laneA = laneNear(fromTile, down);
@@ -604,9 +613,10 @@
     });
   }
 
-  function threadTasks(fromId, toId) {
-    if (!fromId || !toId || String(fromId) === String(toId)) return;
-    post("/tasks/" + fromId + "/threads", { to: Number(toId) })
+  function threadTasks(fromId, toId, toUltimateId) {
+    if (!fromId || (!toId && !toUltimateId) || String(fromId) === String(toId)) return;
+    var payload = toUltimateId ? { to_ultimate: Number(toUltimateId) } : { to: Number(toId) };
+    post("/tasks/" + fromId + "/threads", payload)
       .then(function (res) {
         if (!res.ok) { flash(res.body.message || say("thread_failed"), "error"); return; }
         swapTree(res.body.html);

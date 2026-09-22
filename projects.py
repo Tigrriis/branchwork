@@ -22,7 +22,7 @@ from extensions import db
 from icons import DEFAULT_ICON, clean_icon
 from models import CADENCES, HUES, Branch, InboxItem, Project, Task
 from starters import DEFAULT_STARTER, apply_starter, choices_for
-from threads import thread_tasks
+from threads import find_target, thread_tasks
 
 projects_bp = Blueprint("projects", __name__)
 
@@ -297,16 +297,24 @@ def _read_task_form(task: Task, project: Project, default_branch: Branch | None 
 
 
 def _thread_from_form(project: Project, task: Task) -> None:
-    """The form's "comes after" picker, applied once the machination has an
-    id. A refusal is flashed and the rest of the save still stands."""
+    """The form's "comes after" and "leads to" pickers, applied once the
+    machination has an id. A refusal is flashed and the rest of the save
+    still stands."""
     follows = (request.form.get("follows") or "").strip()
-    if not follows:
-        return
-    error = thread_tasks(project, follows, task)
-    if error:
-        flash(tx(error), "error")
-    else:
-        db.session.commit()
+    if follows:
+        error = thread_tasks(project, follows, task)
+        if error:
+            flash(tx(error), "error")
+        else:
+            db.session.commit()
+    leads_to = (request.form.get("leads_to") or "").strip()
+    if leads_to:
+        ultimate = find_target(project, ultimate_id=leads_to)
+        error = "thread.not_in_plot" if ultimate is None else thread_tasks(project, task.id, ultimate)
+        if error:
+            flash(tx(error), "error")
+        else:
+            db.session.commit()
 
 
 @projects_bp.route("/branches/<int:branch_id>/tasks/new", methods=["GET", "POST"])
@@ -367,8 +375,9 @@ def task_points(task_id: int):
     project = task.branch.project
     payload = request.get_json(silent=True) or {}
     if not task.editable:
-        return jsonify({"error": "locked",
-                        "message": tx("machination.locked")}), 409
+        sealed = task.branch.is_sealed
+        return jsonify({"error": "sealed" if sealed else "locked",
+                        "message": tx("machination.sealed" if sealed else "machination.locked")}), 409
     before = task.points_done
     if "set" in payload:
         task.set_points(_int(payload.get("set"), task.points_done, 0, task.points_max))
