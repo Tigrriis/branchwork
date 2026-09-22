@@ -7,18 +7,15 @@
    clicks are worth more than a shortcut for removing a thread, which the
    machination form does. #}
 <svg class="threads" aria-hidden="true" width="0" height="0">
-  <defs>
-    <marker id="thread-head" class="thread-head" viewBox="0 0 10 10" refX="8" refY="5"
-            markerWidth="2.5" markerHeight="2.5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z"/></marker>
-    <marker id="thread-head-done" class="thread-head thread-head--done" viewBox="0 0 10 10" refX="8" refY="5"
-            markerWidth="2.5" markerHeight="2.5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z"/></marker>
-  </defs>
   {% for thread in project.threads %}
-  <path class="thread{% if thread.done %} thread--done{% endif %}" data-thread="{{ thread.id }}"
-        data-from="{{ thread.from_task_id }}" data-to="{{ thread.to_task_id }}"
-        marker-end="url(#thread-head{% if thread.done %}-done{% endif %})">
-    <title>{{ t('thread.arrow_title', from=thread.source.title, to=thread.target.title) }}</title>
-  </path>
+  {# The head rides in the middle of the line rather than at its end, where
+     it would crowd the tile it points at. The page script places it. #}
+  <g class="thread{% if thread.done %} thread--done{% endif %}" data-thread="{{ thread.id }}">
+    <path class="thread__line" data-from="{{ thread.from_task_id }}" data-to="{{ thread.to_task_id }}">
+      <title>{{ t('thread.arrow_title', from=thread.source.title, to=thread.target.title) }}</title>
+    </path>
+    <path class="thread__arrow" d="M-4 -3.6L4.4 0L-4 3.6Z"></path>
+  </g>
   {% endfor %}
 </svg>
 

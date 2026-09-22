@@ -727,17 +727,14 @@ html[data-rail="pinned"] .rail { box-shadow: none; }
 /* Orange while the sequence is unfinished, green once both ends are done.
    The glow is a drop-shadow in the same colour, so the arrow reads over a
    tinted column and over a tile alike. */
-.thread {
-  fill: none; stroke: var(--part); stroke-width: 3; stroke-linecap: round;
-  pointer-events: none;
-  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--part) 65%, transparent));
+.thread { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--part) 65%, transparent)); }
+.thread--done { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--full) 65%, transparent)); }
+.thread__line {
+  fill: none; stroke: var(--part); stroke-width: 3; stroke-linecap: round; pointer-events: none;
 }
-.thread--done {
-  stroke: var(--full);
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--full) 65%, transparent));
-}
-.thread-head > path { fill: var(--part); }
-.thread-head--done > path { fill: var(--full); }
+.thread__arrow { fill: var(--part); stroke: none; pointer-events: none; }
+.thread--done .thread__line { stroke: var(--full); }
+.thread--done .thread__arrow { fill: var(--full); }
 
 /* The handle you drag from one tile to another. */
 .tile__thread {

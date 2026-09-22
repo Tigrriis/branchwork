@@ -451,9 +451,15 @@
     // Three passes: work out every route, then spread the ones that would
     // share a band or meet at the same point on a tile, then draw.
     var routes = [];
-    Array.prototype.forEach.call(svg.querySelectorAll("path[data-from]"), function (path) {
+    Array.prototype.forEach.call(svg.querySelectorAll(".thread__line"), function (path) {
+      var arrow = path.parentNode.querySelector(".thread__arrow");
       var fromTile = tileOf(path.dataset.from), toTile = tileOf(path.dataset.to);
-      if (!fromTile || !toTile) { path.removeAttribute("d"); return; }
+      if (!fromTile || !toTile) {
+        path.removeAttribute("d");
+        arrow.setAttribute("hidden", "hidden");
+        return;
+      }
+      arrow.removeAttribute("hidden");
       var a = boxOf(fromTile.querySelector(".tile__box"));
       var b = boxOf(toTile.querySelector(".tile__box"));
       var aRow = fromTile.closest(".tier__row"), bRow = toTile.closest(".tier__row");
@@ -466,7 +472,7 @@
       var outA = toTheRight ? 1 : -1;
       var sameRow = aRow === bRow || Math.abs(boxOf(aRow).top - boxOf(bRow).top) < 4;
       var route = {
-        path: path, a: a, b: b,
+        path: path, arrow: arrow, a: a, b: b,
         leaves: path.dataset.from + (toTheRight ? ":right" : ":left"),
         arrives: path.dataset.to + (toTheRight ? ":left" : ":right")
       };
@@ -552,6 +558,14 @@
     routes.forEach(function (route) {
       route.path.setAttribute("d",
         roundedPath(route.build(route.nudge || 0, route.from || 0, route.to || 0), 18));
+      // Half way along, pointing the way the line is going at that moment.
+      var length = route.path.getTotalLength();
+      var middle = route.path.getPointAtLength(length / 2);
+      var before = route.path.getPointAtLength(Math.max(0, length / 2 - 4));
+      var after = route.path.getPointAtLength(Math.min(length, length / 2 + 4));
+      var angle = Math.atan2(after.y - before.y, after.x - before.x) * 180 / Math.PI;
+      route.arrow.setAttribute("transform",
+        "translate(" + middle.x + " " + middle.y + ") rotate(" + angle + ")");
     });
   }
 
