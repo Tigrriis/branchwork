@@ -10,7 +10,7 @@
   {% for thread in project.threads %}
   {# The head rides in the middle of the line rather than at its end, where
      it would crowd the tile it points at. The page script places it. #}
-  <g class="thread{% if thread.done %} thread--done{% endif %}" data-thread="{{ thread.id }}">
+  <g class="thread{% if thread.started %} thread--started{% endif %}{% if thread.done %} thread--done{% endif %}" data-thread="{{ thread.id }}">
     <path class="thread__line" data-from="{{ thread.from_task_id }}" data-to="{{ thread.to_task_id }}">
       <title>{{ t('thread.arrow_title', from=thread.source.title, to=thread.target.title) }}</title>
     </path>

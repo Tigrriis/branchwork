@@ -464,7 +464,7 @@ drag_title = "Drag onto another machination to thread them"
 # Hover text on an arrow, and how a thread reads in lists
 arrow_title = "{from} → {to}"
 form_legend = "Sequence"
-form_help = "Thread this machination to another to show what follows what. The arrow curves across the tree, orange until both ends are finished and green once they are. It does not lock anything, and this is where a thread is removed."
+form_help = "Thread this machination to another to show what follows what. The arrow curves across the tree: grey until this end is finished, orange once the sequence is under way, green when both ends are done. It does not lock anything, and this is where a thread is removed."
 follows = "Comes after"
 pick = "Nothing yet — pick one"
 remove = "Unthread"

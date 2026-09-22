@@ -724,15 +724,21 @@ html[data-rail="pinned"] .rail { box-shadow: none; }
    them would only show in the gaps. It takes no pointer events, so a tile
    underneath still gets every click. */
 .threads { position: absolute; top: 0; left: 0; z-index: 3; overflow: visible; pointer-events: none; }
-/* Orange while the sequence is unfinished, green once both ends are done.
-   The glow is a drop-shadow in the same colour, so the arrow reads over a
-   tinted column and over a tile alike. */
-.thread { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--part) 65%, transparent)); }
-.thread--done { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--full) 65%, transparent)); }
+/* Grey and unlit until the machination it leads from is finished, orange
+   while the sequence is under way, green once both ends are done. The glow
+   is a drop-shadow in the same colour, so a lit arrow reads over a tinted
+   column and over a tile alike. */
+.thread { opacity: 0.75; }
 .thread__line {
-  fill: none; stroke: var(--part); stroke-width: 3; stroke-linecap: round; pointer-events: none;
+  fill: none; stroke: var(--muted); stroke-width: 3; stroke-linecap: round; pointer-events: none;
 }
-.thread__arrow { fill: var(--part); stroke: none; pointer-events: none; }
+.thread__arrow { fill: var(--muted); stroke: none; pointer-events: none; }
+.thread--started {
+  opacity: 1; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--part) 65%, transparent));
+}
+.thread--started .thread__line { stroke: var(--part); }
+.thread--started .thread__arrow { fill: var(--part); }
+.thread--done { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--full) 65%, transparent)); }
 .thread--done .thread__line { stroke: var(--full); }
 .thread--done .thread__arrow { fill: var(--full); }
 

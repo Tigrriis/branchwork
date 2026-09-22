@@ -19,18 +19,28 @@ def test_threading_two_machinations_across_schemes(client, db):
     assert res.status_code == 200
     thread = Thread.query.one()
     assert (thread.from_task_id, thread.to_task_id) == (brief.id, dig.id)
-    assert thread.project_id == project.id and not thread.done
+    assert thread.project_id == project.id
+    assert not thread.started and not thread.done
 
     # The answer carries the re-rendered tree, with the arrow in it.
     html = res.get_json()["html"]
     assert f'data-from="{brief.id}" data-to="{dig.id}"' in html
-    assert "thread--done" not in html
+    assert "thread--started" not in html and "thread--done" not in html
 
-    # One end finished is still an unfinished sequence: the arrow stays orange.
+    # Part way through the near end is not a start: the arrow stays grey.
+    brief.set_points(1)
+    db.session.commit()
+    assert not Thread.query.one().started
+    assert "thread--started" not in client.get(f"/projects/{project.id}").data.decode()
+
+    # Finishing the near end starts the sequence, but one end alone is not
+    # the whole of it: orange.
     brief.set_points(2)
     db.session.commit()
-    assert not Thread.query.one().done
-    assert "thread--done" not in client.get(f"/projects/{project.id}").data.decode()
+    thread = Thread.query.one()
+    assert thread.started and not thread.done
+    html = client.get(f"/projects/{project.id}").data.decode()
+    assert "thread--started" in html and "thread--done" not in html
 
     # Both ends finished turns it green.
     dig.set_points(dig.points_max)
