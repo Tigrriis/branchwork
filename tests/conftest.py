@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import create_app  # noqa: E402
 from extensions import db as _db  # noqa: E402
-from models import Branch, Project, Task, User  # noqa: E402
+from models import Branch, Project, Task, Ultimate, User  # noqa: E402
 from markupsafe import escape  # noqa: E402
 import copytext  # noqa: E402
 
@@ -96,6 +96,13 @@ def make_task(branch: Branch, title="Task", tier=1, points_max=1, points_done=0)
     _db.session.add(task)
     _db.session.commit()
     return task
+
+
+def make_ultimate(branch: Branch, title="The big one") -> Ultimate:
+    ultimate = Ultimate(branch=branch, title=title)
+    _db.session.add(ultimate)
+    _db.session.commit()
+    return ultimate
 
 
 def status_rows(user) -> list[list[str]]:

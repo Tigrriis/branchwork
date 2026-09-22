@@ -13,7 +13,7 @@ from flask import Blueprint
 
 from extensions import db
 from icons import DEFAULT_ICON
-from models import Branch, InboxItem, Project, Routine, Task, User
+from models import Branch, InboxItem, Project, Routine, Task, Ultimate, User
 
 demo_bp = Blueprint("demo", __name__, cli_group=None)
 
@@ -21,14 +21,14 @@ DEMO = {
     "name": "Office fit-out, Level 3",
     "code": "2026-014",
     "branches": [
-        {"name": "Design", "hue": "green", "tiers": [
+        {"name": "Design", "hue": "green", "ultimate": "Tender documents out the door", "tiers": [
             [("Brief & survey", DEFAULT_ICON, 3, 3), ("Concept layouts", DEFAULT_ICON, 2, 2), ("Detailed drawings", DEFAULT_ICON, 4, 2)],
             [("Site measure-up", DEFAULT_ICON, 1, 1), ("Client brief signed", DEFAULT_ICON, 1, 1), ("Option A / B review", DEFAULT_ICON, 2, 2)],
             [("Services coordination", DEFAULT_ICON, 2, 0), ("Issue for tender", DEFAULT_ICON, 1, 0)]]},
-        {"name": "Approvals", "hue": "blue", "tiers": [
+        {"name": "Approvals", "hue": "blue", "ultimate": "Permit in hand", "tiers": [
             [("Landlord consent", DEFAULT_ICON, 1, 1), ("Building permit", DEFAULT_ICON, 3, 2)],
             [("Fire engineering report", DEFAULT_ICON, 2, 2), ("Certifier lodgement", DEFAULT_ICON, 1, 0)]]},
-        {"name": "Construction", "hue": "red", "requires": "Approvals", "tiers": [
+        {"name": "Construction", "hue": "red", "requires": "Approvals", "ultimate": "Keys handed over", "tiers": [
             [("Tender & award", DEFAULT_ICON, 3, 0), ("Site works", DEFAULT_ICON, 5, 0), ("Handover", DEFAULT_ICON, 2, 0)],
             [("Shortlist contractors", DEFAULT_ICON, 2, 0), ("Award contract", DEFAULT_ICON, 1, 0), ("Demolition", DEFAULT_ICON, 2, 0)],
             [("Fit-out & services", DEFAULT_ICON, 4, 0)]]},
@@ -78,6 +78,8 @@ def build_demo(user: User) -> Project:
                             points_max=pmax)
                 task.set_points(pdone)
                 db.session.add(task)
+        if spec.get("ultimate"):
+            db.session.add(Ultimate(branch=branch, title=spec["ultimate"], icon=DEFAULT_ICON))
     db.session.flush()
     for spec in DEMO["branches"]:
         if spec.get("requires"):

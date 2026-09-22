@@ -16,6 +16,10 @@ template agrees:
 * **Branch locks.** A branch may require another branch; it stays locked, all
   tiers dimmed, until that branch is complete.
 
+A branch may also end in an ``Ultimate``: its end goal, drawn below every
+tier. It opens by the tier rule and is claimed with a click, and a branch
+with one is not complete until it is claimed.
+
 Points on a locked tier cannot be changed (``Task.editable``), enforced by the
 routes, not just hidden by the template.
 """
@@ -414,8 +418,11 @@ class Branch(db.Model):
 
     @property
     def is_complete(self) -> bool:
-        """Every task fully pointed. An empty branch is not complete."""
-        return bool(self.tasks) and self.points_done >= self.points_max
+        """Every task fully pointed and the ultimate, if there is one,
+        claimed. An empty branch is not complete."""
+        if not self.tasks or self.points_done < self.points_max:
+            return False
+        return self.ultimate is None or self.ultimate.achieved
 
     @property
     def is_locked(self) -> bool:
@@ -503,6 +510,26 @@ class Branch(db.Model):
         last = rows[-1]
         return last["open"] and sum(t.points_done for t in last["tasks"]) >= last["need"]
 
+    # ── Ultimate ────────────────────────────────────────────────────────────
+    def ultimate_gate(self) -> tuple[bool, str | None]:
+        """Whether the ultimate can be claimed and, if not, why.
+
+        The same rule as a new tier: the last tier must hold enough points
+        to open another. So the ultimate is always the step after the last
+        tier, however many tiers come to sit above it.
+        """
+        rows = self.tiers()
+        if not rows:
+            return False, tx("ultimate.needs_machinations")
+        if self.is_locked:
+            return False, self.lock_reason
+        last = rows[-1]
+        if not last["open"]:
+            return False, tx("gate.above_locked")
+        if last["points"] < last["need"]:
+            return False, tx("gate.needs_points", gate=last["need"], have=last["points"])
+        return True, None
+
 
 class Task(db.Model):
     __tablename__ = "tasks"
@@ -548,6 +575,56 @@ class Task(db.Model):
 
     def adjust(self, delta: int) -> None:
         self.set_points((self.points_done or 0) + delta)
+
+
+class Ultimate(db.Model):
+    """A scheme's end goal: one per scheme, drawn below every tier.
+
+    Tiers are numbered and the ultimate is not, so a new tier always lands
+    above it. It opens by the tier rule (the last tier holds enough points to
+    open another) and is claimed with a click rather than pointed. Once
+    claimed it counts towards the scheme being complete, so a scheme that
+    waits on this one waits for the ultimate too.
+    """
+    __tablename__ = "ultimates"
+
+    id = db.Column(db.Integer, primary_key=True)
+    branch_id = db.Column(db.Integer, db.ForeignKey("branches.id", ondelete="CASCADE"),
+                          nullable=False, unique=True)
+    title = db.Column(db.String(120), nullable=False)
+    icon = db.Column(db.String(30), nullable=False, default=DEFAULT_ICON, server_default=DEFAULT_ICON)
+    notes = db.Column(db.Text, nullable=True)
+    achieved_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
+
+    branch = db.relationship(
+        "Branch", backref=db.backref("ultimate", uselist=False, cascade="all, delete-orphan"))
+
+    @property
+    def achieved(self) -> bool:
+        return self.achieved_at is not None
+
+    @property
+    def open(self) -> bool:
+        return self.branch.ultimate_gate()[0]
+
+    @property
+    def reason(self) -> str | None:
+        return self.branch.ultimate_gate()[1]
+
+    @property
+    def state(self) -> str:
+        """``achieved``, ``open`` or ``closed``: the tree's three looks. A
+        claimed ultimate stays lit even if the tier above loses a point."""
+        if self.achieved:
+            return "achieved"
+        return "open" if self.open else "closed"
+
+    def set_achieved(self, value: bool) -> None:
+        if value and not self.achieved:
+            self.achieved_at = _utcnow()
+        elif not value:
+            self.achieved_at = None
 
 
 class Thread(db.Model):

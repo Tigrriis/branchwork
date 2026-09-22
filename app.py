@@ -35,6 +35,7 @@ from starters import starters_bp
 from statuses import statuses_bp
 from switcher import plot_switcher
 from threads import threads_bp
+from ultimates import ultimates_bp
 
 
 def create_app(overrides: dict | None = None) -> Flask:
@@ -59,6 +60,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     app.register_blueprint(starters_bp)
     app.register_blueprint(statuses_bp)
     app.register_blueprint(threads_bp)
+    app.register_blueprint(ultimates_bp)
 
     _register_asset_versioning(app)
     _register_template_helpers(app)

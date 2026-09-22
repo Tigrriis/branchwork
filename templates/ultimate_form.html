@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{% if is_new %}{{ t('ultimate.title_new') }}{% else %}{{ t('ultimate.title_edit') }}{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block main_class %}page page--narrow{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__head">
+    <h1>{% if is_new %}{{ t('ultimate.title_new') }}{% else %}{{ t('ultimate.title_edit') }}{% endif %}</h1>
+    <span class="muted">{{ project.name }} · {{ branch.name }}</span>
+  </div>
+  <p class="muted small">{{ t('ultimate.help') }}</p>
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label class="field__label" for="title">{{ t('ultimate.title') }}</label>
+      <input class="input" type="text" id="title" name="title" maxlength="120" required autofocus value="{{ ultimate.title or '' }}">
+    </div>
+    <div class="field">
+      <span class="field__label">{{ t('ultimate.icon') }}</span>
+      <div class="icon-picker">
+        {% for name in ICON_NAMES %}
+        <label class="icon-pick" title="{{ name }}">
+          <input type="radio" name="icon" value="{{ name }}" {% if ultimate.icon == name %}checked{% endif %}>
+          <span class="icon-pick__tile">{{ icon(name, 24) }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="field">
+      <label class="field__label" for="notes">{{ t('ultimate.notes') }} <span class="muted">{{ t('common.optional') }}</span></label>
+      <textarea class="input" id="notes" name="notes" rows="3">{{ ultimate.notes or '' }}</textarea>
+    </div>
+    <div class="form__actions">
+      <button class="btn btn--primary" type="submit">{% if is_new %}{{ t('ultimate.set') }}{% else %}{{ t('common.save') }}{% endif %}</button>
+      <a class="btn btn--ghost" href="{{ url_for('projects.tree', project_id=project.id) }}">{{ t('common.cancel') }}</a>
+    </div>
+  </form>
+</div>
+{% if not is_new %}
+<form method="post" action="{{ url_for('ultimates.delete_ultimate', ultimate_id=ultimate.id) }}" class="inline-form" data-confirm="{{ t('ultimate.delete_confirm') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn btn--danger" type="submit">{{ t('ultimate.delete') }}</button>
+</form>
+{% endif %}
+{% endblock %}

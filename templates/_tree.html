@@ -64,6 +64,32 @@
        data-branch="{{ branch.id }}" data-tier="{{ branch.next_tier }}">
       {% if not branch.tasks %}{{ t('tree.add_first_machination') }}{% else %}{{ t('tree.new_tier') }}{% endif %}
     </a>
+    {% if branch.ultimate %}
+    {% set ult = branch.ultimate %}
+    {# The ultimate: the scheme's end goal, below every tier. A new tier goes
+       in above it, and it opens by the tier rule, so it is always the step
+       after the last one. Claimed with a click, not pointed; lit with the
+       scheme's colour once it is. #}
+    <div class="ultimate ultimate--{{ ult.state }}" data-ultimate="{{ ult.id }}" title="{{ ult.title }}{% if ult.notes %} — {{ ult.notes }}{% endif %}">
+      <span class="ultimate__kicker">{{ t('tree.ultimate') }}</span>
+      {% if ult.state == 'closed' and not branch.is_locked %}
+      <div class="tier-note">
+        <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"></rect><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg>
+        {{ ult.reason }}
+      </div>
+      {% endif %}
+      <button type="button" class="ultimate__box" {% if ult.state == 'closed' %}disabled{% endif %}
+              aria-pressed="{{ 'true' if ult.achieved else 'false' }}"
+              aria-label="{{ t('tree.ultimate_aria', title=ult.title, scheme=branch.name) }}">
+        <span class="ultimate__aura" aria-hidden="true"></span>
+        <span class="ultimate__ring" aria-hidden="true"></span>
+        <span class="ultimate__icon">{{ icon(ult.icon, 40) }}</span>
+      </button>
+      <a class="ultimate__label" href="{{ url_for('ultimates.edit_ultimate', branch_id=branch.id) }}">{{ ult.title }}</a>
+    </div>
+    {% elif branch.tasks %}
+    <a class="tier-add tier-add--ultimate" href="{{ url_for('ultimates.edit_ultimate', branch_id=branch.id) }}">{{ t('tree.set_ultimate') }}</a>
+    {% endif %}
   </div>
   <div class="col__foot">
     <span class="col__name">{{ branch.name }}</span>

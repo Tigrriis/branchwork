@@ -77,6 +77,15 @@ handle at a tile's corner onto another tile to thread them, or use "comes
 after" on the task form, which is also where one is removed. The arrows are
 drawn over the tree and take no clicks, so the tiles under them still do.
 
+A branch can end in an **ultimate**: its end goal, drawn as a round disc
+below every tier, so a new tier always slides in above it. It opens by the
+tier rule (the last tier holds enough points to open another) and is claimed
+with a click rather than pointed; shift-click or right-click takes it back.
+Claimed, it lights up in the branch's colour with a breathing halo. A branch
+with an ultimate is not complete, and so cannot unlock the branches that wait
+on it, until the ultimate is claimed. Set it from the "+ Set the ultimate"
+link under a branch's tiers, which is also where it is edited or removed.
+
 ## Run locally
 
 ```bash

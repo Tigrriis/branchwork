@@ -83,6 +83,13 @@
     var busy = false;
 
     tree.addEventListener("click", function (e) {
+      var disc = e.target.closest(".ultimate__box");
+      if (disc) {
+        if (disc.disabled) return;
+        e.preventDefault();
+        claimUltimate(disc.closest(".ultimate"), !e.shiftKey);
+        return;
+      }
       var box = e.target.closest(".tile__box");
       if (!box || box.disabled || box.classList.contains("tile__box--add")) return;
       var tile = box.closest(".tile");
@@ -92,6 +99,13 @@
     });
 
     tree.addEventListener("contextmenu", function (e) {
+      var disc = e.target.closest(".ultimate__box");
+      if (disc) {
+        if (disc.disabled) return;
+        e.preventDefault();
+        claimUltimate(disc.closest(".ultimate"), false);
+        return;
+      }
       var box = e.target.closest(".tile__box");
       if (!box || box.disabled) return;
       var tile = box.closest(".tile");
@@ -115,6 +129,27 @@
         })
         .catch(function () { flash(say("network"), "error"); })
         .finally(function () { busy = false; tile.classList.remove("is-busy"); });
+    }
+
+    // An ultimate is claimed rather than pointed: one click lights it, and
+    // shift-click or right-click takes it back. The tree comes back
+    // re-rendered like it does for points; the burst is only for the
+    // moment it first lights, so it is added here, not by the template.
+    function claimUltimate(el, achieved) {
+      if (busy || !el) return;
+      var id = el.dataset.ultimate;
+      var wasLit = el.classList.contains("ultimate--achieved");
+      busy = true;
+      el.classList.add("is-busy");
+      post("/ultimates/" + id + "/achieve", { achieved: achieved })
+        .then(function (res) {
+          if (!res.ok) { flash(res.body.message || say("ultimate_failed"), "error"); return; }
+          swapTree(res.body.html);
+          var again = tree.querySelector('[data-ultimate="' + id + '"]');
+          if (again && !wasLit && again.classList.contains("ultimate--achieved")) again.classList.add("is-lit");
+        })
+        .catch(function () { flash(say("network"), "error"); })
+        .finally(function () { busy = false; el.classList.remove("is-busy"); });
     }
   }
 
