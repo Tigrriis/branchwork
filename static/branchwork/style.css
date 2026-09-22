@@ -84,7 +84,10 @@ button { font: inherit; }
 .card { padding: 28px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
 .card__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
 .form { display: flex; flex-direction: column; gap: 16px; }
-.field { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+/* min-width: 0 throughout: a field, a fieldset and a select are all sized
+   to their content by default, so one long option in a picker drags the
+   whole block past the card it sits in. */
+.field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
 .field-row { display: flex; gap: 14px; }
 .field__label { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .input {
@@ -93,9 +96,9 @@ button { font: inherit; }
 }
 textarea.input { height: auto; padding: 10px 14px; resize: vertical; }
 .input:focus { outline: none; border-color: var(--accent); }
-select.input { appearance: none; }
+select.input { appearance: none; width: 100%; min-width: 0; text-overflow: ellipsis; }
 .check { display: flex; align-items: center; gap: 8px; color: var(--fg2); }
-.fieldset { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+.fieldset { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .fieldset legend { padding: 0 6px; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .form__actions { display: flex; gap: 10px; margin-top: 4px; }
 
