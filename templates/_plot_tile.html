@@ -1,0 +1,32 @@
+{# One plot in focus: its tree in miniature, the step that moves it next, and
+   how recently it moved. Drag it to the backburner, or use the arrow. #}
+<article class="ptile{% if p.is_due %} ptile--due{% endif %}" draggable="true" data-project="{{ p.id }}" tabindex="0" id="p{{ p.id }}">
+  <header class="ptile__head">
+    <a class="ptile__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
+    <form method="post" action="{{ url_for('dashboard.set_focus', project_id=p.id) }}" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="focused" value="0">
+      <button class="icon-btn" type="submit" title="{{ t('focus.demote_title') }}">↓</button>
+    </form>
+  </header>
+  <div class="ptile__meta">
+    {% include "_status_pick.html" %}
+    {% set age %}{% if p.days_since_touch == 0 %}{{ t('common.touched_today') }}{% else %}{{ t('common.days_ago', n=p.days_since_touch) }}{% endif %}{% endset %}
+    <span class="ptile__age{% if p.is_due %} is-due{% endif %}">{{ t('focus.age_cadence', age=age, cadence=p.cadence_label|lower) }}</span>
+  </div>
+  {% include "_mini_tree.html" %}
+  <form method="post" action="{{ url_for('dashboard.set_next_action', project_id=p.id) }}" class="ptile__next">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input class="input input--xs{% if not p.next_action %} input--wanting{% endif %}" type="text"
+           name="next_action" maxlength="200" value="{{ p.next_action or '' }}"
+           placeholder="{{ t('focus.next_placeholder') }}" title="{{ p.next_action or t('focus.next_placeholder') }}">
+    <button class="btn btn--ghost btn--sm" type="submit">{{ t('common.save') }}</button>
+  </form>
+  <footer class="ptile__foot">
+    {% with counts=p.activity_strip() %}{% include "_strip.html" %}{% endwith %}
+    <form method="post" action="{{ url_for('dashboard.touch', project_id=p.id) }}" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn--sm" title="{{ t('common.touched_title') }}">{{ t('common.touched') }}</button>
+    </form>
+  </footer>
+</article>

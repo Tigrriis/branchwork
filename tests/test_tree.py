@@ -4,7 +4,7 @@ from copytext import tx
 
 
 def _points(client, task_id, delta=1):
-    return client.post(f"/tasks/{task_id}/points", json={"delta": delta})
+    return client.post(f"/machinations/{task_id}/points", json={"delta": delta})
 
 
 def test_tier_two_opens_at_gate(db):
@@ -121,7 +121,7 @@ def test_branch_form_rejects_cycle(client, db):
     project = make_project(user)
     a = make_branch(project, "A")
     b = make_branch(project, "B", requires=a)
-    r = client.post(f"/branches/{a.id}/edit", data={"name": "A", "hue": "green",
+    r = client.post(f"/schemes/{a.id}/edit", data={"name": "A", "hue": "green",
                                                     "requires_branch_id": str(b.id)},
                     follow_redirects=True)
     assert copy_in(r.data, "scheme.cycle")
@@ -135,7 +135,7 @@ def test_deleting_required_branch_unlocks_dependants(client, db):
     project = make_project(user)
     a = make_branch(project, "A")
     b = make_branch(project, "B", requires=a)
-    client.post(f"/branches/{a.id}/delete")
+    client.post(f"/schemes/{a.id}/delete")
     db.session.refresh(b)
     assert b.requires_branch_id is None and not b.is_locked
 
@@ -146,9 +146,9 @@ def test_new_task_defaults_to_next_tier(client, db):
     project = make_project(user)
     branch = make_branch(project)
     make_task(branch, "A", tier=1)
-    r = client.get(f"/branches/{branch.id}/tasks/new")
+    r = client.get(f"/schemes/{branch.id}/machinations/new")
     assert b'name="tier" min="1" max="50" value="2"' in r.data
-    client.post(f"/branches/{branch.id}/tasks/new?tier=2",
+    client.post(f"/schemes/{branch.id}/machinations/new?tier=2",
                 data={"title": "B", "icon": "bomb", "tier": "2", "points_max": "3", "points_done": "0"})
     db.session.refresh(branch)
     assert [t.tier for t in branch.tasks] == [1, 2]
@@ -163,7 +163,7 @@ def test_tree_page_renders_tiles_and_locks(client, db):
     build = make_branch(project, "Build", "red", requires=design)
     make_task(design, "Brief", points_max=2, points_done=1)
     make_task(build, "Dig")
-    r = client.get(f"/projects/{project.id}")
+    r = client.get(f"/plots/{project.id}")
     html = r.data.decode()
     assert "tile--part" in html and "1/2" in html
     assert "col--locked" in html and copy_in(html, "gate.opens_when", name="Design")
@@ -175,9 +175,9 @@ def test_new_forms_render_without_inserting(client, db):
     login(client)
     project = make_project(user)
     branch = make_branch(project)
-    assert client.get("/projects/new").status_code == 200
-    assert client.get(f"/projects/{project.id}/branches/new").status_code == 200
-    assert client.get(f"/branches/{branch.id}/tasks/new").status_code == 200
+    assert client.get("/plots/new").status_code == 200
+    assert client.get(f"/plots/{project.id}/schemes/new").status_code == 200
+    assert client.get(f"/schemes/{branch.id}/machinations/new").status_code == 200
     db.session.rollback()
     assert len(user.projects) == 1 and len(project.branches) == 1 and branch.tasks == []
 
@@ -205,7 +205,7 @@ def test_tree_page_carries_each_tiers_fill(client, db):
     project = make_project(user, gate_points=3)
     branch = make_branch(project)
     make_task(branch, "A", tier=1, points_max=3, points_done=1)
-    html = client.get(f"/projects/{project.id}").data.decode()
+    html = client.get(f"/plots/{project.id}").data.decode()
     assert f'data-tier-key="{branch.id}:1" style="--fill: 0.333"' in html
-    body = client.post(f"/tasks/{branch.tasks[0].id}/points", json={"delta": 2}).get_json()
+    body = client.post(f"/machinations/{branch.tasks[0].id}/points", json={"delta": 2}).get_json()
     assert "tier--charged" in body["html"] and "--fill: 1.000" in body["html"]

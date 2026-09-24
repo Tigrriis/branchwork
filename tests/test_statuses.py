@@ -35,7 +35,7 @@ def test_renaming_a_status_keeps_its_plots(client, db):
     assert copy_in(r.data, "statuses.saved")
     db.session.expire_all()
     assert p.phase == "building" and p.phase_label == "Scheming" and p.phase_hue == "red"
-    board = client.get("/board").data.decode()
+    board = client.get("/").data.decode()
     assert "Scheming" in board and "hue--red" in board
 
 
@@ -51,7 +51,7 @@ def test_an_added_active_status_is_a_column_that_advance_walks_through(client, d
     p.phase = "exploring"
     db.session.commit()
     assert p.next_status.key == "testing"
-    assert "Testing" in client.get("/board").data.decode()
+    assert "Testing" in client.get("/").data.decode()
 
 
 def test_a_new_status_gets_a_key_of_its_own(client, db):
@@ -114,8 +114,8 @@ def test_any_active_status_can_carry_a_cap(client, db):
     rows[1][4] = "1"                                            # Exploring
     post_statuses(client, rows)
     first, second = make_project(user), make_project(user)
-    client.post(f"/projects/{first.id}/phase", data={"phase": "exploring"})
-    r = client.post(f"/projects/{second.id}/phase", data={"phase": "exploring"}, follow_redirects=True)
+    client.post(f"/plots/{first.id}/phase", data={"phase": "exploring"})
+    r = client.post(f"/plots/{second.id}/phase", data={"phase": "exploring"}, follow_redirects=True)
     assert copy_prefix_in(r.data, "board.status_full")
     db.session.expire_all()
     assert first.phase == "exploring" and second.phase == "idea"
@@ -152,7 +152,7 @@ def test_review_closes_only_onto_closed_statuses(client, db):
     p = make_project(user)
     p.name, p.phase = "Doomsday device", "exploring"
     db.session.commit()
-    html = client.get("/review").data.decode()
+    html = client.get("/?review=1").data.decode()
     assert 'value="close:done"' in html and 'value="close:dropped"' in html
     client.post(f"/review/{p.id}", data={"decision": "close:building", "done": ""})
     db.session.expire_all()

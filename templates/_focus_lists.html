@@ -1,52 +1,23 @@
-{# The two halves of Today: what you are giving time to, and what you are not.
-   Rendered on the page and again by POST /projects/<id>/focus after a drop. #}
+{# The two halves of the home page: what you are giving time to, and what you
+   are not. Focus plots are tiles with their tree in miniature; backburner
+   plots are small and quiet. In review mode both flip to their decision side.
+   Rendered on the page and again by POST /plots/<id>/focus after a drop. #}
 <section class="lane lane--focus" data-focus-zone="1">
   <div class="lane__head">
     <h2 class="section__title">{{ t('focus.heading') }}</h2>
     <span class="lane__count">{{ focus|length }}</span>
     <span class="muted small">{{ t('focus.about') }}</span>
   </div>
-
-  {% for p in focus %}
-  <article class="prow {% if p.is_due %}prow--due{% endif %}" draggable="true" data-project="{{ p.id }}" tabindex="0">
-    <span class="prow__grip" aria-hidden="true">
-      <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor"><circle cx="3" cy="3" r="1.4"/><circle cx="9" cy="3" r="1.4"/><circle cx="3" cy="8" r="1.4"/><circle cx="9" cy="8" r="1.4"/><circle cx="3" cy="13" r="1.4"/><circle cx="9" cy="13" r="1.4"/></svg>
-    </span>
-    <div class="prow__main">
-      <div class="prow__head">
-        <a class="prow__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
-        <span class="phase hue--{{ p.phase_hue }}">{{ p.phase_label }}</span>
-        {% set age %}{% if p.days_since_touch == 0 %}{{ t('common.touched_today') }}{% else %}{{ t('common.days_ago', n=p.days_since_touch) }}{% endif %}{% endset %}
-        <span class="prow__age {% if p.is_due %}is-due{% endif %}">{{ t('focus.age_cadence', age=age, cadence=p.cadence_label|lower) }}</span>
-      </div>
-      {% if p.objective %}<div class="prow__objective muted small">{{ p.objective }}</div>{% endif %}
-      <form method="post" action="{{ url_for('dashboard.set_next_action', project_id=p.id) }}" class="action-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input class="input input--sm {% if not p.next_action %}input--wanting{% endif %}" type="text"
-               name="next_action" maxlength="200" value="{{ p.next_action or '' }}"
-               placeholder="{{ t('focus.next_placeholder') }}">
-        <button class="btn btn--ghost btn--sm" type="submit">{{ t('common.save') }}</button>
-      </form>
-    </div>
-    <div class="prow__side">
-      {% with counts=p.activity_strip() %}{% include "_strip.html" %}{% endwith %}
-      <span class="prow__actions">
-        <form method="post" action="{{ url_for('dashboard.touch', project_id=p.id) }}" class="inline-form">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="btn btn--sm" title="{{ t('common.touched_title') }}">{{ t('common.touched') }}</button>
-        </form>
-        <form method="post" action="{{ url_for('dashboard.set_focus', project_id=p.id) }}" class="inline-form">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="focused" value="0">
-          <button class="icon-btn" type="submit" title="{{ t('focus.demote_title') }}">↓</button>
-        </form>
-      </span>
-    </div>
-  </article>
+  {% if focus %}
+  <div class="{% if reviewing %}rtiles{% else %}ptiles{% endif %}">
+    {% for p in focus %}
+      {% if reviewing %}{% include "_review_tile.html" %}{% else %}{% include "_plot_tile.html" %}{% endif %}
+    {% endfor %}
+  </div>
   {% else %}
   {% set link %}<a href="{{ url_for('projects.new_project') }}">{{ t('focus.empty_link') }}</a>{% endset %}
   <p class="lane__empty muted">{{ t('focus.empty', link=link) }}</p>
-  {% endfor %}
+  {% endif %}
 </section>
 
 <section class="lane lane--back" data-focus-zone="0">
@@ -55,32 +26,13 @@
     <span class="lane__count">{{ backburner|length }}</span>
     <span class="muted small">{{ t('backburner.about') }}</span>
   </div>
-
-  {% for p in backburner %}
-  <article class="prow prow--quiet" draggable="true" data-project="{{ p.id }}" tabindex="0">
-    <span class="prow__grip" aria-hidden="true">
-      <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor"><circle cx="3" cy="3" r="1.4"/><circle cx="9" cy="3" r="1.4"/><circle cx="3" cy="8" r="1.4"/><circle cx="9" cy="8" r="1.4"/><circle cx="3" cy="13" r="1.4"/><circle cx="9" cy="13" r="1.4"/></svg>
-    </span>
-    <div class="prow__main">
-      <div class="prow__head">
-        <a class="prow__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
-        <span class="phase hue--{{ p.phase_hue }}">{{ p.phase_label }}</span>
-        <span class="prow__age muted">{% if p.days_since_touch == 0 %}{{ t('common.touched_today') }}{% else %}{{ t('common.days_ago', n=p.days_since_touch) }}{% endif %}</span>
-      </div>
-      {% if p.next_action %}<div class="muted small">→ {{ p.next_action }}</div>{% endif %}
-    </div>
-    <div class="prow__side">
-      {% with counts=p.activity_strip() %}{% include "_strip.html" %}{% endwith %}
-      <span class="prow__actions">
-        <form method="post" action="{{ url_for('dashboard.set_focus', project_id=p.id) }}" class="inline-form">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="focused" value="1">
-          <button class="icon-btn" type="submit" title="{{ t('backburner.promote_title') }}">↑</button>
-        </form>
-      </span>
-    </div>
-  </article>
+  {% if backburner %}
+  <div class="{% if reviewing %}rtiles{% else %}btiles{% endif %}">
+    {% for p in backburner %}
+      {% if reviewing %}{% include "_review_tile.html" %}{% else %}{% include "_back_tile.html" %}{% endif %}
+    {% endfor %}
+  </div>
   {% else %}
   <p class="lane__empty muted small">{{ t('backburner.empty') }}</p>
-  {% endfor %}
+  {% endif %}
 </section>

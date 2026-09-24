@@ -79,7 +79,7 @@
     </div>
     <div class="form__actions">
       <button class="btn btn--primary" type="submit">{% if is_new %}{{ t('plot.create') }}{% else %}{{ t('common.save') }}{% endif %}</button>
-      <a class="btn btn--ghost" href="{{ url_for('projects.tree', project_id=project.id) if not is_new else url_for('dashboard.board') }}">{{ t('common.cancel') }}</a>
+      <a class="btn btn--ghost" href="{{ url_for('projects.tree', project_id=project.id) if not is_new else url_for('dashboard.today') }}">{{ t('common.cancel') }}</a>
     </div>
   </form>
 </div>

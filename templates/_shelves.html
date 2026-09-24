@@ -1,0 +1,24 @@
+{# Plots off the lanes: one shelf per parked or closed status, as the board
+   kept them. A parked shelf with anything on it opens by itself. #}
+<div class="shelves">
+  {% for status, projects in shelves %}
+  <details class="shelf" {% if projects and status.is_parked %}open{% endif %}>
+    <summary class="shelf__head"><span class="phase hue--{{ status.hue }}">{{ status.name }}</span> <span class="muted">{{ projects|length }}</span></summary>
+    <div class="shelf__body">
+      {% for p in projects %}
+      <div class="shelf-row">
+        <a class="due-row__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
+        {% if status.is_parked and p.parked_until %}<span class="muted small">{{ t('board.parked_until', date=p.parked_until.strftime('%d %b %Y')) }}</span>{% endif %}
+        <span class="muted small">{{ t('common.pts', done=p.points_done, max=p.points_max) }}</span>
+        <form method="post" action="{{ url_for('dashboard.set_phase', project_id=p.id) }}" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="{{ p.resume_phase }}">
+          <button class="btn btn--ghost btn--sm">{% if status.is_closed %}{{ t('board.reopen') }}{% else %}{{ t('common.pick_up') }}{% endif %}</button>
+        </form>
+      </div>
+      {% else %}
+      <div class="muted small">{{ t('common.nothing_here') }}</div>
+      {% endfor %}
+    </div>
+  </details>
+  {% endfor %}
+</div>

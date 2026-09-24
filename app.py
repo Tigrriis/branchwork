@@ -4,8 +4,8 @@ Villainy: plan large, multi-stranded plots as a skill tree.
   /                      Today: projects due for a touch, the inbox
   /board                 every project by status: columns and shelves
   /review                the weekly review: keep / advance / park / drop
-  /projects/<id>         the tree (branches as columns, tasks in tiers)
-  /projects/<id>/list    the same tasks as a table
+  /plots/<id>            the tree (branches as columns, tasks in tiers)
+  /plots/<id>/list       the same tasks as a table
   /login, /register, /account
 
 Module-level ``app`` rather than a factory, matching the other Arete Flask
@@ -16,7 +16,7 @@ import hashlib
 import os
 import threading
 
-from flask import Flask, render_template, request
+from flask import Flask, redirect, render_template, request
 from flask_wtf.csrf import CSRFError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -116,10 +116,25 @@ def _register_template_helpers(app: Flask) -> None:
         }
 
 
+# URL segments from before the rename, to the ones the routes use now.
+_OLD_SEGMENTS = {"projects": "plots", "branches": "schemes", "tasks": "machinations"}
+
+
 def _register_routes(app: Flask) -> None:
     @app.route("/healthz")
     def healthz():
         return {"ok": True}
+
+    # Bookmarks and tabs left open from before the rename still land. 308 keeps
+    # the method and body, so a POST from a stale page arrives intact.
+    @app.route("/<any(projects, branches, tasks):old>/<path:rest>",
+               methods=["GET", "POST"])
+    def _renamed(old, rest):
+        parts = [_OLD_SEGMENTS.get(part, part) for part in f"{old}/{rest}".split("/")]
+        target = "/" + "/".join(parts)
+        if request.query_string:
+            target += "?" + request.query_string.decode()
+        return redirect(target, code=308)
 
 
 def _register_error_handlers(app: Flask) -> None:

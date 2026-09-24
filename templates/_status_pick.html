@@ -1,0 +1,27 @@
+{# A plot's status as a pill that opens onto every status: what the board's
+   columns and shelves used to do, one click from any tile. Caps still apply,
+   and a full status refuses the move and says which plots fill it. Parking
+   from here is for 30 days; "back from the shelf" offers more when it is up.
+   Pass p; needs statuses, status_counts and today. #}
+<details class="spick">
+  <summary class="phase hue--{{ p.phase_hue }}" title="{{ t('tile.status_title') }}">{{ p.phase_label }}</summary>
+  <form method="post" action="{{ url_for('dashboard.set_phase', project_id=p.id) }}" class="spick__menu">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="parked_until" value="{{ (today.toordinal() + 30)|to_date }}">
+    {% for s in statuses if s.is_active %}
+    {% set n = status_counts.get(s.key, 0) %}
+    <button class="spick__item" name="phase" value="{{ s.key }}"{% if s.key == p.phase %} disabled{% endif %}>
+      <span class="phase hue--{{ s.hue }}">{{ s.name }}</span>
+      <span class="spick__count{% if s.wip_limit and n >= s.wip_limit %} is-full{% endif %}">{{ n }}{% if s.wip_limit %} / {{ s.wip_limit }}{% endif %}</span>
+    </button>
+    {% endfor %}
+    <hr class="spick__rule">
+    {% for s in statuses if not s.is_active %}
+    <button class="spick__item" name="phase" value="{{ s.key }}"{% if s.key == p.phase %} disabled{% endif %}>
+      <span class="phase hue--{{ s.hue }}">{{ s.name }}</span>
+      {% if s.is_parked %}<span class="spick__count">{{ t('tile.park_for') }}</span>{% endif %}
+    </button>
+    {% endfor %}
+    <a class="spick__edit link-quiet" href="{{ url_for('statuses.edit_statuses') }}">{{ t('board.edit_statuses') }}</a>
+  </form>
+</details>

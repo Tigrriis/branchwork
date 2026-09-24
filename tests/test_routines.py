@@ -117,11 +117,11 @@ def test_routine_form_creates_edits_and_deletes(client, db):
     user = make_user()
     login(client)
     p = make_project(user)
-    assert client.get(f"/projects/{p.id}/routines/new").status_code == 200
+    assert client.get(f"/plots/{p.id}/routines/new").status_code == 200
     db.session.rollback()
     assert p.routines == []                 # rendering the form inserts nothing
 
-    client.post(f"/projects/{p.id}/routines/new",
+    client.post(f"/plots/{p.id}/routines/new",
                 data={"title": "Site walk", "every_days": "14", "icon": "bomb", "last_done": ""})
     r = Routine.query.one()
     assert (r.title, r.every_days, r.icon, r.last_done_at) == ("Site walk", 14, "bomb", None)
@@ -135,7 +135,7 @@ def test_routine_form_creates_edits_and_deletes(client, db):
     # Correcting the date is bookkeeping, not work on the plot.
     assert not any(e.kind == "routine" for e in p.events)
 
-    html = client.get(f"/projects/{p.id}").data.decode()
+    html = client.get(f"/plots/{p.id}").data.decode()
     assert f'data-routine="{r.id}"' in html and "Site walk" in html
 
     client.post(f"/routines/{r.id}/delete")
@@ -147,5 +147,5 @@ def test_deleting_a_plot_deletes_its_routines(client, db):
     login(client)
     p = make_project(user)
     _routine(db, p)
-    client.post(f"/projects/{p.id}/delete")
+    client.post(f"/plots/{p.id}/delete")
     assert Routine.query.count() == 0

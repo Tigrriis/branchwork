@@ -89,7 +89,7 @@ def test_claiming_needs_it_open_and_taking_back_does_not(client, db):
     # Claimed, it stays lit even if the tier above loses a point.
     task.set_points(2); db.session.commit()
     assert Ultimate.query.one().state == "achieved"
-    assert "ultimate--achieved" in client.get(f"/projects/{project.id}").data.decode()
+    assert "ultimate--achieved" in client.get(f"/plots/{project.id}").data.decode()
 
     # Taking it back is always allowed, and is its own event.
     res = _claim(client, ultimate, achieved=False)
@@ -109,7 +109,7 @@ def test_ultimate_routes_are_owner_only(client, db):
     make_user("other@example.com")
     login(client, "other@example.com")
     assert _claim(client, ultimate).status_code == 404
-    assert client.get(f"/branches/{branch.id}/ultimate").status_code == 404
+    assert client.get(f"/schemes/{branch.id}/ultimate").status_code == 404
     assert client.post(f"/ultimates/{ultimate.id}/delete").status_code == 404
     assert not Ultimate.query.one().achieved
 
@@ -122,12 +122,12 @@ def test_form_sets_edits_and_removes_the_ultimate(client, db):
     make_task(branch, "A")
 
     # The tree offers to set one, and the empty form inserts nothing.
-    html = client.get(f"/projects/{project.id}").data.decode()
+    html = client.get(f"/plots/{project.id}").data.decode()
     assert copy_in(html, "tree.set_ultimate") and 'class="ultimate ' not in html
-    assert client.get(f"/branches/{branch.id}/ultimate").status_code == 200
+    assert client.get(f"/schemes/{branch.id}/ultimate").status_code == 200
     assert Ultimate.query.count() == 0
 
-    res = client.post(f"/branches/{branch.id}/ultimate",
+    res = client.post(f"/schemes/{branch.id}/ultimate",
                       data={"title": "  Keys handed over ", "icon": "bomb", "notes": ""},
                       follow_redirects=True)
     assert res.status_code == 200
@@ -139,12 +139,12 @@ def test_form_sets_edits_and_removes_the_ultimate(client, db):
     assert not copy_in(html, "tree.set_ultimate")
 
     # A blank title is refused and changes nothing.
-    res = client.post(f"/branches/{branch.id}/ultimate", data={"title": "   "})
+    res = client.post(f"/schemes/{branch.id}/ultimate", data={"title": "   "})
     assert res.status_code == 200 and copy_in(res.data.decode(), "ultimate.title_required")
     assert Ultimate.query.one().title == "Keys handed over"
 
     # The same form edits the one that exists rather than adding a second.
-    res = client.post(f"/branches/{branch.id}/ultimate",
+    res = client.post(f"/schemes/{branch.id}/ultimate",
                       data={"title": "Handover", "icon": "nope", "notes": "With the manuals"},
                       follow_redirects=True)
     assert copy_in(res.data.decode(), "ultimate.saved")
@@ -164,7 +164,7 @@ def test_deleting_a_scheme_takes_its_ultimate(client, db):
     make_task(branch, "A")
     make_ultimate(branch)
 
-    client.post(f"/branches/{branch.id}/delete", follow_redirects=True)
+    client.post(f"/schemes/{branch.id}/delete", follow_redirects=True)
     assert Ultimate.query.count() == 0
 
 
@@ -176,7 +176,7 @@ def test_tree_shows_the_lock_reason_on_a_closed_ultimate(client, db):
     make_task(branch, "A", points_max=3, points_done=1)
     make_ultimate(branch)
 
-    html = client.get(f"/projects/{project.id}").data.decode()
+    html = client.get(f"/plots/{project.id}").data.decode()
     assert "ultimate--closed" in html
     assert tx("gate.needs_points", gate=3, have=1) in html
     assert "<button type=\"button\" class=\"ultimate__box\" disabled" in html
@@ -192,18 +192,18 @@ def test_claiming_seals_the_look_but_leftovers_still_tick(client, db):
     ultimate = make_ultimate(branch)
     assert ultimate.open and not branch.is_sealed
 
-    html = client.get(f"/projects/{project.id}").data.decode()
+    html = client.get(f"/plots/{project.id}").data.decode()
     assert "ultimate--open" in html and "col--sealed" not in html
 
     # Sealed is a look: the note and the class, with the tiles still live.
     _claim(client, ultimate)
     assert branch.is_sealed and b.editable
-    html = client.get(f"/projects/{project.id}").data.decode()
+    html = client.get(f"/plots/{project.id}").data.decode()
     assert "col--sealed" in html and tx("gate.sealed") in html
     assert html.count("tile--live") == 2 and 'class="tile__box" disabled' not in html
-    assert client.post(f"/tasks/{b.id}/points", json={"delta": 1}).status_code == 200
+    assert client.post(f"/machinations/{b.id}/points", json={"delta": 1}).status_code == 200
     assert b.points_done == 2
 
     _claim(client, ultimate, achieved=False)
     assert not branch.is_sealed
-    assert "col--sealed" not in client.get(f"/projects/{project.id}").data.decode()
+    assert "col--sealed" not in client.get(f"/plots/{project.id}").data.decode()

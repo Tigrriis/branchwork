@@ -1,0 +1,17 @@
+{# A plot's tree in miniature: one column per scheme in its colour, a row of
+   pips per tier coloured by state, and the ultimate as a dot at the foot.
+   Tier 1 is at the top, as on the plot's own page. Pass p. #}
+<a class="mtree" href="{{ url_for('projects.tree', project_id=p.id) }}" aria-label="{{ t('tile.tree_aria', name=p.name) }}">
+  {% for b in p.branches %}
+  <span class="mtree__col hue--{{ b.hue }}{% if b.is_locked %} is-locked{% endif %}{% if b.is_sealed %} is-sealed{% endif %}" title="{{ b.name }} · {{ t('common.pts', done=b.points_done, max=b.points_max) }}{% if b.is_locked %}{{ t('tile.locked') }}{% endif %}">
+    {% for row in b.tiers() %}
+    <span class="mtree__tier{% if not row.open %} is-closed{% endif %}">
+      {%- for task in row.tasks %}<i class="mtree__pip mtree__pip--{{ task.state }}"></i>{% endfor -%}
+    </span>
+    {% endfor %}
+    {% if b.ultimate %}<i class="mtree__ult mtree__ult--{{ b.ultimate.state }}"></i>{% endif %}
+  </span>
+  {% else %}
+  <span class="mtree__empty">{{ t('tile.no_schemes') }}</span>
+  {% endfor %}
+</a>

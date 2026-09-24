@@ -101,7 +101,7 @@ def _tree(project: Project):
     return jsonify({"html": render_template("_tree.html", project=project)})
 
 
-@threads_bp.route("/tasks/<int:task_id>/threads", methods=["POST"])
+@threads_bp.route("/machinations/<int:task_id>/threads", methods=["POST"])
 @login_required
 def add_thread(task_id: int):
     """Thread this machination to another, ``{"to": id}``, or into a scheme's

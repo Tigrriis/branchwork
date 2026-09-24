@@ -1,10 +1,31 @@
 {% extends "base.html" %}
-{% block title %}{{ t('today.title') }} · {{ SITE_NAME }}{% endblock %}
+{% block title %}{% if reviewing %}{{ t('review.title') }}{% else %}{{ t('today.title') }}{% endif %} · {{ SITE_NAME }}{% endblock %}
 {% block topactions %}
   <a class="btn btn--primary btn--sm" href="{{ url_for('projects.new_project') }}">{{ t('common.new_plot') }}</a>
 {% endblock %}
 
 {% block content %}
+{# The one home page. Focus and backburner as tiles, each plot's status on its
+   tile, the shelves underneath, and the inbox beside. Review is a mode of the
+   same page (?review=1) that flips every live tile to one decision. #}
+{% if reviewing %}
+<div class="page-head">
+  <div>
+    <h1>{{ t('review.heading') }}</h1>
+    <p class="muted">
+      {% if total %}{{ t('review.progress', done=reviewed, total=total) }}
+      {% else %}{{ t('review.nothing') }}{% endif %}
+    </p>
+  </div>
+  <div class="page-head__side">
+    {% if reviewed %}<a class="btn btn--ghost btn--sm" href="{{ url_for('dashboard.today', review=1) }}">{{ t('review.clear_ticks') }}</a>{% endif %}
+    <a class="btn btn--primary btn--sm" href="{{ url_for('dashboard.today') }}">{{ t('review.finish') }}</a>
+  </div>
+</div>
+{% if reviewed and reviewed == total %}
+<div class="review-banner">{{ t('review.all_decided') }}</div>
+{% endif %}
+{% else %}
 <div class="page-head">
   <div>
     <h1>{{ t('today.heading') }}</h1>
@@ -12,14 +33,20 @@
     {% set n_back %}<span data-count-back>{{ backburner|length }}</span>{% endset %}
     <p class="muted">{{ t('today.subhead', date=today.strftime('%A %d %B'), focus=n_focus, back=n_back) }}</p>
   </div>
-  <div class="chips">
-    {% set n_due %}<span data-count-due>{{ due|length }}</span>{% endset %}
-    {% set n_noaction %}<span data-count-noaction>{{ no_action|length }}</span>{% endset %}
-    <span class="chip {% if due %}chip--warn{% endif %}" data-chip-due>{{ t('today.chip_due', n=n_due) }}</span>
-    <span class="chip {% if no_action %}chip--warn{% endif %}" data-chip-noaction>{{ t('today.chip_noaction', n=n_noaction) }}</span>
-    <span class="chip">{{ t('today.chip_inbox', n=inbox|length) }}</span>
+  <div class="page-head__side">
+    <div class="chips">
+      {% set n_due %}<span data-count-due>{{ due|length }}</span>{% endset %}
+      {% set n_noaction %}<span data-count-noaction>{{ no_action|length }}</span>{% endset %}
+      <span class="chip {% if due %}chip--warn{% endif %}" data-chip-due>{{ t('today.chip_due', n=n_due) }}</span>
+      <span class="chip {% if no_action %}chip--warn{% endif %}" data-chip-noaction>{{ t('today.chip_noaction', n=n_noaction) }}</span>
+      <span class="chip">{{ t('today.chip_inbox', n=inbox|length) }}</span>
+    </div>
+    {% if active_projects or resurfaced %}
+    <a class="btn btn--ghost btn--sm" href="{{ url_for('dashboard.today', review=1) }}">{{ t('today.review_link') }}</a>
+    {% endif %}
   </div>
 </div>
+{% endif %}
 
 {# Routines ready on any live plot, across the top of the page. #}
 <section id="ready-routines" class="abilities abilities--today{% if not ready_routines %} abilities--quiet{% endif %}" data-routines="today"{% if not ready_routines and not next_routine %} hidden{% endif %}>
@@ -32,6 +59,11 @@
     {% if resurfaced %}
     <section class="section">
       <h2 class="section__title">{{ t('today.shelf_heading') }}</h2>
+      {% if reviewing %}
+      <div class="rtiles">
+        {% for p in resurfaced %}{% include "_review_tile.html" %}{% endfor %}
+      </div>
+      {% else %}
       {% for p in resurfaced %}
       <div class="due-row">
         <div class="due-row__main">
@@ -51,20 +83,23 @@
         </div>
       </div>
       {% endfor %}
+      {% endif %}
     </section>
     {% endif %}
 
     <div id="lanes" class="lanes">
       {% include "_focus_lists.html" %}
     </div>
-    <p class="hint muted">{{ t('today.drag_hint') }}</p>
+    {% if not reviewing %}<p class="hint muted">{{ t('today.drag_hint') }}</p>{% endif %}
 
-    {% if not active_projects %}
+    {% if not active_projects and not resurfaced %}
     <div class="empty">
       <p>{{ t('today.empty') }}</p>
       <a class="btn btn--primary" href="{{ url_for('projects.new_project') }}">{{ t('today.empty_cta') }}</a>
     </div>
     {% endif %}
+
+    {% include "_shelves.html" %}
   </div>
 
   <aside class="today-side">
@@ -113,7 +148,6 @@
       </details>
       {% endif %}
     </section>
-    <a class="review-link" href="{{ url_for('dashboard.review') }}">{{ t('today.review_link') }}</a>
   </aside>
 </div>
 {% endblock %}

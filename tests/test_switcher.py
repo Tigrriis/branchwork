@@ -26,10 +26,10 @@ def test_every_signed_in_page_has_the_switcher(client, db):
     user = make_user()
     login(client)
     p = _plot(db, user, "Moon laser")
-    for url in ("/", "/board", "/review", "/account", "/settings/statuses", "/settings/templates",
-                "/projects/new", f"/projects/{p.id}", f"/projects/{p.id}/list", f"/projects/{p.id}/edit"):
+    for url in ("/", "/?review=1", "/account", "/settings/statuses", "/settings/templates",
+                "/plots/new", f"/plots/{p.id}", f"/plots/{p.id}/list", f"/plots/{p.id}/edit"):
         html = client.get(url).data.decode()
-        assert f'href="/projects/{p.id}"' in _rail(html), url
+        assert f'href="/plots/{p.id}"' in _rail(html), url
 
 
 def test_focus_comes_before_the_backburner_and_shelved_plots_stay_out(client, db):
@@ -52,12 +52,12 @@ def test_the_plot_being_viewed_is_marked_even_when_shelved(client, db):
     live = _plot(db, user, "Shark tank")
     shelved = _plot(db, user, "Old lair", phase="parked")
 
-    rail = _rail(client.get(f"/projects/{live.id}").data.decode())
-    assert re.search(rf'href="/projects/{live.id}"[^>]*aria-current="page"', rail)
+    rail = _rail(client.get(f"/plots/{live.id}").data.decode())
+    assert re.search(rf'href="/plots/{live.id}"[^>]*aria-current="page"', rail)
 
     # A shelved plot appears only on its own page, under its status's name.
-    rail = _rail(client.get(f"/projects/{shelved.id}").data.decode())
-    assert re.search(rf'href="/projects/{shelved.id}"[^>]*aria-current="page"', rail)
+    rail = _rail(client.get(f"/plots/{shelved.id}").data.decode())
+    assert re.search(rf'href="/plots/{shelved.id}"[^>]*aria-current="page"', rail)
     assert shelved.phase_label in rail
 
 
@@ -70,7 +70,7 @@ def test_due_plots_and_ready_routines_are_flagged(client, db):
     for title in ("Oil the gears", "Feed the sharks"):
         db.session.add(Routine(project=p, title=title, every_days=7))
     db.session.commit()
-    rail = _rail(client.get("/board").data.decode())
+    rail = _rail(client.get("/").data.decode())
     assert 'class="rail__due"' in rail
     assert copy_in(rail, "rail.ready_title", n=2)
 

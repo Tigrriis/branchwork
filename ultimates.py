@@ -62,7 +62,7 @@ def _thread_from_form(project, ultimate: Ultimate) -> None:
 
 # ── Routes ──────────────────────────────────────────────────────────────────
 
-@ultimates_bp.route("/branches/<int:branch_id>/ultimate", methods=["GET", "POST"])
+@ultimates_bp.route("/schemes/<int:branch_id>/ultimate", methods=["GET", "POST"])
 @login_required
 def edit_ultimate(branch_id: int):
     """One form both sets and edits, since a scheme has at most one."""

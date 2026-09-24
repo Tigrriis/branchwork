@@ -1,0 +1,17 @@
+{# One plot on the backburner: small, quiet, and one arrow from focus. #}
+<article class="btile" draggable="true" data-project="{{ p.id }}" tabindex="0" id="p{{ p.id }}">
+  <a class="btile__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
+  <div class="ptile__meta">
+    {% include "_status_pick.html" %}
+    <span class="ptile__age">{% if p.days_since_touch == 0 %}{{ t('common.touched_today') }}{% else %}{{ t('common.days_ago', n=p.days_since_touch) }}{% endif %}</span>
+  </div>
+  {% if p.next_action %}<div class="btile__next" title="{{ p.next_action }}">→ {{ p.next_action }}</div>{% endif %}
+  <footer class="ptile__foot">
+    {% with counts=p.activity_strip() %}{% include "_strip.html" %}{% endwith %}
+    <form method="post" action="{{ url_for('dashboard.set_focus', project_id=p.id) }}" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="focused" value="1">
+      <button class="icon-btn" type="submit" title="{{ t('backburner.promote_title') }}">↑</button>
+    </form>
+  </footer>
+</article>

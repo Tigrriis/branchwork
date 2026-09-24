@@ -4,26 +4,32 @@ Plan large, multi-stranded plots as a skill tree. A plot splits into
 schemes (the columns), each scheme stacks its machinations in tiers, and every
 machination carries points. A plain checkbox is a machination worth one point.
 
-Formerly Branchwork. Only the words changed: the code, database tables, URLs,
-static paths, the GitHub repo and the Render services all keep their original
-names (`Project`, `Branch`, `Task`, `branchwork`), because renaming them would
-break links and deployments for no one's benefit. The rest of this file uses
-the code's names.
+Formerly Branchwork. The words and the URLs changed: pages live under
+`/plots/`, `/schemes/` and `/machinations/`, and the old `/projects/`,
+`/branches/` and `/tasks/` paths answer with a permanent redirect so existing
+links still work. The code, database tables, static paths, the GitHub repo and
+the Render services all keep their original names (`Project`, `Branch`,
+`Task`, `branchwork`), because renaming them would break deployments for no
+one's benefit. The rest of this file uses the code's names.
 
 Above the trees sits the portfolio layer, built for someone who starts many
 projects and forgets to move them along:
 
-* **Today** splits your live projects into **Focus** and **Backburner** and
-  lets you drag between them, so a weekend has a short deliberate list.
-  Focus rows are full size with their next action and tempo; backburner rows
-  recede and stop counting towards the "needs a touch" nagging. Focus is
-  independent of phase: a project can be well into Building and still not be
-  what you are touching this weekend.
-* **Board** shows every project by status. Each account edits its own
-  statuses under Account, Plot statuses: active ones are the columns, in
-  the order Advance walks; a parked one is a shelf with a return date;
-  closed ones are shelves for finished or abandoned work. Any active status
-  can carry a cap, so a fourth build has to wait. New accounts start with
+* **Today** is the one home page. It splits your live projects into
+  **Focus** and **Backburner** and lets you drag between them, so a weekend
+  has a short deliberate list. Focus projects are square tiles with their
+  tree in miniature (a column per branch, a pip per task by state, the
+  ultimate as a dot at the foot), their next action and tempo; backburner
+  tiles are small, recede, and stop counting towards the "needs a touch"
+  nagging. Focus is independent of phase: a project can be well into
+  Building and still not be what you are touching this weekend.
+* **Statuses** sit on every tile as a pill that opens onto all of them, with
+  each active status's count and cap, and parked and closed projects sit on
+  shelves under the lanes. Each account edits its own statuses under
+  Account, Plot statuses: active ones are the working stages, in the order
+  Advance walks; a parked one is a shelf with a return date; closed ones are
+  shelves for finished or abandoned work. Any active status can carry a
+  cap, so a fourth build has to wait. New accounts start with
   Idea, Exploring, Building (capped at `WIP_BUILDING_LIMIT`), Maintaining,
   and Done, Parked and Dropped shelves. Plots store a status's key, which
   never changes, so renaming or reordering one moves nothing.
@@ -31,9 +37,11 @@ projects and forgets to move them along:
   Focus, then Backburner, by name, with a dot on anything due and a count
   of ready routines. It folds to initials, opens on hover or with Ctrl K
   to filter, can be pinned open, and becomes a drawer on a phone.
-* **Review** puts every active project on one scrolling page so the whole
-  scope is visible at once, and takes one decision each: keep, advance, park
-  or drop. Each card edits the project's objective and next action.
+* **Review** is a mode of Today (`/?review=1`) that flips every live tile,
+  and anything back from the shelf, to one decision each: keep, advance,
+  park or drop, with the objective and next action to edit. The whole scope
+  stays on one page, and a decided tile stays put, marked. The old `/board`
+  and `/review` addresses redirect here.
 * **Inbox** captures ideas that belong to no project yet. Filing one sends
   it to that project's ideas, not into its tree; you can also park it until
   a date or tick it off.

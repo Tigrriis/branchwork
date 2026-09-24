@@ -29,13 +29,6 @@
              width="22" height="22" alt="">
         {{ SITE_NAME }}
       </a>
-      {% if current_user.is_authenticated %}
-      <nav class="gnav">
-        <a class="gnav__item {% if request.endpoint == 'dashboard.today' %}is-active{% endif %}" href="{{ url_for('dashboard.today') }}">{{ t('nav.today') }}</a>
-        <a class="gnav__item {% if request.endpoint == 'dashboard.board' %}is-active{% endif %}" href="{{ url_for('dashboard.board') }}">{{ t('nav.board') }}</a>
-        <a class="gnav__item {% if request.endpoint == 'dashboard.review' %}is-active{% endif %}" href="{{ url_for('dashboard.review') }}">{{ t('nav.review') }}</a>
-      </nav>
-      {% endif %}
       {% block topnav %}{% endblock %}
     </div>
     <nav class="topbar__right">

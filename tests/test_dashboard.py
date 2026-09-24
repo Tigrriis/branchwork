@@ -42,14 +42,14 @@ def test_points_change_records_event_and_touch(client, db):
     p = make_project(user)
     _age(p, 30); db.session.commit()
     task = make_task(make_branch(p), "T", points_max=2)
-    client.post(f"/tasks/{task.id}/points", json={"delta": 1})
+    client.post(f"/machinations/{task.id}/points", json={"delta": 1})
     db.session.refresh(p)
     assert p.days_since_touch == 0
     kinds = [(e.kind, e.delta) for e in p.events]
     assert ("points", 1) in kinds
     # a no-op change (already at max) records nothing
-    client.post(f"/tasks/{task.id}/points", json={"delta": 1})
-    client.post(f"/tasks/{task.id}/points", json={"delta": 1})
+    client.post(f"/machinations/{task.id}/points", json={"delta": 1})
+    client.post(f"/machinations/{task.id}/points", json={"delta": 1})
     assert sum(1 for e in p.events if e.kind == "points") == 2
 
 
@@ -89,12 +89,12 @@ def test_wip_limit_on_building(client, db):
         p = make_project(user); p.phase = "building"
     db.session.commit()
     third = make_project(user)
-    r = client.post(f"/projects/{third.id}/phase", data={"phase": "building"}, follow_redirects=True)
+    r = client.post(f"/plots/{third.id}/phase", data={"phase": "building"}, follow_redirects=True)
     assert copy_prefix_in(r.data, "board.status_full")
     db.session.refresh(third)
     assert third.phase == "idea"
     # moving within building (no-op) or elsewhere is fine
-    r = client.post(f"/projects/{third.id}/phase", data={"phase": "exploring"}, follow_redirects=True)
+    r = client.post(f"/plots/{third.id}/phase", data={"phase": "exploring"}, follow_redirects=True)
     db.session.refresh(third)
     assert third.phase == "exploring"
     assert any(e.kind == "phase" and "Exploring" in e.note for e in third.events)
@@ -105,12 +105,12 @@ def test_park_and_resurface(client, db):
     login(client)
     p = make_project(user)
     yesterday = (date.today() - timedelta(days=1)).isoformat()
-    client.post(f"/projects/{p.id}/phase", data={"phase": "parked", "parked_until": yesterday})
+    client.post(f"/plots/{p.id}/phase", data={"phase": "parked", "parked_until": yesterday})
     db.session.refresh(p)
     assert p.phase == "parked" and p.parked_expired
     html = client.get("/").data.decode()
     assert copy_in(html, "today.shelf_heading")
-    client.post(f"/projects/{p.id}/phase", data={"phase": "exploring"})
+    client.post(f"/plots/{p.id}/phase", data={"phase": "exploring"})
     db.session.refresh(p)
     assert p.phase == "exploring" and p.parked_until is None
 
@@ -134,7 +134,7 @@ def test_inbox_add_file_park_done(client, db):
     assert p.events == []                      # triage is not progress
     # Gone from Today, present under the project's tree.
     assert b"Try the new router" not in client.get("/").data
-    assert b"Try the new router" in client.get(f"/projects/{p.id}").data
+    assert b"Try the new router" in client.get(f"/plots/{p.id}").data
 
     client.post("/inbox", data={"text": "Later idea"})
     later = InboxItem.query.filter_by(text="Later idea").one()
@@ -166,26 +166,27 @@ def test_review_shows_every_project_at_once_and_marks_decided(client, db):
     b = make_project(user); b.name, b.phase = "Beta", "building"
     db.session.commit()
 
-    html = client.get("/review").data.decode()
+    html = client.get("/?review=1").data.decode()
     assert "0 of 2 decided" in html
     # The whole scope is on the page, not one project at a time.
     assert "Alpha" in html and "Beta" in html
-    assert html.count('class="review-card ') == 2
+    assert html.count('<article class="rtile') == 2
     assert "is-decided" not in html
 
     r = client.post(f"/review/{a.id}", data={"decision": "advance",
                                              "objective": "Prove the idea is worth building",
                                              "next_action": "Write the spec", "done": ""})
-    # Redirects back to the same page, anchored to the card just decided.
+    # Redirects back to review mode, anchored to the tile just decided.
     assert r.status_code == 302
-    assert f"done={a.id}" in r.headers["Location"] and f"#p{a.id}" in r.headers["Location"]
+    location = r.headers["Location"]
+    assert "review=1" in location and f"done={a.id}" in location and f"#p{a.id}" in location
     db.session.refresh(a)
     assert a.phase == "exploring" and a.next_action == "Write the spec"
     assert a.objective == "Prove the idea is worth building"
     assert any(e.kind == "review" for e in a.events)
 
     # Alpha stays on the page, now marked, and Beta is still there undecided.
-    html = client.get(f"/review?done={a.id}").data.decode()
+    html = client.get(f"/?review=1&done={a.id}").data.decode()
     assert "1 of 2 decided" in html
     assert "Alpha" in html and "Beta" in html
     assert html.count("is-decided") == 1
@@ -195,7 +196,7 @@ def test_review_shows_every_project_at_once_and_marks_decided(client, db):
     assert b.phase == "dropped"
     # Dropped, so no longer active: one project left under review, and it is
     # decided, so the banner shows.
-    html = client.get(f"/review?done={a.id},{b.id}").data.decode()
+    html = client.get(f"/?review=1&done={a.id},{b.id}").data.decode()
     assert "1 of 1 decided" in html
     assert copy_in(html, "review.all_decided")
 
@@ -206,27 +207,27 @@ def test_review_ignores_stale_done_ids(client, db):
     login(client)
     p = make_project(user); p.phase = "building"
     db.session.commit()
-    html = client.get(f"/review?done={p.id},9999").data.decode()
+    html = client.get(f"/?review=1&done={p.id},9999").data.decode()
     assert "1 of 1 decided" in html
 
 
 def test_objective_saves_from_the_project_form(client, db):
     user = make_user()
     login(client)
-    client.post("/projects/new", data={"name": "Arete", "starter": "blank", "cadence_days": "14",
+    client.post("/plots/new", data={"name": "Arete", "starter": "blank", "cadence_days": "14",
                                        "phase": "building", "gate_points": "3",
                                        "objective": "Fewer hours per job, same fee",
                                        "next_action": "Time three jobs end to end"})
     p = user.projects[0]
     assert p.objective == "Fewer hours per job, same fee"
-    html = client.get(f"/projects/{p.id}/edit").data.decode()
+    html = client.get(f"/plots/{p.id}/edit").data.decode()
     assert "Fewer hours per job, same fee" in html
 
 
 def test_new_project_starter_creates_chained_branches(client, db):
     user = make_user()
     login(client)
-    client.post("/projects/new", data={"name": "Rocket", "starter": "lifecycle", "cadence_days": "7",
+    client.post("/plots/new", data={"name": "Rocket", "starter": "lifecycle", "cadence_days": "7",
                                        "phase": "idea", "gate_points": "3"})
     p = user.projects[0]
     names = [b.name for b in p.branches]
@@ -259,7 +260,7 @@ def test_sync_git_records_commits_once(db, tmp_path):
 def test_business_starter_seeds_unchained_areas_with_mapping_tasks(client, db):
     user = make_user()
     login(client)
-    client.post("/projects/new", data={"name": "Arete", "starter": "business",
+    client.post("/plots/new", data={"name": "Arete", "starter": "business",
                                        "cadence_days": "7", "phase": "maintaining",
                                        "gate_points": "3"})
     p = user.projects[0]
@@ -320,13 +321,13 @@ def test_wip_cap_is_a_per_status_setting(client, db):
         p = make_project(user); p.phase = "building"
     db.session.commit()
     fourth = make_project(user)
-    r = client.post(f"/projects/{fourth.id}/phase", data={"phase": "building"}, follow_redirects=True)
+    r = client.post(f"/plots/{fourth.id}/phase", data={"phase": "building"}, follow_redirects=True)
     assert copy_prefix_in(r.data, "board.status_full")
 
     _set_cap(client, user, "building", 5)
     db.session.expire_all()
     assert user.status("building").wip_limit == 5
-    client.post(f"/projects/{fourth.id}/phase", data={"phase": "building"})
+    client.post(f"/plots/{fourth.id}/phase", data={"phase": "building"})
     db.session.refresh(fourth)
     assert fourth.phase == "building"
 
@@ -339,11 +340,11 @@ def test_wip_cap_of_zero_turns_it_off(client, db):
     assert user.status("building").wip_limit == 0
     for _ in range(6):
         p = make_project(user)
-        client.post(f"/projects/{p.id}/phase", data={"phase": "building"})
+        client.post(f"/plots/{p.id}/phase", data={"phase": "building"})
     db.session.expire_all()
     assert sum(1 for p in user.projects if p.phase == "building") == 6
-    # The board shows a plain count rather than a "6 / 0" counter.
-    html = client.get("/board").data.decode()
+    # The status menus show a plain count rather than a "6 / 0" counter.
+    html = client.get("/").data.decode()
     assert "6 / 0" not in html and "is-full" not in html
 
 
@@ -358,7 +359,7 @@ def test_lowering_the_cap_does_not_evict_projects(client, db):
     assert sum(1 for p in user.projects if p.phase == "building") == 3
     # ...but nothing new gets in until it is back under the cap.
     extra = make_project(user)
-    r = client.post(f"/projects/{extra.id}/phase", data={"phase": "building"}, follow_redirects=True)
+    r = client.post(f"/plots/{extra.id}/phase", data={"phase": "building"}, follow_redirects=True)
     assert copy_prefix_in(r.data, "board.status_full")
 
 
@@ -382,7 +383,7 @@ def test_project_ideas_stay_out_of_the_loose_inbox(client, db):
     login(client)
     p = make_project(user); p.name, p.phase = "Fit-out", "building"
     db.session.commit()
-    client.post(f"/projects/{p.id}/ideas", data={"text": "Ask about the fire damper"})
+    client.post(f"/plots/{p.id}/ideas", data={"text": "Ask about the fire damper"})
     client.post("/inbox", data={"text": "Unrelated loose thought"})
 
     idea = InboxItem.query.filter_by(text="Ask about the fire damper").one()
@@ -391,7 +392,7 @@ def test_project_ideas_stay_out_of_the_loose_inbox(client, db):
     # Today shows the loose one only; the tree page shows the project one only.
     today = client.get("/").data.decode()
     assert "Unrelated loose thought" in today and "Ask about the fire damper" not in today
-    tree = client.get(f"/projects/{p.id}").data.decode()
+    tree = client.get(f"/plots/{p.id}").data.decode()
     assert "Ask about the fire damper" in tree and "Unrelated loose thought" not in tree
 
 
@@ -401,7 +402,7 @@ def test_dropping_an_idea_on_a_tier_makes_it_a_task(client, db):
     p = make_project(user)
     branch = make_branch(p, "Design")
     make_task(branch, "Existing", tier=1)
-    client.post(f"/projects/{p.id}/ideas", data={"text": "Check the ceiling heights\nwith the architect"})
+    client.post(f"/plots/{p.id}/ideas", data={"text": "Check the ceiling heights\nwith the architect"})
     idea = InboxItem.query.one()
 
     r = _promote(client, idea.id, branch.id, 1)
@@ -429,7 +430,7 @@ def test_an_idea_can_open_a_new_tier(client, db):
     p = make_project(user)
     branch = make_branch(p)
     make_task(branch, "First", tier=1)
-    client.post(f"/projects/{p.id}/ideas", data={"text": "Later thing"})
+    client.post(f"/plots/{p.id}/ideas", data={"text": "Later thing"})
     idea = InboxItem.query.one()
     _promote(client, idea.id, branch.id, 2)
     db.session.refresh(branch)
@@ -441,7 +442,7 @@ def test_an_idea_cannot_be_promoted_twice(client, db):
     login(client)
     p = make_project(user)
     branch = make_branch(p)
-    client.post(f"/projects/{p.id}/ideas", data={"text": "Once only"})
+    client.post(f"/plots/{p.id}/ideas", data={"text": "Once only"})
     idea = InboxItem.query.one()
     assert _promote(client, idea.id, branch.id, 1).status_code == 200
     r = _promote(client, idea.id, branch.id, 1)
@@ -466,12 +467,12 @@ def test_finishing_an_idea_leaves_the_tree_alone(client, db):
     login(client)
     p = make_project(user)
     make_branch(p)
-    client.post(f"/projects/{p.id}/ideas", data={"text": "Never mind"})
+    client.post(f"/plots/{p.id}/ideas", data={"text": "Never mind"})
     idea = InboxItem.query.one()
     client.post(f"/ideas/{idea.id}/done")
     db.session.refresh(idea)
     assert idea.status == "done" and Task.query.count() == 0
-    assert "Never mind" not in client.get(f"/projects/{p.id}").data.decode()
+    assert "Never mind" not in client.get(f"/plots/{p.id}").data.decode()
 
 
 def test_an_idea_travels_from_today_to_a_tier(client, db):
@@ -521,8 +522,8 @@ def test_new_projects_start_in_focus(client, db):
     user = make_user()
     login(client)
     # The form arrives with the box already ticked.
-    assert b'name="focused" value="1" checked' in client.get("/projects/new").data
-    client.post("/projects/new", data={"name": "Fresh", "starter": "blank", "cadence_days": "14",
+    assert b'name="focused" value="1" checked' in client.get("/plots/new").data
+    client.post("/plots/new", data={"name": "Fresh", "starter": "blank", "cadence_days": "14",
                                        "phase": "idea", "gate_points": "3", "focused": "1"})
     assert user.projects[0].focused is True
 
@@ -533,7 +534,7 @@ def test_unticking_focus_on_the_form_is_respected(client, db):
     login(client)
     p = make_project(user); p.focused = True
     db.session.commit()
-    client.post(f"/projects/{p.id}/edit", data={"name": p.name, "cadence_days": "14",
+    client.post(f"/plots/{p.id}/edit", data={"name": p.name, "cadence_days": "14",
                                                 "phase": "building", "gate_points": "3"})
     db.session.refresh(p)
     assert p.focused is False
@@ -573,7 +574,7 @@ def test_dragging_a_project_between_lanes(client, db):
     p = make_project(user); p.name, p.phase = "Swing", "building"
     db.session.commit()
 
-    r = client.post(f"/projects/{p.id}/focus", json={"focused": "0"})
+    r = client.post(f"/plots/{p.id}/focus", json={"focused": "0"})
     assert r.status_code == 200
     body = r.get_json()
     assert body["focused"] is False and body["name"] == "Swing"
@@ -583,7 +584,7 @@ def test_dragging_a_project_between_lanes(client, db):
     # backburner half.
     assert "Swing" in _lane(body["lists"], "back")
 
-    r = client.post(f"/projects/{p.id}/focus", json={"focused": "1"})
+    r = client.post(f"/plots/{p.id}/focus", json={"focused": "1"})
     db.session.refresh(p)
     assert p.focused is True
     assert "Swing" in _lane(r.get_json()["lists"], "focus")
@@ -594,10 +595,10 @@ def test_focus_buttons_work_without_javascript(client, db):
     login(client)
     p = make_project(user); p.phase = "building"
     db.session.commit()
-    client.post(f"/projects/{p.id}/focus", data={"focused": "0"})
+    client.post(f"/plots/{p.id}/focus", data={"focused": "0"})
     db.session.refresh(p)
     assert p.focused is False
-    client.post(f"/projects/{p.id}/focus", data={"focused": "1"})
+    client.post(f"/plots/{p.id}/focus", data={"focused": "1"})
     db.session.refresh(p)
     assert p.focused is True
 
@@ -608,7 +609,7 @@ def test_focus_is_owner_only(client, db):
     db.session.commit()
     make_user("intruder@example.com")
     login(client, email="intruder@example.com")
-    assert client.post(f"/projects/{p.id}/focus", json={"focused": "0"}).status_code == 404
+    assert client.post(f"/plots/{p.id}/focus", json={"focused": "0"}).status_code == 404
     db.session.refresh(p)
     assert p.focused is True
 
@@ -636,7 +637,7 @@ def test_copying_a_builtin_gives_an_editable_template(client, db):
     assert [(b.name, b.hue, b.waits) for b in t.branches] == [
         ("Design", "green", False), ("Approvals", "blue", False), ("Construction", "red", True)]
     # It shows on the new-project form, marked as the user's own.
-    html = client.get("/projects/new").data.decode()
+    html = client.get("/plots/new").data.decode()
     assert f'value="custom:{t.id}"' in html and copy_in(html, "plot.yours_tag")
 
 
@@ -701,7 +702,7 @@ def test_a_custom_template_builds_a_project(client, db):
         "branch_waits_1": "1",
         "branch_tasks": ["Write it down | 3", "Ship it"],
     })
-    client.post("/projects/new", data={"name": "Real one", "starter": f"custom:{t.id}",
+    client.post("/plots/new", data={"name": "Real one", "starter": f"custom:{t.id}",
                                        "cadence_days": "14", "phase": "building",
                                        "gate_points": "3", "focused": "1"})
     p = [x for x in user.projects if x.name == "Real one"][0]
@@ -723,9 +724,9 @@ def test_templates_are_private(client, db):
     login(client, email="other@example.com")
     assert client.get(f"/settings/templates/{t.id}").status_code == 404
     assert client.post(f"/settings/templates/{t.id}/delete").status_code == 404
-    assert f"custom:{t.id}" not in client.get("/projects/new").data.decode()
+    assert f"custom:{t.id}" not in client.get("/plots/new").data.decode()
     # ...and naming it on a project create simply yields no branches.
-    client.post("/projects/new", data={"name": "Sneaky", "starter": f"custom:{t.id}",
+    client.post("/plots/new", data={"name": "Sneaky", "starter": f"custom:{t.id}",
                                        "cadence_days": "14", "phase": "idea", "gate_points": "3"})
     assert other.projects[0].branches == []
 
@@ -736,7 +737,7 @@ def test_deleting_a_template_leaves_its_projects_alone(client, db):
     login(client)
     client.post("/settings/templates/new", data={"copy": "engineering"})
     t = Template.query.one()
-    client.post("/projects/new", data={"name": "Built from it", "starter": f"custom:{t.id}",
+    client.post("/plots/new", data={"name": "Built from it", "starter": f"custom:{t.id}",
                                        "cadence_days": "14", "phase": "idea", "gate_points": "3"})
     client.post(f"/settings/templates/{t.id}/delete")
     db.session.expire_all()

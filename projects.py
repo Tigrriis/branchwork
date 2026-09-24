@@ -4,7 +4,7 @@ Every route here is owner-only. ``_project``/``_branch``/``_task`` look an
 object up and 404 unless the signed-in user owns the project it belongs to,
 so a guessed id reads the same as a missing one.
 
-Points change through one endpoint, ``POST /tasks/<id>/points``, which the
+Points change through one endpoint, ``POST /machinations/<id>/points``, which the
 tree page calls with fetch() and which answers with the re-rendered tree
 fragment. One template renders the tree in both cases, so the page never has
 to reproduce the gate logic in JavaScript.
@@ -102,12 +102,12 @@ def _read_project_form(project: Project) -> bool:
     return True
 
 
-@projects_bp.route("/projects/new", methods=["GET", "POST"])
+@projects_bp.route("/plots/new", methods=["GET", "POST"])
 @login_required
 def new_project():
     if len(current_user.projects) >= current_app.config["MAX_PROJECTS_PER_USER"]:
         flash(tx("plot.limit"), "error")
-        return redirect(url_for("dashboard.board"))
+        return redirect(url_for("dashboard.today"))
     # Not attached to current_user until the form is valid: appending to the
     # relationship would let an autoflush insert a half-built row.
     # focused=True so the form renders with the box ticked: creating a project
@@ -126,7 +126,7 @@ def new_project():
                            starters=choices_for(current_user), default_starter=DEFAULT_STARTER)
 
 
-@projects_bp.route("/projects/<int:project_id>")
+@projects_bp.route("/plots/<int:project_id>")
 @login_required
 def tree(project_id: int):
     project = _project(project_id)
@@ -134,21 +134,21 @@ def tree(project_id: int):
                            ideas=_project_ideas(project))
 
 
-@projects_bp.route("/projects/<int:project_id>/tree")
+@projects_bp.route("/plots/<int:project_id>/tree")
 @login_required
 def tree_fragment(project_id: int):
     project = _project(project_id)
     return render_template("_tree.html", project=project)
 
 
-@projects_bp.route("/projects/<int:project_id>/list")
+@projects_bp.route("/plots/<int:project_id>/list")
 @login_required
 def task_list(project_id: int):
     project = _project(project_id)
     return render_template("project_list.html", project=project)
 
 
-@projects_bp.route("/projects/<int:project_id>/edit", methods=["GET", "POST"])
+@projects_bp.route("/plots/<int:project_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_project(project_id: int):
     project = _project(project_id)
@@ -159,14 +159,14 @@ def edit_project(project_id: int):
     return render_template("project_form.html", project=project, is_new=False)
 
 
-@projects_bp.route("/projects/<int:project_id>/delete", methods=["POST"])
+@projects_bp.route("/plots/<int:project_id>/delete", methods=["POST"])
 @login_required
 def delete_project(project_id: int):
     project = _project(project_id)
     db.session.delete(project)
     db.session.commit()
     flash(tx("plot.deleted"), "info")
-    return redirect(url_for("dashboard.board"))
+    return redirect(url_for("dashboard.today"))
 
 
 # ── Branches ────────────────────────────────────────────────────────────────
@@ -205,7 +205,7 @@ def _read_branch_form(branch: Branch, project: Project) -> bool:
     return True
 
 
-@projects_bp.route("/projects/<int:project_id>/branches/new", methods=["GET", "POST"])
+@projects_bp.route("/plots/<int:project_id>/schemes/new", methods=["GET", "POST"])
 @login_required
 def new_branch(project_id: int):
     project = _project(project_id)
@@ -225,7 +225,7 @@ def new_branch(project_id: int):
     return render_template("branch_form.html", project=project, branch=branch, is_new=True)
 
 
-@projects_bp.route("/branches/<int:branch_id>/edit", methods=["GET", "POST"])
+@projects_bp.route("/schemes/<int:branch_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_branch(branch_id: int):
     branch = _branch(branch_id)
@@ -237,7 +237,7 @@ def edit_branch(branch_id: int):
     return render_template("branch_form.html", project=project, branch=branch, is_new=False)
 
 
-@projects_bp.route("/branches/<int:branch_id>/move", methods=["POST"])
+@projects_bp.route("/schemes/<int:branch_id>/move", methods=["POST"])
 @login_required
 def move_branch(branch_id: int):
     """Swap a branch with its neighbour (direction=left|right)."""
@@ -254,7 +254,7 @@ def move_branch(branch_id: int):
     return redirect(url_for("projects.tree", project_id=project.id))
 
 
-@projects_bp.route("/branches/<int:branch_id>/delete", methods=["POST"])
+@projects_bp.route("/schemes/<int:branch_id>/delete", methods=["POST"])
 @login_required
 def delete_branch(branch_id: int):
     branch = _branch(branch_id)
@@ -317,7 +317,7 @@ def _thread_from_form(project: Project, task: Task) -> None:
             db.session.commit()
 
 
-@projects_bp.route("/branches/<int:branch_id>/tasks/new", methods=["GET", "POST"])
+@projects_bp.route("/schemes/<int:branch_id>/machinations/new", methods=["GET", "POST"])
 @login_required
 def new_task(branch_id: int):
     branch = _branch(branch_id)
@@ -339,7 +339,7 @@ def new_task(branch_id: int):
     return render_template("task_form.html", project=project, task=task, branch=branch, is_new=True)
 
 
-@projects_bp.route("/tasks/<int:task_id>/edit", methods=["GET", "POST"])
+@projects_bp.route("/machinations/<int:task_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_task(task_id: int):
     task = _task(task_id)
@@ -352,7 +352,7 @@ def edit_task(task_id: int):
     return render_template("task_form.html", project=project, task=task, branch=task.branch, is_new=False)
 
 
-@projects_bp.route("/tasks/<int:task_id>/delete", methods=["POST"])
+@projects_bp.route("/machinations/<int:task_id>/delete", methods=["POST"])
 @login_required
 def delete_task(task_id: int):
     task = _task(task_id)
@@ -363,7 +363,7 @@ def delete_task(task_id: int):
     return redirect(url_for("projects.tree", project_id=project.id))
 
 
-@projects_bp.route("/tasks/<int:task_id>/points", methods=["POST"])
+@projects_bp.route("/machinations/<int:task_id>/points", methods=["POST"])
 @login_required
 def task_points(task_id: int):
     """Adjust a task's points. Body: JSON ``{"delta": ±1}`` or ``{"set": n}``.
@@ -400,7 +400,7 @@ def task_points(task_id: int):
 # no bearing on progress. Dragging one onto a tier is what turns it into a
 # task, which is the moment you decide where it actually belongs.
 
-@projects_bp.route("/projects/<int:project_id>/ideas", methods=["POST"])
+@projects_bp.route("/plots/<int:project_id>/ideas", methods=["POST"])
 @login_required
 def add_idea(project_id: int):
     project = _project(project_id)

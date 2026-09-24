@@ -63,7 +63,7 @@ def test_the_pickers_offer_the_new_set(client, db):
     login(client)
     project = make_project(user)
     branch = make_branch(project)
-    for url in (f"/branches/{branch.id}/tasks/new", f"/projects/{project.id}/routines/new"):
+    for url in (f"/schemes/{branch.id}/machinations/new", f"/plots/{project.id}/routines/new"):
         html = client.get(url).data.decode()
         assert 'name="icon" value="bomb"' in html, url
         assert 'value="hammer"' not in html and 'value="check"' not in html, url

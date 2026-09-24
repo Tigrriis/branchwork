@@ -25,7 +25,7 @@ def test_login_bad_password(client):
 def test_anonymous_is_redirected_to_login(client):
     r = client.get("/")
     assert r.status_code == 302 and "/login" in r.headers["Location"]
-    r = client.get("/projects/1")
+    r = client.get("/plots/1")
     assert r.status_code == 302 and "/login" in r.headers["Location"]
 
 
@@ -42,8 +42,8 @@ def test_other_users_project_is_404(client):
     project = make_project(owner)
     make_user("intruder@example.com")
     login(client, email="intruder@example.com")
-    assert client.get(f"/projects/{project.id}").status_code == 404
-    assert client.post(f"/projects/{project.id}/delete").status_code == 404
+    assert client.get(f"/plots/{project.id}").status_code == 404
+    assert client.post(f"/plots/{project.id}/delete").status_code == 404
 
 
 def test_account_password_change(client):

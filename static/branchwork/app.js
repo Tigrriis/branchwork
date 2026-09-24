@@ -119,7 +119,7 @@
       var id = tile.dataset.task;
       busy = true;
       tile.classList.add("is-busy");
-      post("/tasks/" + id + "/points", { delta: delta })
+      post("/machinations/" + id + "/points", { delta: delta })
         .then(function (res) {
           if (!res.ok) { flash(res.body.message || say("points_failed"), "error"); return; }
           swapTree(res.body.html);
@@ -160,7 +160,7 @@
 
   var KINDS = {
     idea: { handle: ".idea", zone: ".tier__row, .tier-add" },
-    project: { handle: ".prow", zone: "[data-focus-zone]" },
+    project: { handle: ".ptile, .btile", zone: "[data-focus-zone]" },
     thread: { handle: ".tile__thread", zone: ".tile[data-task], .ultimate[data-ultimate]" }
   };
 
@@ -204,7 +204,7 @@
   }
 
   function setFocus(projectId, focused) {
-    post("/projects/" + projectId + "/focus", { focused: focused ? "1" : "0" })
+    post("/plots/" + projectId + "/focus", { focused: focused ? "1" : "0" })
       .then(function (res) {
         if (!res.ok) { flash(res.body.message || say("focus_failed"), "error"); return; }
         var lanes = document.getElementById("lanes");
@@ -289,6 +289,21 @@
       var parts = ((target && target.value) || "").split(":");
       promoteIdea(idea.dataset.idea, parts[0], parts[1]);
     }
+  });
+
+  // ── Status menus ──────────────────────────────────────────────────────
+  // A tile's status pill is a <details>, so it opens without the script. The
+  // script only closes it again: on a click anywhere else, on Escape, and
+  // when another one opens, so at most one menu hangs over the tiles.
+  function closeStatusMenus(except) {
+    Array.prototype.forEach.call(document.querySelectorAll("details.spick[open]"),
+      function (el) { if (el !== except) el.open = false; });
+  }
+  document.addEventListener("click", function (e) {
+    closeStatusMenus(e.target.closest && e.target.closest("details.spick"));
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeStatusMenus(null);
   });
 
   // ── Confirm before destructive forms ──────────────────────────────────
@@ -616,7 +631,7 @@
   function threadTasks(fromId, toId, toUltimateId) {
     if (!fromId || (!toId && !toUltimateId) || String(fromId) === String(toId)) return;
     var payload = toUltimateId ? { to_ultimate: Number(toUltimateId) } : { to: Number(toId) };
-    post("/tasks/" + fromId + "/threads", payload)
+    post("/machinations/" + fromId + "/threads", payload)
       .then(function (res) {
         if (!res.ok) { flash(res.body.message || say("thread_failed"), "error"); return; }
         swapTree(res.body.html);

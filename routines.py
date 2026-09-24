@@ -118,7 +118,7 @@ def _read_form(routine: Routine) -> bool:
 
 # ── Routes ──────────────────────────────────────────────────────────────────
 
-@routines_bp.route("/projects/<int:project_id>/routines/new", methods=["GET", "POST"])
+@routines_bp.route("/plots/<int:project_id>/routines/new", methods=["GET", "POST"])
 @login_required
 def new_routine(project_id: int):
     project = _project(project_id)

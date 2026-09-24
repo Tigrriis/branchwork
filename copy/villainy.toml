@@ -16,13 +16,6 @@ _screen = "Everywhere"
 _about = "The product name, in the top bar and every browser tab."
 name = "Villainy"
 
-[nav]
-_screen = "Top bar"
-_about = "The main navigation, on every page once signed in."
-today = "Today"
-board = "Board"
-review = "Review"
-
 [rail]
 _screen = "Plot switcher"
 _about = "The sidebar of plots on every page once signed in. It folds to initials and opens on hover, on focus, or with Ctrl K."
@@ -136,7 +129,7 @@ server = "Something went wrong on our side."
 
 [today]
 _screen = "Today"
-_about = "The home screen: what's in focus, what's on the backburner, and the inbox."
+_about = "The home screen: plots in focus as tiles, the backburner, the shelves, and the inbox."
 title = "Today"
 heading = "Today"
 # Under the heading. {focus} and {back} are counts.
@@ -182,6 +175,18 @@ about = "Still yours, just not this weekend. They stop asking for your attention
 promote_title = "Bring into focus"
 empty = "Nothing here. Drop a plot you are not touching this weekend."
 
+[tile]
+_screen = "Today · Plot tiles"
+_about = "The tiles on Today: a plot's tree in miniature and its status pill."
+# Read out for the miniature tree, which opens the plot
+tree_aria = "Open {name}"
+no_schemes = "No schemes yet"
+# After a scheme's name and points, when it waits on another scheme
+locked = " · locked"
+status_title = "Change status"
+# Beside the parked status in a tile's status menu
+park_for = "30 days"
+
 [ready]
 _screen = "Today · Ready routines"
 _about = "The bar at the top of Today: routines from every live plot that are ready to be done."
@@ -198,11 +203,8 @@ pick_plot = "Pick a plot to file it into."
 filed = "Filed into {name}. Drag it onto a tier when you know where it goes."
 
 [board]
-_screen = "Board"
-_about = "Every plot by status, with any caps you have set."
-title = "Board"
-heading = "Board"
-about = "Every plot by status."
+_screen = "Today · Statuses"
+_about = "Moving a plot between statuses from the pill on its tile, and the shelves of parked and finished plots under the lanes."
 edit_statuses = "Edit statuses"
 parked_until = "until {date}"
 reopen = "Reopen"
@@ -211,31 +213,21 @@ status_full = "{status} is full ({limit}): {names}. Ship or park one first, or r
 phase_moved = "{name} → {phase}."
 touched = "Logged a touch on {name}."
 
-[card]
-_screen = "Board · Plot card"
-_about = "One plot on the board."
-in_focus_title = "In focus"
-cadence_title = "Cadence: {cadence}"
-today = "today"
-days = "{n}d"
-no_action = "No next action"
-back_to = "Back to {phase}"
-advance_to = "Advance to {phase}"
-
 [review]
-_screen = "Weekly review"
-_about = "Every live plot on one page, one decision each."
+_screen = "Today · Weekly review"
+_about = "Review mode on Today: every live plot's tile flips to one decision."
 title = "Weekly review"
 heading = "Weekly review"
 progress = "{done} of {total} decided. One decision each: keep, advance, park, or drop."
 nothing = "Nothing active to review."
+# The button that leaves review mode for the ordinary home page
+finish = "Finish the review"
 clear_ticks = "Clear the ticks"
 all_decided = "Every plot has a decision and a next action."
 parked_until = "parked until {date}"
 last_touched = "last touched {n} days ago"
 decided = "decided"
 stats = "{done} / {max} points · {part} in progress · {empty} not started"
-locked = " · locked"
 unpark = "Pick it up"
 keep_parked = "Keep parked"
 keep = "Keep going"
@@ -243,7 +235,6 @@ advance = "Advance to {phase}"
 park = "Park"
 # One button per closed status, such as Done or Dropped
 close = "Mark {phase}"
-empty = "No active plots to review."
 
 [tree]
 _screen = "Plot · Tree"

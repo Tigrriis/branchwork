@@ -1,10 +1,13 @@
-"""The portfolio layer: Today, the phase board, the inbox and the weekly review.
+"""The portfolio layer: one home page, the inbox and the weekly review.
 
-Today answers "what am I neglecting": projects past their cadence, parked
-projects whose date has come, projects with no next action, and the inbox.
-The board is every project by status, with any caps set on them. Review
-walks the active projects one by one and asks: keep, advance, park or drop.
+The home page answers "what am I neglecting": plots in focus as tiles with
+their tree in miniature, the backburner beneath, parked plots whose date has
+come, and the inbox. Each tile carries its status, which is what the board
+used to be for, and the parked and closed plots sit on shelves underneath.
+Review is a mode of the same page that flips every live tile to one decision:
+keep, advance, park or drop.
 """
+from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 
 from flask import (
@@ -57,7 +60,9 @@ def _focus_split(projects: list[Project]) -> tuple[list[Project], list[Project]]
     Shelved projects are never in focus regardless of the flag: a dropped
     project sitting at the top of the page would be nonsense.
     """
-    live = [p for p in projects if p.is_active]
+    # A plot whose status has somehow gone stays on a tile, where its pill
+    # offers the real statuses, rather than vanishing from the page.
+    live = [p for p in projects if p.is_active or p.status is None]
     def order(p):
         return (p.overdue_days if p.overdue_days is not None else -9999, p.days_since_touch)
     focus = sorted((p for p in live if p.focused), key=order, reverse=True)
@@ -65,9 +70,16 @@ def _focus_split(projects: list[Project]) -> tuple[list[Project], list[Project]]
     return focus, backburner
 
 
-def _today_context():
+def _shelves(projects: list[Project]) -> list[tuple]:
+    """(status, plots) for every parked or closed status, in the account's order."""
+    return [(s, [p for p in projects if p.phase == s.key])
+            for s in current_user.statuses if not s.is_active]
+
+
+def _today_context(reviewing: bool = False, done: str = ""):
     projects = list(current_user.projects)
     focus, backburner = _focus_split(projects)
+    resurfaced = [p for p in projects if p.parked_expired]
     # Only loose ideas belong here; ones attached to a project live under that
     # project's tree instead.
     inbox = [i for i in current_user.inbox_items if i.is_loose]
@@ -75,7 +87,7 @@ def _today_context():
     return {
         "focus": focus,
         "backburner": backburner,
-        "resurfaced": [p for p in projects if p.parked_expired],
+        "resurfaced": resurfaced,
         # The nagging counts are about what you said you are working on. A
         # backburner project going quiet is the point of the backburner.
         "due": [p for p in focus if p.is_due],
@@ -85,9 +97,28 @@ def _today_context():
                          if i.status == "parked" and i.project_id is None],
         "active_projects": [p for p in projects if p.is_active],
         "today": date.today(),
+        # Every tile's status pill offers every status, with the caps.
+        "statuses": list(current_user.statuses),
+        "status_counts": Counter(p.phase for p in projects),
+        "shelves": _shelves(projects),
         # The bar across the top: routines ready on any live plot.
         "ready_routines": ready_routines(current_user),
         "next_routine": next_routine(current_user),
+        **_review_state(reviewing, focus + backburner + resurfaced, done),
+    }
+
+
+def _review_state(reviewing: bool, under_review: list[Project], done: str) -> dict:
+    """Review mode's bookkeeping. ``done`` carries the plots decided this
+    pass, so a decided one stays on the page, marked, instead of vanishing."""
+    ids = {p.id for p in under_review}
+    reviewed_ids = {int(x) for x in done.split(",") if x.isdigit()} & ids if reviewing else set()
+    return {
+        "reviewing": reviewing,
+        "reviewed_ids": reviewed_ids,
+        "reviewed": len(reviewed_ids),
+        "total": len(under_review),
+        "done_param": ",".join(str(i) for i in sorted(reviewed_ids)),
     }
 
 
@@ -95,10 +126,11 @@ def _today_context():
 def today():
     if not current_user.is_authenticated:
         return redirect(url_for("auth.login"))
-    return render_template("today.html", **_today_context())
+    return render_template("today.html", **_today_context(
+        reviewing=request.args.get("review") == "1", done=request.args.get("done", "")))
 
 
-@dashboard_bp.route("/projects/<int:project_id>/focus", methods=["POST"])
+@dashboard_bp.route("/plots/<int:project_id>/focus", methods=["POST"])
 @login_required
 def set_focus(project_id: int):
     """Move a project between focus and the backburner.
@@ -125,29 +157,13 @@ def set_focus(project_id: int):
     return _back()
 
 
-# ── Board ───────────────────────────────────────────────────────────────────
+# ── Statuses ────────────────────────────────────────────────────────────────
 
 @dashboard_bp.route("/board")
 @login_required
 def board():
-    projects = list(current_user.projects)
-    statuses = list(current_user.statuses)
-    # A plot whose status has somehow gone shows in the first column rather
-    # than vanishing from the board.
-    known = {s.key for s in statuses}
-    home = current_user.default_status.key
-
-    def key_of(p):
-        return p.phase if p.phase in known else home
-
-    columns = [(s, sorted((p for p in projects if key_of(p) == s.key),
-                          key=lambda p: p.days_since_touch))
-               for s in statuses if s.is_active]
-    shelves = [(s, [p for p in projects if key_of(p) == s.key])
-               for s in statuses if not s.is_active]
-    # Where the last column's advance arrow goes.
-    finish = next((s for s in statuses if s.is_closed), None)
-    return render_template("board.html", columns=columns, shelves=shelves, finish=finish)
+    """The board was folded into the home page. Old links still land."""
+    return redirect(url_for("dashboard.today"))
 
 
 def _set_phase(project: Project, key: str, *, park_until: date | None = None,
@@ -168,7 +184,7 @@ def _set_phase(project: Project, key: str, *, park_until: date | None = None,
     return True
 
 
-@dashboard_bp.route("/projects/<int:project_id>/phase", methods=["POST"])
+@dashboard_bp.route("/plots/<int:project_id>/phase", methods=["POST"])
 @login_required
 def set_phase(project_id: int):
     project = _project(project_id)
@@ -182,7 +198,7 @@ def set_phase(project_id: int):
     return _back()
 
 
-@dashboard_bp.route("/projects/<int:project_id>/next-action", methods=["POST"])
+@dashboard_bp.route("/plots/<int:project_id>/next-action", methods=["POST"])
 @login_required
 def set_next_action(project_id: int):
     project = _project(project_id)
@@ -191,7 +207,7 @@ def set_next_action(project_id: int):
     return _back()
 
 
-@dashboard_bp.route("/projects/<int:project_id>/touch", methods=["POST"])
+@dashboard_bp.route("/plots/<int:project_id>/touch", methods=["POST"])
 @login_required
 def touch(project_id: int):
     """Log activity that happened outside the app."""
@@ -276,20 +292,8 @@ def inbox_delete(item_id: int):
 @dashboard_bp.route("/review")
 @login_required
 def review():
-    """Every project under review on one scrolling page.
-
-    Deciding one does not remove it: the point of the page is to see the
-    whole scope at once, so a decided project stays put and is marked.
-    ``done`` carries which ones have been decided this pass.
-    """
-    projects = [p for p in current_user.projects if p.is_active or p.parked_expired]
-    projects.sort(key=lambda p: (p.overdue_days if p.overdue_days is not None else -999), reverse=True)
-    ids = {p.id for p in projects}
-    reviewed_ids = {int(x) for x in request.args.get("done", "").split(",") if x.isdigit()} & ids
-    return render_template("review.html", projects=projects, reviewed_ids=reviewed_ids,
-                           reviewed=len(reviewed_ids), total=len(projects),
-                           done_param=",".join(str(i) for i in sorted(reviewed_ids)),
-                           today=date.today())
+    """Review became a mode of the home page. Old links, ticks and all, land there."""
+    return redirect(url_for("dashboard.today", review=1, done=request.args.get("done") or None))
 
 
 @dashboard_bp.route("/review/<int:project_id>", methods=["POST"])
@@ -318,6 +322,6 @@ def review_decide(project_id: int):
         db.session.commit()
     done = request.form.get("done") or ""
     ids = [x for x in done.split(",") if x.isdigit()] + [str(project.id)]
-    # Anchor back to the card just decided, so a long page does not jump to
+    # Anchor back to the tile just decided, so a long page does not jump to
     # the top after every decision.
-    return redirect(url_for("dashboard.review", done=",".join(ids)) + f"#p{project.id}")
+    return redirect(url_for("dashboard.today", review=1, done=",".join(ids)) + f"#p{project.id}")
