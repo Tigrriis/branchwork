@@ -24,9 +24,5 @@
   </form>
   <footer class="ptile__foot">
     {% with counts=p.activity_strip() %}{% include "_strip.html" %}{% endwith %}
-    <form method="post" action="{{ url_for('dashboard.touch', project_id=p.id) }}" class="inline-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button class="btn btn--sm" title="{{ t('common.touched_title') }}">{{ t('common.touched') }}</button>
-    </form>
   </footer>
 </article>

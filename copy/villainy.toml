@@ -55,9 +55,6 @@ days_ago = "{n}d ago"
 pts = "{done} / {max} pts"
 nothing_here = "Nothing here."
 back_to_today = "Back to Today"
-# The button that logs work done away from the app
-touched = "Touched it"
-touched_title = "Log work done outside the app"
 pick_up = "Pick it up"
 
 [fields]
@@ -211,7 +208,6 @@ reopen = "Reopen"
 # Pop-up when a cap refuses a move. {status} is the full status, {names} the plots already in it.
 status_full = "{status} is full ({limit}): {names}. Ship or park one first, or raise its cap in plot statuses."
 phase_moved = "{name} → {phase}."
-touched = "Logged a touch on {name}."
 
 [review]
 _screen = "Today · Weekly review"

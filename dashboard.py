@@ -207,17 +207,6 @@ def set_next_action(project_id: int):
     return _back()
 
 
-@dashboard_bp.route("/plots/<int:project_id>/touch", methods=["POST"])
-@login_required
-def touch(project_id: int):
-    """Log activity that happened outside the app."""
-    project = _project(project_id)
-    project.record("touch", note=(request.form.get("note") or "").strip()[:200] or None)
-    db.session.commit()
-    flash(tx("board.touched", name=project.name), "success")
-    return _back()
-
-
 # ── Inbox ───────────────────────────────────────────────────────────────────
 
 @dashboard_bp.route("/inbox", methods=["POST"])

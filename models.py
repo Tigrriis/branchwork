@@ -90,9 +90,9 @@ STATUS_HUES = _Labels("hue", ("green", "blue", "red", "amber", "violet", "teal",
 CADENCES = _Labels("cadence", (7, 14, 30, 90, 0))
 
 # Activity event kinds. ``points`` and ``task`` come from the tree, ``touch``
-# from the "touched it" button, ``phase`` from the board, ``git`` from
+# from creating a plot, ``phase`` from a status move, ``git`` from
 # ``flask sync-git``, ``review`` from the weekly review, ``routine`` from
-# using a routine.
+# using a routine. There is no manual touch: doing the work is the touch.
 EVENT_KINDS = ("points", "task", "touch", "phase", "git", "review", "park", "routine")
 
 

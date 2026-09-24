@@ -136,3 +136,18 @@ def test_a_plot_whose_status_vanished_stays_on_the_page(client, db):
     db.session.commit()
     html = client.get("/").data.decode()
     assert f'id="p{p.id}"' in html
+
+
+def test_there_is_no_manual_touch(client, db):
+    """Ticking off a machination or using a routine is the touch; nothing
+    else claims work was done."""
+    user = make_user()
+    login(client)
+    p = make_project(user); p.phase = "building"
+    db.session.commit()
+    for url in ("/", f"/plots/{p.id}"):
+        assert "/touch" not in client.get(url).data.decode(), url
+    before = p.last_activity_at
+    assert client.post(f"/plots/{p.id}/touch").status_code in (404, 405)
+    db.session.refresh(p)
+    assert p.last_activity_at == before

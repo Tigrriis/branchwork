@@ -317,7 +317,6 @@ select.input { appearance: none; width: 100%; min-width: 0; text-overflow: ellip
 .starter:has(input:checked) { border-color: var(--accent); background: var(--card2); }
 .next-action-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 10px 14px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--line); }
 .next-action-bar .action-form { flex: 1; }
-.next-action-bar .inline-form { margin: 0; }
 code { font-family: Consolas, monospace; font-size: 12px; color: var(--fg2); }
 
 @media (max-width: 900px) {
@@ -448,7 +447,6 @@ body.is-dragging-project .lane.is-drop {
 .ptile__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; }
 .ptile__foot .inline-form { margin: 0; }
 .ptile .strip__cell, .btile .strip__cell { width: 5px; height: 10px; }
-.ptile__foot .btn { white-space: nowrap; }
 
 /* The tree in miniature: a column per scheme, a row of pips per tier. */
 .mtree {
