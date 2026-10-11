@@ -120,8 +120,13 @@ def _explorer(project: Project, note: Note | None, folder: str) -> str:
                            shelves=_shelves(project, folder))
 
 
-def _page(project: Project, note: Note | None = None, *, draft: dict | None = None):
-    folder = note.folder if note is not None else (draft or {}).get("folder", "plot")
+def _page(project: Project, note: Note | None = None, *, draft: dict | None = None,
+          folder: str | None = None):
+    if note is not None:
+        folder = note.folder
+    elif draft is not None:
+        folder = draft["folder"]
+    folder = folder or "plot"
     return render_template("notes.html", project=project, note=note, draft=draft,
                            folder=folder, shelves=_shelves(project, folder))
 
@@ -135,7 +140,17 @@ def _refuse(key: str, status: int):
 @notes_bp.route("/plots/<int:project_id>/notes")
 @login_required
 def index(project_id: int):
-    return _page(_project(project_id))
+    """No note open. ``?machination=`` or ``?scheme=`` opens that folder in
+    the explorer, which is where a tile's note count leads."""
+    project = _project(project_id)
+    place = None
+    if request.args.get("machination"):
+        place = _place(project, f"machination:{request.args['machination']}")
+    elif request.args.get("scheme"):
+        place = _place(project, f"scheme:{request.args['scheme']}")
+    if place is _NOWHERE:
+        abort(404)
+    return _page(project, draft=None, folder=_folder_of(place))
 
 
 @notes_bp.route("/plots/<int:project_id>/notes/<int:note_id>")

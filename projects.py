@@ -295,7 +295,6 @@ def _read_task_form(task: Task, project: Project, default_branch: Branch | None 
     task.tier = _int(request.form.get("tier"), task.tier or 1, 1, 50)
     task.points_max = _int(request.form.get("points_max"), 1, 1,
                            current_app.config["MAX_POINTS_PER_TASK"])
-    task.notes = (request.form.get("notes") or "").strip() or None
     task.set_points(_int(request.form.get("points_done"), task.points_done or 0, 0, task.points_max))
     return True
 

@@ -697,7 +697,12 @@
     if (unlockPanel) unlockPanel.hidden = true;
     if (lockButton) lockButton.hidden = false;
     if (filter) filter.disabled = false;
-    return openTitles().then(function () {
+    // Text still in the clear becomes notes first; the page that follows
+    // shows them where they landed.
+    return Vault.absorb().then(function (made) {
+      if (made) { window.location.reload(); return new Promise(function () {}); }
+      return openTitles();
+    }).then(function () {
       pane.hidden = false;
       if (!state || !titleEl) return;
       if (state.id === null) return startEditor(draftTitle(), "");

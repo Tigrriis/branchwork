@@ -207,3 +207,70 @@ def test_limits(app, client, db):
     app.config["MAX_NOTES_PER_PROJECT"] = 1
     res = _create(client, project, title="Another", body="", folder="plot")
     assert res.status_code == 409 and copy_in(res.get_json()["message"], "notes.limit")
+
+
+def _note_on(db, task, title="Note"):
+    note = Note(project=task.branch.project, title=sealed(title), body=sealed("words"))
+    db.session.add(note)
+    note.file_under(task)
+    db.session.commit()
+    return note
+
+
+def test_a_tile_counts_its_notes(client, db):
+    user = make_user_with_vault()
+    login(client)
+    project = make_project(user)
+    branch = make_branch(project)
+    bare, one, two, waiting = (make_task(branch, name) for name in ("Bare", "One", "Two", "Waiting"))
+    only = _note_on(db, one)
+    _note_on(db, two), _note_on(db, two)
+    waiting.notes = "From the old notes box"
+    db.session.commit()
+
+    html = client.get(f"/plots/{project.id}").data.decode()
+    assert html.count('class="tile__notes"') == 3
+    # One note opens it; more, or text still to become a note, open the folder.
+    assert f'href="/plots/{project.id}/notes/{only.id}"' in html
+    assert f'href="/plots/{project.id}/notes?machination={two.id}"' in html
+    assert f'href="/plots/{project.id}/notes?machination={waiting.id}"' in html
+    assert copy_in(html, "tree.notes_count", n=2)
+    # The old text is not shown on the tree, not even in a tooltip.
+    assert "From the old notes box" not in html
+
+
+def test_the_notes_page_opens_on_a_machinations_folder(client, db):
+    user = make_user_with_vault()
+    login(client)
+    project = make_project(user)
+    task = make_task(make_branch(project), "Brief")
+    html = client.get(f"/plots/{project.id}/notes?machination={task.id}").data.decode()
+    assert f'data-folder="machination:{task.id}" open' in html
+    elsewhere = make_task(make_branch(make_project(user)), "Far away")
+    assert client.get(f"/plots/{project.id}/notes?machination={elsewhere.id}").status_code == 404
+
+
+def test_the_machination_form_lists_its_notes_in_place_of_the_box(client, db):
+    user = make_user_with_vault()
+    login(client)
+    project = make_project(user)
+    task = make_task(make_branch(project), "Brief")
+    note = _note_on(db, task)
+    task.notes = "Old words"
+    db.session.commit()
+
+    html = client.get(f"/machinations/{task.id}/edit").data.decode()
+    assert 'name="notes"' not in html
+    assert note.title in html and f"/plots/{project.id}/notes/{note.id}" in html
+    assert f"/plots/{project.id}/notes/new?machination={task.id}" in html
+    assert copy_in(html, "machination.notes_waiting") and "tasknotes.js" in html
+
+    # Saving the form leaves the waiting text alone for the browser to seal.
+    client.post(f"/machinations/{task.id}/edit", data={
+        "title": "Brief", "branch_id": task.branch_id, "tier": 1, "points_max": 1, "points_done": 0})
+    db.session.expire_all()
+    assert db.session.get(type(task), task.id).notes == "Old words"
+
+    # A new machination has nowhere to file a note yet.
+    html = client.get(f"/schemes/{task.branch_id}/machinations/new").data.decode()
+    assert copy_in(html, "machination.notes_after_save")

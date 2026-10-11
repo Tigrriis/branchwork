@@ -146,3 +146,44 @@ def test_the_account_page(client, db):
     make_vault(user)
     html = client.get("/account").data.decode()
     assert "data-vault-rekey" in html and copy_in(html, "vault.reset_submit")
+
+
+def test_text_in_the_clear_becomes_a_sealed_note(client, db):
+    import hashlib
+    from models import Task
+    user = make_user()
+    login(client)
+    project = make_project(user)
+    branch = make_branch(project)
+    brief, dig = make_task(branch, "Brief"), make_task(branch, "Dig")
+    brief.notes, dig.notes = "Ask about the lifts", "Call the council"
+    other = make_task(make_branch(make_project(make_user("other@example.com"))), "Theirs")
+    other.notes = "Not yours"
+    db.session.commit()
+
+    # Only an account with a vault can seal anything.
+    assert client.get("/notes/vault/pending").status_code == 409
+    make_vault(user)
+    waiting = client.get("/notes/vault/pending").get_json()["pending"]
+    assert {(w["task_id"], w["title"], w["text"]) for w in waiting} == {
+        (brief.id, "Brief", "Ask about the lifts"), (dig.id, "Dig", "Call the council")}
+
+    def item(task, text, **extra):
+        return {"task_id": task.id, "title": sealed(task.title), "body": sealed(text),
+                "digest": hashlib.sha256(text.encode()).hexdigest(), **extra}
+
+    # Unsealed is refused outright.
+    res = client.post("/notes/vault/pending", json={"notes": [item(brief, "Ask about the lifts", body="plain")]})
+    assert res.status_code == 400
+    # Text that changed since it was sealed is left for next time; someone
+    # else's machination is not this account's to touch.
+    res = client.post("/notes/vault/pending", json={"notes": [
+        item(brief, "Ask about the lifts"), item(dig, "Call the council, again"),
+        item(other, "Not yours")]})
+    assert res.get_json()["created"] == 1
+    db.session.expire_all()
+    assert db.session.get(Task, brief.id).notes is None
+    assert db.session.get(Task, dig.id).notes == "Call the council"
+    assert db.session.get(Task, other.id).notes == "Not yours"
+    note = Note.query.one()
+    assert note.folder == f"machination:{brief.id}" and note.body.startswith("v1.")

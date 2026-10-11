@@ -47,12 +47,21 @@
       {% endif %}
       <div class="tier__row" data-branch="{{ branch.id }}" data-tier="{{ row.tier }}">
         {% for task in row.tasks %}
-        <div class="tile tile--{{ task.state }} {% if row.open %}tile--live{% endif %}" data-task="{{ task.id }}" title="{{ task.title }}{% if task.notes %} — {{ task.notes }}{% endif %}">
+        <div class="tile tile--{{ task.state }} {% if row.open %}tile--live{% endif %}" data-task="{{ task.id }}" title="{{ task.title }}">
           <button type="button" class="tile__box" {% if not row.open %}disabled{% endif %} aria-label="{{ t('tree.tile_aria', title=task.title, done=task.points_done, max=task.points_max) }}">
             {{ icon(task.icon, 32) }}
           </button>
           <span class="tile__plate">{{ task.points_done }}/{{ task.points_max }}</span>
           <a class="tile__label" href="{{ url_for('projects.edit_task', task_id=task.id) }}">{{ task.title }}</a>
+          {% set note_count = task.note_count %}
+          {% if note_count %}
+          {# One note opens it; more open the machination's folder. #}
+          <a class="tile__notes" href="{{ url_for('notes.show', project_id=project.id, note_id=task.filed_notes[0].id) if note_count == 1 and task.filed_notes else url_for('notes.index', project_id=project.id, machination=task.id) }}"
+             title="{{ t('tree.notes_count', n=note_count) }}" aria-label="{{ t('tree.notes_count', n=note_count) }}">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"></path><path d="M14 3v5h5"></path></svg>
+            {{ note_count }}
+          </a>
+          {% endif %}
           <a class="tile__note" href="{{ url_for('notes.new_note', project_id=project.id, machination=task.id) }}"
              title="{{ t('tree.note_title') }}" aria-label="{{ t('tree.note_title') }}">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l4-1L19 8l-3-3L5 16z"></path><path d="M14 7l3 3"></path></svg>

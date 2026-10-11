@@ -26,7 +26,14 @@ Notes written before the vault existed are plain text until their owner
 first opens Notes and chooses a master password: ``plain`` hands them to the
 browser once, and ``setup`` swaps them for their sealed versions in the same
 transaction that stores the key.
+
+Text can also arrive in the clear afterwards, from where the server writes
+it: a machination's ``notes`` column holds what the machination form's old
+notes box held and the rest of an idea filed onto the tree. ``pending``
+hands that to an unlocked browser, which seals each into a note in the
+machination's folder and sends it back, and the column is emptied.
 """
+import hashlib
 import re
 from datetime import datetime, timezone
 
@@ -37,7 +44,7 @@ from flask_login import current_user, login_required
 
 from copytext import tx
 from extensions import db
-from models import Note, Project
+from models import Branch, Note, Project, Task
 
 vault_bp = Blueprint("vault", __name__)
 
@@ -165,3 +172,52 @@ def reset():
     db.session.commit()
     flash(tx("vault.reset_done"), "info")
     return redirect(url_for("auth.account"))
+
+
+def _pending_tasks() -> list[Task]:
+    return (Task.query.join(Branch).join(Project)
+            .filter(Project.owner_id == current_user.id, Task.notes.isnot(None), Task.notes != "")
+            .order_by(Task.id).all())
+
+
+def _digest(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+@vault_bp.route("/notes/vault/pending")
+@login_required
+def pending():
+    """Text in the clear waiting to become notes, for an unlocked browser to
+    seal. ``title`` is the machination's, which the note takes."""
+    if not current_user.has_vault:
+        return _refuse("vault.missing", 409)
+    return jsonify({"pending": [{"task_id": t.id, "title": t.title, "text": t.notes}
+                                for t in _pending_tasks()]})
+
+
+@vault_bp.route("/notes/vault/pending", methods=["POST"])
+@login_required
+def absorb():
+    """Body: JSON ``{"notes": [{"task_id", "title", "body", "digest"}]}``,
+    each sealing one machination's waiting text, ``digest`` being the
+    SHA-256 of the text that was sealed. A machination whose text changed
+    in the meantime is left for next time, so nothing is cleared unsealed."""
+    if not current_user.has_vault:
+        return _refuse("vault.missing", 409)
+    waiting = {t.id: t for t in _pending_tasks()}
+    created = 0
+    for item in (request.get_json(silent=True) or {}).get("notes") or []:
+        if not isinstance(item, dict):
+            continue
+        task = waiting.get(item.get("task_id"))
+        if task is None or item.get("digest") != _digest(task.notes):
+            continue
+        if not sealed_title(item.get("title")) or not sealed_body(item.get("body")):
+            return _refuse("vault.not_sealed", 400)
+        note = Note(project=task.branch.project, title=item["title"], body=item["body"])
+        db.session.add(note)
+        note.file_under(task)
+        task.notes = None
+        created += 1
+    db.session.commit()
+    return jsonify({"created": created})

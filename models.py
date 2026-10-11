@@ -577,6 +577,11 @@ class Task(db.Model):
     icon = db.Column(db.String(30), nullable=False, default=DEFAULT_ICON, server_default=DEFAULT_ICON)
     points_max = db.Column(db.Integer, nullable=False, default=1, server_default="1")
     points_done = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    # Text waiting to become a note, in the clear: what the machination form's
+    # old notes box held, and the rest of an idea filed here. The server
+    # cannot seal it, so the browser does, the next time the notes are
+    # unlocked: it becomes a note in this machination's folder and this is
+    # emptied (vault.py, ``pending``). Nothing shows or edits it meanwhile.
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
     completed_at = db.Column(db.DateTime(timezone=True), nullable=True)
@@ -610,6 +615,11 @@ class Task(db.Model):
 
     def adjust(self, delta: int) -> None:
         self.set_points((self.points_done or 0) + delta)
+
+    @property
+    def note_count(self) -> int:
+        """Notes filed here, counting text still waiting to become one."""
+        return len(self.filed_notes) + (1 if (self.notes or "").strip() else 0)
 
 
 class Ultimate(db.Model):

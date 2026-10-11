@@ -49,9 +49,46 @@
         {% endfor %}
       </div>
     </div>
+    {# The machination's notes: the same encrypted notes as the Notes page,
+       filed in this machination's folder. Titles and first lines arrive
+       sealed; tasknotes.js opens them once the notes key is unlocked. #}
     <div class="field">
-      <label class="field__label" for="notes">{{ t('machination.notes') }} <span class="muted">{{ t('common.optional') }}</span></label>
-      <textarea class="input" id="notes" name="notes" rows="3">{{ task.notes or '' }}</textarea>
+      <span class="field__label">{{ t('machination.notes') }}</span>
+      {% if is_new %}
+      <p class="muted small tnotes__hint">{{ t('machination.notes_after_save') }}</p>
+      {% else %}
+      <div class="tnotes" data-task-notes>
+        {% set notes = task.filed_notes|sort(attribute='id') %}
+        {% if notes %}
+        <ul class="tnotes__list">
+          {% for n in notes %}
+          <li><a class="tnote" href="{{ url_for('notes.show', project_id=project.id, note_id=n.id) }}"
+                 data-sealed-title="{{ n.title }}" data-sealed-body="{{ n.body }}">
+            <svg class="tnote__glyph" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"></path><path d="M14 3v5h5"></path></svg>
+            <span class="tnote__text">
+              <span class="tnote__title"><span class="nx-note__sealed" aria-hidden="true"></span></span>
+              <span class="tnote__snippet"></span>
+            </span>
+          </a></li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% if task.notes and task.notes.strip() %}
+        <p class="muted small tnotes__hint">{{ t('machination.notes_waiting') }}</p>
+        {% endif %}
+        {% if current_user.has_vault and (notes or task.notes) %}
+        {# Not a form of its own: it sits inside the machination's. #}
+        <div class="tnotes__unlock" data-tnotes-unlock hidden>
+          <span class="muted small">{{ t('machination.notes_locked') }}</span>
+          <input class="input input--sm" type="password" data-tnotes-password autocomplete="current-password"
+                 aria-label="{{ t('vault.master') }}" placeholder="{{ t('vault.master') }}">
+          <button class="btn btn--sm" type="button" data-tnotes-open>{{ t('vault.unlock_submit') }}</button>
+          <span class="vault-panel__status" data-vault-status role="status"></span>
+        </div>
+        {% endif %}
+        <a class="btn btn--ghost btn--sm" href="{{ url_for('notes.new_note', project_id=project.id, machination=task.id) }}">{{ t('machination.notes_add') }}</a>
+      </div>
+      {% endif %}
     </div>
     {% if not is_new and (project.tasks|length > 1 or project.ultimates) %}
     <fieldset class="fieldset">
@@ -104,5 +141,13 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <button class="btn btn--danger" type="submit">{{ t('machination.delete') }}</button>
 </form>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if not is_new and current_user.has_vault %}
+{% include "_vault_data.html" %}
+<script src="{{ url_for('static', filename='branchwork/vault.js') }}"></script>
+<script src="{{ url_for('static', filename='branchwork/tasknotes.js') }}"></script>
 {% endif %}
 {% endblock %}

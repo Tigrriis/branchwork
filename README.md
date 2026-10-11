@@ -111,6 +111,11 @@ while reading, and a note is dragged onto a folder to move it. Delete a
 machination and its notes drop into the scheme's folder; delete the scheme
 and they drop to the root. Only deleting the plot takes them. The Notes tab
 replaces the old List tab, whose page still answers at `/plots/<id>/list`.
+A tile with notes shows how many at its top left, and the machination form
+lists its notes, each opening on the Notes page, in place of the free-text
+box it used to have. Text from that old box, and the rest of an idea filed
+onto the tree, waits in the clear until the notes are next unlocked, when
+the browser encrypts it into a note in that machination's folder.
 
 Notes are **end-to-end encrypted** under a master password, separate from
 the sign-in password, that never leaves the browser. The first visit to

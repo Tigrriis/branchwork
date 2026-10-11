@@ -39,6 +39,11 @@
     return out;
   }
   function random(n) { return window.crypto.getRandomValues(new Uint8Array(n)); }
+  function hex(buffer) {
+    return Array.prototype.map.call(new Uint8Array(buffer), function (b) {
+      return ("0" + b.toString(16)).slice(-2);
+    }).join("");
+  }
 
   // ── Primitives ────────────────────────────────────────────────────────
   function stretch(password, salt, rounds) {
@@ -196,6 +201,34 @@
     decrypt: function (sealed, field) {
       if (!key) return Promise.reject(new Error("locked"));
       return unseal(key, sealed, LABEL[field]).then(function (bytes) { return decoder.decode(bytes); });
+    },
+
+    // Text the server holds in the clear for a machination (vault.py,
+    // pending): seal each into a note in its folder and hand it back.
+    // Resolves to how many notes that made; a failure makes none and is
+    // tried again on the next unlock.
+    absorb: function () {
+      var post = window.BRANCHWORK && window.BRANCHWORK.post;
+      if (!key || !config.pending_url || !post) return Promise.resolve(0);
+      return fetch(config.pending_url, { credentials: "same-origin" })
+        .then(function (r) { return r.ok ? r.json() : { pending: [] }; })
+        .then(function (data) {
+          var items = data.pending || [];
+          if (!items.length) return 0;
+          return Promise.all(items.map(function (item) {
+            return Promise.all([
+              seal(key, encoder.encode(item.title), LABEL.title),
+              seal(key, encoder.encode(item.text), LABEL.body),
+              subtle.digest("SHA-256", encoder.encode(item.text))
+            ]).then(function (r) {
+              return { task_id: item.task_id, title: r[0], body: r[1], digest: hex(r[2]) };
+            });
+          })).then(function (notes) {
+            return post(config.pending_url, { notes: notes })
+              .then(function (res) { return res.ok ? res.body.created : 0; });
+          });
+        })
+        .catch(function () { return 0; });
     },
 
     forget: forget

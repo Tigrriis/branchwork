@@ -257,6 +257,8 @@ schemes_hint = "Schemes are the columns of the tree: Design, Approvals, Construc
 ultimate = "Ultimate"
 ultimate_aria = "{title}: the ultimate of {scheme}"
 set_ultimate = "+ Set the ultimate"
+# The count at the top left of a tile with notes, and its tooltip
+notes_count = "{n} note(s)"
 # The pencil at the top of a tile, beside the thread handle
 note_title = "Write a note on this machination"
 
@@ -488,6 +490,10 @@ points_hint = "(1 = a plain checkbox)"
 points_done = "Points done"
 icon = "Icon"
 notes = "Notes"
+notes_add = "+ Add a note"
+notes_after_save = "Save the machination first, then add notes to it."
+notes_waiting = "The text that used to be here becomes an encrypted note when you next unlock your notes."
+notes_locked = "Notes are locked."
 add = "Add machination"
 delete = "Delete machination"
 delete_confirm = "Delete this machination?"

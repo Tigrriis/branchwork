@@ -1068,3 +1068,31 @@ body.is-dragging-note [data-drop-folder].is-drop { background: color-mix(in srgb
 /* A title still sealed: a bar where the words will go. */
 .nx-note__sealed { display: inline-block; width: 7em; height: 0.7em; border-radius: 4px; background: var(--line2); vertical-align: middle; }
 .nx-note.is-broken { color: var(--danger); }
+
+/* A tile's note count, top left, opposite the pencil and thread handle. */
+.tile__notes {
+  position: absolute; top: -5px; left: 3px; z-index: 2;
+  display: flex; align-items: center; gap: 3px; height: 20px; padding: 0 6px;
+  border-radius: 999px; background: var(--card); border: 1px solid var(--line2);
+  color: var(--fg2); font-size: 11px; font-weight: 800; text-decoration: none;
+}
+.tile__notes:hover { color: var(--fg); border-color: var(--muted); }
+
+/* The machination form's notes. */
+.tnotes { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.tnotes__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.tnote {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;
+  border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line2);
+  color: var(--fg); text-decoration: none;
+}
+.tnote:hover { border-color: var(--muted); }
+.tnote__glyph { flex: none; margin-top: 2px; color: var(--muted); }
+.tnote__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tnote__title { font-weight: 700; }
+.tnote__snippet { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tnote__snippet:empty { display: none; }
+.tnote.is-broken .tnote__title { color: var(--danger); }
+.tnotes__hint { margin: 0; }
+.tnotes__unlock { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tnotes__unlock .input { width: 220px; }
