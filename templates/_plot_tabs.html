@@ -1,0 +1,6 @@
+{# A plot's views, in the top bar. Include with ``active`` set to the one
+   showing: 'tree', 'notes', or nothing for a page that is neither. #}
+<div class="segmented">
+  <a class="segmented__item{% if active == 'tree' %} is-active{% endif %}" href="{{ url_for('projects.tree', project_id=project.id) }}">{{ t('tree.tab_tree') }}</a>
+  <a class="segmented__item{% if active == 'notes' %} is-active{% endif %}" href="{{ url_for('notes.index', project_id=project.id) }}">{{ t('tree.tab_notes') }}</a>
+</div>

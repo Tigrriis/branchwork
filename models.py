@@ -92,8 +92,9 @@ CADENCES = _Labels("cadence", (7, 14, 30, 90, 0))
 # Activity event kinds. ``points`` and ``task`` come from the tree, ``touch``
 # from creating a plot, ``phase`` from a status move, ``git`` from
 # ``flask sync-git``, ``review`` from the weekly review, ``routine`` from
-# using a routine. There is no manual touch: doing the work is the touch.
-EVENT_KINDS = ("points", "task", "touch", "phase", "git", "review", "park", "routine")
+# using a routine, ``note`` from starting a note. There is no manual touch:
+# doing the work is the touch.
+EVENT_KINDS = ("points", "task", "touch", "phase", "git", "review", "park", "routine", "note")
 
 
 def _aware(dt: datetime | None) -> datetime | None:
@@ -202,6 +203,9 @@ class Project(db.Model):
         cascade="all, delete-orphan")
     threads = db.relationship(
         "Thread", backref="project", order_by="Thread.id",
+        cascade="all, delete-orphan")
+    notes = db.relationship(
+        "Note", backref="project", order_by="Note.id",
         cascade="all, delete-orphan")
 
     # ── Tempo ───────────────────────────────────────────────────────────────
@@ -708,6 +712,61 @@ class Thread(db.Model):
         if isinstance(target, Ultimate):
             return target.achieved
         return target.state == STATE_FULL
+
+
+class Note(db.Model):
+    """A page of writing that belongs to a plot, kept in folders the way
+    Obsidian keeps a vault.
+
+    The folders are the plot itself: its root, a folder per scheme, and
+    inside each scheme a folder per machination. Where a note sits is read
+    from ``task_id`` and ``branch_id``: a machination's note carries both, a
+    scheme's only ``branch_id``, and a note at the root neither. Keeping the
+    scheme on a machination's note is what lets it fall back a level rather
+    than vanish: delete the machination and the note lands in its scheme's
+    folder, delete the scheme and it lands at the root. A machination that
+    moves scheme takes its notes along (``projects._read_task_form``).
+
+    ``title`` and ``body`` are text the server stores and hands back but
+    never interprets: markdown is rendered in the browser, so the same
+    columns can hold ciphertext once notes are encrypted.
+    """
+    __tablename__ = "notes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False, index=True)
+    branch_id = db.Column(db.Integer, db.ForeignKey("branches.id", ondelete="SET NULL"),
+                          nullable=True, index=True)
+    task_id = db.Column(db.Integer, db.ForeignKey("tasks.id", ondelete="SET NULL"),
+                        nullable=True, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    body = db.Column(db.Text, nullable=False, default="", server_default="")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
+
+    # Not ``notes``: a machination already has a ``notes`` column of its own.
+    branch = db.relationship("Branch", backref=db.backref("filed_notes"))
+    task = db.relationship("Task", backref=db.backref("filed_notes"))
+
+    @property
+    def folder(self) -> str:
+        """The folder as the page names it: ``plot``, ``scheme:<id>`` or
+        ``machination:<id>``."""
+        if self.task_id is not None:
+            return f"machination:{self.task_id}"
+        if self.branch_id is not None:
+            return f"scheme:{self.branch_id}"
+        return "plot"
+
+    def file_under(self, place: Branch | Task | None) -> None:
+        """Move into a scheme's folder, a machination's, or the root."""
+        if isinstance(place, Task):
+            self.task, self.branch = place, place.branch
+        else:
+            self.task, self.branch = None, place
+
+    def touch(self) -> None:
+        self.updated_at = _utcnow()
 
 
 class Routine(db.Model):

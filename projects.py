@@ -284,6 +284,10 @@ def _read_task_form(task: Task, project: Project, default_branch: Branch | None 
         if task.branch is not target:
             task.branch = target
             task.position = len([t for t in target.tasks if t.tier == task.tier])
+            # Its notes go with it, so they still fall back to the right
+            # scheme if the machination is deleted later.
+            for note in task.filed_notes:
+                note.file_under(task)
     elif task.branch is None and default_branch is not None:
         task.branch = default_branch
     task.title = title

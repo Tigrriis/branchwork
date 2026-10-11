@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% set open_title = (note.title if note else (draft.title if draft else '')) %}
+{% block title %}{% if note or draft %}{{ open_title or t('notes.untitled') }} · {% endif %}{{ t('notes.title', name=project.name) }} · {{ SITE_NAME }}{% endblock %}
+{% block body_class %}body--notes{% endblock %}
+{% block main_class %}page page--wide page--notes{% endblock %}
+
+{% set kind, _sep, folder_id = folder.partition(':') %}
+{% set here_url = url_for('notes.new_note', project_id=project.id, **({kind: folder_id} if folder_id else {})) %}
+
+{% block topnav %}
+  {% with active='notes' %}{% include "_plot_tabs.html" %}{% endwith %}
+{% endblock %}
+{% block topactions %}
+  <a class="btn btn--primary btn--sm" href="{{ here_url }}">{{ t('notes.new') }}</a>
+{% endblock %}
+
+{% block content %}
+<div class="notes" id="notes">
+  <aside class="notes__side" aria-label="{{ t('notes.explorer_aria') }}">
+    <div class="notes__tools">
+      <input class="input input--xs notes__filter" type="search" data-nx-filter autocomplete="off"
+             placeholder="{{ t('notes.filter_placeholder') }}" aria-label="{{ t('notes.filter_placeholder') }}">
+      <button class="icon-btn" type="button" data-nx-empty aria-pressed="false"
+              title="{{ t('notes.hide_empty') }}" aria-label="{{ t('notes.hide_empty') }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M9 13h6"></path></svg>
+      </button>
+      <button class="icon-btn" type="button" data-nx-fold title="{{ t('notes.fold_all') }}" aria-label="{{ t('notes.fold_all') }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4l5 5 5-5"></path><path d="M7 20l5-5 5 5"></path></svg>
+      </button>
+    </div>
+    <nav class="nx" id="note-explorer">
+      {% include "_notes_explorer.html" %}
+    </nav>
+  </aside>
+
+  <section class="notes__main">
+    {% if note or draft %}
+    <div class="note-bar">
+      <label class="note-bar__where" title="{{ t('notes.folder') }}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+        <span class="visually-hidden">{{ t('notes.folder') }}</span>
+        <select class="input input--xs" data-note-folder>
+          <option value="plot" {% if folder == 'plot' %}selected{% endif %}>{{ project.name }}</option>
+          {% for branch in project.branches %}
+          <option value="scheme:{{ branch.id }}" {% if folder == 'scheme:%d'|format(branch.id) %}selected{% endif %}>{{ project.name }} › {{ branch.name }}</option>
+          {% for task in branch.tasks %}
+          <option value="machination:{{ task.id }}" {% if folder == 'machination:%d'|format(task.id) %}selected{% endif %}>{{ project.name }} › {{ branch.name }} › {{ task.title }}</option>
+          {% endfor %}
+          {% endfor %}
+        </select>
+      </label>
+      <span class="note-bar__status" data-note-status>{% if note %}{{ t('notes.status_saved') }}{% else %}{{ t('notes.status_draft') }}{% endif %}</span>
+      <div class="segmented note-bar__mode" role="group" aria-label="{{ t('notes.mode_aria') }}">
+        <button class="segmented__item" type="button" data-note-mode="edit" title="{{ t('notes.mode_hint') }}">{{ t('notes.mode_edit') }}</button>
+        <button class="segmented__item" type="button" data-note-mode="read" title="{{ t('notes.mode_hint') }}">{{ t('notes.mode_read') }}</button>
+      </div>
+      <form method="post" class="inline-form note-bar__delete" data-note-delete
+            action="{{ url_for('notes.delete', note_id=note.id) if note else '' }}"
+            data-confirm="{{ t('notes.delete_confirm') }}" {% if not note %}hidden{% endif %}>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="icon-btn" type="submit" title="{{ t('notes.delete') }}" aria-label="{{ t('notes.delete') }}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6M14 11v6"></path><path d="M6 7l1 13h10l1-13"></path><path d="M9 7V4h6v3"></path></svg>
+        </button>
+      </form>
+    </div>
+
+    <input class="note-title" type="text" data-note-name maxlength="200" autocomplete="off"
+           value="{{ open_title }}" placeholder="{{ t('notes.untitled') }}" aria-label="{{ t('notes.title_aria') }}">
+    <textarea class="note-editor" data-note-body spellcheck="true" aria-label="{{ t('notes.body_aria') }}"
+              placeholder="{{ t('notes.body_placeholder') }}">
+{{ note.body if note else '' }}</textarea>
+    <article class="note-view md" data-note-view hidden></article>
+    <p class="note-hint muted small">{{ t('notes.hint') }}</p>
+
+    {# What the script needs to save. The words of the note travel in the
+       fields above, not here. #}
+    <script type="application/json" id="note-data">{{ {
+      "id": note.id if note else none,
+      "folder": folder,
+      "create_url": url_for('notes.create', project_id=project.id),
+      "save_url": url_for('notes.save', note_id=note.id) if note else none,
+      "new_url": url_for('notes.new_note', project_id=project.id),
+      "untitled": t('notes.untitled')|string,
+    }|tojson }}</script>
+    {% else %}
+    <div class="empty notes__empty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"></path><path d="M14 3v5h5"></path><path d="M9 13h6M9 17h4"></path></svg>
+      <p>{{ t('notes.empty') }}</p>
+      <a class="btn btn--primary" href="{{ here_url }}">{{ t('notes.new') }}</a>
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='branchwork/notes.js') }}"></script>
+{% endblock %}

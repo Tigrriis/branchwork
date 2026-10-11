@@ -4,10 +4,7 @@
 {% block main_class %}page page--wide{% endblock %}
 
 {% block topnav %}
-  <div class="segmented">
-    <a class="segmented__item is-active" href="{{ url_for('projects.tree', project_id=project.id) }}">{{ t('tree.tab_tree') }}</a>
-    <a class="segmented__item" href="{{ url_for('projects.task_list', project_id=project.id) }}">{{ t('tree.tab_list') }}</a>
-  </div>
+  {% with active='tree' %}{% include "_plot_tabs.html" %}{% endwith %}
 {% endblock %}
 {% block topactions %}
   {% if project.branches %}

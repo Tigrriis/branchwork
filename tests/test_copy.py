@@ -23,7 +23,7 @@ def _read(pattern):
 def _referenced():
     templates = _read("templates/*.html")
     python = _read("*.py")
-    js = _read("static/branchwork/app.js")
+    js = _read("static/branchwork/*.js")
     keys = set(re.findall(r"\bt\('([a-z_0-9.]+)'", templates))
     keys |= set(re.findall(r'\btx\("([a-z_0-9.]+)"', python))
     # A key also travels as a plain string when it is handed around before

@@ -5,7 +5,8 @@ Villainy: plan large, multi-stranded plots as a skill tree.
   /board                 every project by status: columns and shelves
   /review                the weekly review: keep / advance / park / drop
   /plots/<id>            the tree (branches as columns, tasks in tiers)
-  /plots/<id>/list       the same tasks as a table
+  /plots/<id>/notes      the plot's notebook, foldered by scheme and machination
+  /plots/<id>/list       the same tasks as a table (no longer linked from the tabs)
   /login, /register, /account
 
 Module-level ``app`` rather than a factory, matching the other Arete Flask
@@ -29,6 +30,7 @@ from gitsync import gitsync_bp
 from extensions import csrf, db, login_manager, migrate
 from icons import icon_names, icon_svg
 from models import CADENCES, HUES, STATUS_HUES
+from notes import notes_bp
 from projects import projects_bp
 from routines import routines_bp
 from starters import starters_bp
@@ -56,6 +58,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     app.register_blueprint(routines_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(demo_bp)
+    app.register_blueprint(notes_bp)
     app.register_blueprint(gitsync_bp)
     app.register_blueprint(starters_bp)
     app.register_blueprint(statuses_bp)

@@ -78,6 +78,9 @@
     });
   }
 
+  // The notes page has a script of its own; these are what it borrows.
+  window.BRANCHWORK = { post: post, say: say, flash: flash };
+
   // ── Points ────────────────────────────────────────────────────────────
   if (tree) {
     var busy = false;
@@ -154,14 +157,16 @@
   }
 
   // ── Dragging ──────────────────────────────────────────────────────────
-  // Two kinds, one set of listeners: an idea onto a tier of the tree, and a
-  // project between the focus and backburner lanes.
+  // One set of listeners: an idea onto a tier of the tree, a project between
+  // the focus and backburner lanes, a thread from tile to tile, and a note
+  // onto a folder of the notes explorer.
   var drag = null;   // {kind, id, from}
 
   var KINDS = {
     idea: { handle: ".idea", zone: ".tier__row, .tier-add" },
     project: { handle: ".ptile, .btile", zone: "[data-focus-zone]" },
-    thread: { handle: ".tile__thread", zone: ".tile[data-task], .ultimate[data-ultimate]" }
+    thread: { handle: ".tile__thread", zone: ".tile[data-task], .ultimate[data-ultimate]" },
+    note: { handle: ".nx-note", zone: "[data-drop-folder]" }
   };
 
   function zoneFor(node) {
@@ -225,7 +230,7 @@
     var handle = e.target.closest(KINDS[kind].handle);
     drag = {
       kind: kind,
-      id: handle.dataset.idea || handle.dataset.project || handle.dataset.threadFrom,
+      id: handle.dataset.idea || handle.dataset.project || handle.dataset.threadFrom || handle.dataset.note,
       from: handle.closest("[data-focus-zone]")
     };
     e.dataTransfer.effectAllowed = "move";
@@ -266,6 +271,10 @@
       promoteIdea(moving.id, zone.dataset.branch, zone.dataset.tier);
     } else if (moving.kind === "thread") {
       threadTasks(moving.id, zone.dataset.task, zone.dataset.ultimate);
+    } else if (moving.kind === "note") {
+      // The notes script owns the explorer, so it does the moving.
+      document.dispatchEvent(new CustomEvent("note-drop",
+        { detail: { id: moving.id, folder: zone.dataset.dropFolder } }));
     } else if (zone !== moving.from) {        // dropping back home is a no-op
       setFocus(moving.id, zone.dataset.focusZone === "1");
     }

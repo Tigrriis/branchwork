@@ -53,6 +53,10 @@
           </button>
           <span class="tile__plate">{{ task.points_done }}/{{ task.points_max }}</span>
           <a class="tile__label" href="{{ url_for('projects.edit_task', task_id=task.id) }}">{{ task.title }}</a>
+          <a class="tile__note" href="{{ url_for('notes.new_note', project_id=project.id, machination=task.id) }}"
+             title="{{ t('tree.note_title') }}" aria-label="{{ t('tree.note_title') }}">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l4-1L19 8l-3-3L5 16z"></path><path d="M14 7l3 3"></path></svg>
+          </a>
           <button type="button" class="tile__thread" draggable="true" data-thread-from="{{ task.id }}"
                   title="{{ t('thread.drag_title') }}" aria-label="{{ t('thread.drag_title') }}">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9 15l6-6"></path><path d="M13 5l2-2a4 4 0 0 1 6 6l-2 2"></path><path d="M11 19l-2 2a4 4 0 0 1-6-6l2-2"></path></svg>

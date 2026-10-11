@@ -99,6 +99,23 @@ edited or removed. Threads can end at an ultimate, so tasks in other branches
 can lead into it: drop a tile's handle on the disc, or use "leads to" on the
 task form or "comes after" on the ultimate's.
 
+**Notes** are each plot's notebook, kept the way Obsidian keeps a vault:
+a file explorer down the left, the open note on the right, written in
+markdown and read rendered (Ctrl E switches). The folders are the plot's own
+shape: the plot is the root, each scheme a folder, each machination a folder
+inside its scheme, and a note can sit at any level. The pencil at the top of
+a tile starts a note in that machination's folder; nothing is saved until
+you type, and after that it saves as you go. `[[Title]]` links to another
+note and starts it if it is not there yet, `- [ ]` checkboxes can be ticked
+while reading, and a note is dragged onto a folder to move it. Delete a
+machination and its notes drop into the scheme's folder; delete the scheme
+and they drop to the root. Only deleting the plot takes them. The Notes tab
+replaces the old List tab, whose page still answers at `/plots/<id>/list`.
+
+Markdown is rendered in the browser and notes travel as JSON, so the server
+stores a note's words without ever reading them. That is groundwork for
+encrypting notes with a master password, stored and sent only encrypted.
+
 ## Run locally
 
 ```bash
@@ -244,3 +261,4 @@ set DATABASE_URL=postgresql://...render.com/branchwork
 * Password reset (no email sending is wired up).
 * Drag-and-drop reordering of tasks within a tier.
 * Sharing a project with other users.
+* Encrypting notes with a master password.
