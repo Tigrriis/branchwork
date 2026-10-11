@@ -1,8 +1,27 @@
-flask>=3.0
-gunicorn>=21.2
-flask-sqlalchemy>=3.1
-flask-login>=0.6
-flask-migrate>=4.0
-Flask-WTF>=1.2
-psycopg2-binary>=2.9
-python-dotenv>=1.0
+# Every version pinned, including what the direct dependencies pull in.
+# Render builds from scratch each time, so an unpinned line takes whatever
+# was released that morning: that is how SQLAlchemy 2.1 broke a deploy.
+# To upgrade, change a version here, run the tests, and commit the change.
+
+# Used directly
+Flask==3.1.3
+Flask-Login==0.6.3
+Flask-Migrate==4.1.0
+Flask-SQLAlchemy==3.1.1
+Flask-WTF==1.3.0
+gunicorn==26.2.0
+psycopg2-binary==2.9.13
+python-dotenv==1.2.4
+
+# Pulled in by the above
+alembic==1.20.0
+blinker==1.9.0
+click==8.5.0
+itsdangerous==2.2.0
+Jinja2==3.1.6
+Mako==1.4.3
+MarkupSafe==3.0.4
+SQLAlchemy==2.1.4
+typing_extensions==4.16.0
+Werkzeug==3.1.9
+WTForms==3.2.2
