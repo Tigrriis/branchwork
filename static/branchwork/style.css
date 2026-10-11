@@ -1050,3 +1050,21 @@ body.is-dragging-note [data-drop-folder].is-drop { background: color-mix(in srgb
   .notes__main { padding: 20px 0 40px; }
   .note-title { font-size: 24px; }
 }
+
+/* ── Notes vault ──────────────────────────────────────────────────────── */
+/* The master password: chosen once, then asked for whenever notes are locked. */
+.vault-panel { display: flex; flex-direction: column; gap: 14px; max-width: 440px; margin: 8vh auto 0; }
+.vault-panel h2 { font-size: 20px; }
+.vault-panel p { margin: 0; }
+.vault-panel__glyph { color: var(--accent); }
+.vault-panel__warn { padding: 10px 12px; border-radius: var(--radius-sm); border-left: 3px solid var(--part); background: color-mix(in srgb, var(--part) 10%, transparent); color: var(--fg2); font-size: 13px; }
+.vault-panel__actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.vault-panel__status { font-size: 13px; color: var(--muted); }
+.vault-panel__status.is-failed { color: var(--danger); }
+.vault-card { margin-top: 14px; display: flex; flex-direction: column; gap: 14px; }
+.vault-card .card__head { margin-bottom: 0; }
+.vault-card p { margin: 0; }
+.fieldset--danger { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+/* A title still sealed: a bar where the words will go. */
+.nx-note__sealed { display: inline-block; width: 7em; height: 0.7em; border-radius: 4px; background: var(--line2); vertical-align: middle; }
+.nx-note.is-broken { color: var(--danger); }

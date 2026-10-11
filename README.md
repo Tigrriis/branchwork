@@ -112,9 +112,21 @@ machination and its notes drop into the scheme's folder; delete the scheme
 and they drop to the root. Only deleting the plot takes them. The Notes tab
 replaces the old List tab, whose page still answers at `/plots/<id>/list`.
 
-Markdown is rendered in the browser and notes travel as JSON, so the server
-stores a note's words without ever reading them. That is groundwork for
-encrypting notes with a master password, stored and sent only encrypted.
+Notes are **end-to-end encrypted** under a master password, separate from
+the sign-in password, that never leaves the browser. The first visit to
+Notes asks for one and encrypts any notes already there. From then on every
+title and body is sealed in the browser (AES-256-GCM) before it is sent and
+is stored and returned sealed; the server refuses a note in the clear. The
+master password is stretched with PBKDF2-SHA256 (600,000 rounds) into a key
+that seals a random notes key, and the server keeps only the salt and that
+sealed key, so changing the master password (Account) re-seals one key and
+no notes. Unlocked, the notes key waits in the browser as a key that cannot
+be read back out, until 30 idle minutes, Lock, or signing out. Because the
+server cannot read notes, the browser renders, sorts and searches them.
+There is no recovering a forgotten master password: Account offers to
+delete every note so Notes can start again. What the server can still see
+is a note's folder, size and when it changed. `vault.py` and
+`static/branchwork/vault.js` hold the details.
 
 ## Run locally
 
@@ -261,4 +273,3 @@ set DATABASE_URL=postgresql://...render.com/branchwork
 * Password reset (no email sending is wired up).
 * Drag-and-drop reordering of tasks within a tier.
 * Sharing a project with other users.
-* Encrypting notes with a master password.

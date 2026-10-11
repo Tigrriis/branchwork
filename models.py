@@ -113,6 +113,16 @@ class User(UserMixin, db.Model):
     display_name = db.Column(db.String(80), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
 
+    # The notes vault. Notes are encrypted in the browser with a key the
+    # server never sees: a random notes key, itself encrypted with a key
+    # stretched from the master password. Stored here are only the pieces
+    # needed to redo that in a browser: the salt and rounds for the stretch
+    # and the encrypted notes key. Unset until a master password is chosen.
+    vault_salt = db.Column(db.String(64), nullable=True)
+    vault_rounds = db.Column(db.Integer, nullable=True)
+    vault_key = db.Column(db.String(200), nullable=True)
+    vault_set_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
     projects = db.relationship(
         "Project", backref="owner", order_by="Project.created_at",
         cascade="all, delete-orphan")
@@ -150,6 +160,17 @@ class User(UserMixin, db.Model):
     @property
     def public_name(self) -> str:
         return self.display_name or self.email.split("@", 1)[0]
+
+    @property
+    def has_vault(self) -> bool:
+        return self.vault_key is not None
+
+    @property
+    def vault(self) -> dict | None:
+        """What a browser needs to unlock the notes key, or None."""
+        if not self.has_vault:
+            return None
+        return {"salt": self.vault_salt, "rounds": self.vault_rounds, "key": self.vault_key}
 
 
 @login_manager.user_loader
@@ -727,9 +748,10 @@ class Note(db.Model):
     folder, delete the scheme and it lands at the root. A machination that
     moves scheme takes its notes along (``projects._read_task_form``).
 
-    ``title`` and ``body`` are text the server stores and hands back but
-    never interprets: markdown is rendered in the browser, so the same
-    columns can hold ciphertext once notes are encrypted.
+    ``title`` and ``body`` are ciphertext, sealed in the browser with the
+    owner's notes key (see ``User.vault_key`` and ``vault.py``). The server
+    stores and returns them and can do nothing else with them: it cannot
+    read, search or sort notes, which is why the page does all three.
     """
     __tablename__ = "notes"
 
@@ -739,7 +761,7 @@ class Note(db.Model):
                           nullable=True, index=True)
     task_id = db.Column(db.Integer, db.ForeignKey("tasks.id", ondelete="SET NULL"),
                         nullable=True, index=True)
-    title = db.Column(db.String(200), nullable=False)
+    title = db.Column(db.Text, nullable=False)
     body = db.Column(db.Text, nullable=False, default="", server_default="")
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
     updated_at = db.Column(db.DateTime(timezone=True), default=_utcnow)

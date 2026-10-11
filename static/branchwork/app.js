@@ -81,6 +81,12 @@
   // The notes page has a script of its own; these are what it borrows.
   window.BRANCHWORK = { post: post, say: say, flash: flash };
 
+  // Signed out, an unlocked notes key has no business staying in the
+  // browser (vault.js keeps it in IndexedDB between pages).
+  if (!document.body.classList.contains("has-rail") && window.indexedDB) {
+    try { indexedDB.deleteDatabase("villainy-vault"); } catch (e) { /* nothing kept */ }
+  }
+
   // ── Points ────────────────────────────────────────────────────────────
   if (tree) {
     var busy = false;

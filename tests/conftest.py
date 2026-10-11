@@ -2,6 +2,7 @@
 
 CSRF is disabled for tests so form posts don't have to scrape a token.
 """
+import base64
 import os
 import sys
 
@@ -96,6 +97,24 @@ def make_task(branch: Branch, title="Task", tier=1, points_max=1, points_done=0)
     _db.session.add(task)
     _db.session.commit()
     return task
+
+
+def sealed(text: str) -> str:
+    """A stand-in for what the browser sends: the shape of an AES-GCM sealed
+    value (nonce, then ciphertext and tag), carrying nothing secret. The
+    server only ever checks the shape."""
+    def b64(raw):
+        return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+    return f"v1.{b64(os.urandom(12))}.{b64(text.encode() + bytes(16))}"
+
+
+def make_vault(user: User) -> User:
+    """Give an account a master password, as the browser would leave it."""
+    user.vault_salt = "c2FsdHNhbHRzYWx0c2FsdA"
+    user.vault_rounds = 600_000
+    user.vault_key = sealed("k" * 32)
+    _db.session.commit()
+    return user
 
 
 def make_ultimate(branch: Branch, title="The big one") -> Ultimate:

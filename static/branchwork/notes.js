@@ -1,10 +1,10 @@
 // Notes page script: the explorer, the editor, and a small markdown reader.
 //
 // The tree's script swaps in HTML the server rendered. Notes are the
-// exception: the server stores a note and hands it back but never reads it,
-// so the markdown is rendered here. That keeps the server out of the words,
-// which is what lets notes be encrypted in the browser later without the
-// page losing anything it does now.
+// exception, because the server cannot read them: every title and body is
+// sealed with the notes key (vault.js) before it is sent and arrives back
+// sealed. So this page decrypts, and then does what the server cannot:
+// renders the markdown, and sorts and searches the titles.
 (function () {
   "use strict";
 
@@ -253,12 +253,43 @@
   })();
 
   // ── Explorer ──────────────────────────────────────────────────────────
+  var Vault = window.Vault;
   var explorer = document.getElementById("note-explorer");
   var filter = document.querySelector("[data-nx-filter]");
   var emptyToggle = document.querySelector("[data-nx-empty]");
   var foldAll = document.querySelector("[data-nx-fold]");
+  var dataEl = document.getElementById("note-data");
+  var state = dataEl ? JSON.parse(dataEl.textContent) : null;
 
   function folders() { return Array.prototype.slice.call(explorer.querySelectorAll("details[data-folder]")); }
+  function rowOf(id) { return explorer && explorer.querySelector('.nx-note[data-note="' + id + '"]'); }
+
+  // Titles arrive sealed. Open them, then put each folder's notes in order,
+  // which the server cannot do for want of being able to read them.
+  function openTitles() {
+    if (!explorer) return Promise.resolve();
+    var rows = Array.prototype.slice.call(explorer.querySelectorAll(".nx-note[data-sealed-title]"));
+    return Promise.all(rows.map(function (row) {
+      return Vault.decrypt(row.dataset.sealedTitle, "title").then(function (title) {
+        row.dataset.noteTitle = title;
+        row.querySelector(".nx-note__title").textContent = title;
+      }, function () {
+        row.dataset.noteTitle = "";
+        row.classList.add("is-broken");
+        row.querySelector(".nx-note__title").textContent = say("note_unreadable");
+      }).then(function () { row.removeAttribute("data-sealed-title"); });
+    })).then(sortTitles);
+  }
+
+  function sortTitles() {
+    Array.prototype.forEach.call(explorer.querySelectorAll(".nx__items"), function (box) {
+      var rows = Array.prototype.filter.call(box.children, function (el) { return el.classList.contains("nx-note"); });
+      rows.sort(function (a, b) {
+        return (a.dataset.noteTitle || "").localeCompare(b.dataset.noteTitle || "", undefined, { sensitivity: "base", numeric: true });
+      });
+      rows.forEach(function (row) { box.appendChild(row); });
+    });
+  }
 
   // While a filter is typed, folders open to show what matches; clearing it
   // puts them back the way they were.
@@ -285,7 +316,7 @@
     explorer.classList.add("nx--filtering");
     var hits = 0;
     Array.prototype.forEach.call(notes, function (n) {
-      var hit = n.dataset.noteTitle.toLowerCase().indexOf(q) !== -1;
+      var hit = (n.dataset.noteTitle || "").toLowerCase().indexOf(q) !== -1;
       n.hidden = !hit;
       if (hit) hits++;
     });
@@ -299,7 +330,7 @@
   }
 
   function swapExplorer(html) {
-    if (!explorer) return;
+    if (!explorer) return Promise.resolve();
     var wasOpen = folders().filter(function (f) { return f.open; }).map(function (f) { return f.dataset.folder; });
     explorer.innerHTML = html;
     folders().forEach(function (f) { if (wasOpen.indexOf(f.dataset.folder) !== -1) f.open = true; });
@@ -309,7 +340,9 @@
       row.classList.toggle("is-current", open);
       if (open) row.setAttribute("aria-current", "page"); else row.removeAttribute("aria-current");
     });
-    if (filter && filter.value.trim()) { openBeforeFilter = null; applyFilter(); }
+    return openTitles().then(function () {
+      if (filter && filter.value.trim()) { openBeforeFilter = null; applyFilter(); }
+    });
   }
 
   if (explorer) {
@@ -345,8 +378,6 @@
   }
 
   // ── The open note ─────────────────────────────────────────────────────
-  var dataEl = document.getElementById("note-data");
-  var state = dataEl ? JSON.parse(dataEl.textContent) : null;
   var titleEl = document.querySelector("[data-note-name]");
   var bodyEl = document.querySelector("[data-note-body]");
   var viewEl = document.querySelector("[data-note-view]");
@@ -356,31 +387,44 @@
   var modeButtons = document.querySelectorAll("[data-note-mode]");
   var titleSuffix = document.title.indexOf(" · ") !== -1 ? document.title.slice(document.title.indexOf(" · ")) : "";
 
+  // Shared with the idle lock, which must not drop the key with a save owed.
+  var editor = { pending: function () { return false; }, flush: function () { return Promise.resolve(); } };
+
   function setStatus(key, failed) {
     if (!statusEl) return;
     statusEl.textContent = say(key);
     statusEl.classList.toggle("is-failed", !!failed);
   }
 
-  function rowOf(id) { return explorer && explorer.querySelector('.nx-note[data-note="' + id + '"]'); }
-
   // [[Title]] goes to the note of that title, the open note's folder first;
-  // a title with no note starts one there.
+  // a title with no note starts one there. The title rides in the #fragment,
+  // which the browser keeps to itself, so it never reaches the server.
   function wikiLink(target, label) {
     var title = target.split("#")[0].trim();
     var key = title.toLowerCase();
     var rows = explorer ? Array.prototype.slice.call(explorer.querySelectorAll(".nx-note")) : [];
-    var matches = rows.filter(function (r) { return r.dataset.noteTitle.toLowerCase() === key; });
+    var matches = rows.filter(function (r) { return (r.dataset.noteTitle || "").toLowerCase() === key; });
     var here = state && matches.filter(function (r) { return r.dataset.folder === state.folder; })[0];
     var hit = here || matches[0];
     if (hit) return '<a class="md-wiki" href="' + md.esc(hit.getAttribute("href")) + '">' + md.esc(label) + "</a>";
-    var url = state.new_url + "?title=" + encodeURIComponent(title);
     var place = (state.folder || "plot").split(":");
-    if (place[1]) url += "&" + place[0] + "=" + place[1];
+    var url = state.new_url + (place[1] ? "?" + place[0] + "=" + place[1] : "") +
+              "#title=" + encodeURIComponent(title);
     return '<a class="md-wiki is-missing" href="' + md.esc(url) + '">' + md.esc(label) + "</a>";
   }
 
-  if (state && titleEl && bodyEl) {
+  function draftTitle() {
+    var m = window.location.hash.match(/^#title=(.*)$/);
+    if (!m) return "";
+    try { return decodeURIComponent(m[1]).slice(0, 200); } catch (e) { return ""; }
+  }
+
+  function startEditor(title, body) {
+    titleEl.value = title;
+    bodyEl.value = body;
+    titleEl.disabled = bodyEl.disabled = false;
+    if (state.id !== null) document.title = (title || state.untitled) + titleSuffix;
+
     var dirty = { title: false, body: false, folder: false };
     var saving = null;      // the save in flight, as a promise
     var again = false;      // something changed while it was in flight
@@ -392,33 +436,36 @@
     // followed by a change of mind leaves nothing behind.
     var worthCreating = function () { return titleEl.value.trim() !== "" || bodyEl.value.trim() !== ""; };
 
-    var payload = function () {
-      var out = {};
-      if (state.id === null) {
-        out = { title: titleEl.value, body: bodyEl.value, folder: state.folder };
-      } else {
-        if (dirty.title) out.title = titleEl.value;
-        if (dirty.body) out.body = bodyEl.value;
-        if (dirty.folder) out.folder = state.folder;
+    // What to send, sealed. The fields are read before the sealing starts,
+    // so typing meanwhile goes in the next save rather than being lost.
+    var payload = function (fields) {
+      var creating = state.id === null;
+      var title = titleEl.value.trim() || state.untitled;
+      var body = bodyEl.value;
+      var out = {}, jobs = [];
+      if (creating || fields.title) {
+        jobs.push(Vault.encrypt(title, "title").then(function (s) { out.title = s; }));
       }
-      return out;
+      if (creating || fields.body) {
+        if (body.length > state.max_chars) return Promise.reject(new Error(say("note_too_long")));
+        jobs.push(Vault.encrypt(body, "body").then(function (s) { out.body = s; }));
+      }
+      if (creating || fields.folder) out.folder = state.folder;
+      return Promise.all(jobs).then(function () { return { data: out, title: title }; });
     };
 
     var send = function (url, data) {
-      var body = JSON.stringify(data);
       return fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
-        body: body,
-        credentials: "same-origin",
-        // Lets a save started just before leaving the page finish anyway.
-        keepalive: body.length < 60000
+        body: JSON.stringify(data),
+        credentials: "same-origin"
       }).then(function (r) {
         return r.json().then(function (j) { return { ok: r.ok, body: j }; });
       });
     };
 
-    var settle = function (res) {
+    var settle = function (res, title) {
       var made = state.id === null;
       state.id = res.id;
       state.save_url = res.save_url;
@@ -427,14 +474,14 @@
         if (window.history && history.replaceState) history.replaceState(null, "", res.url);
         if (deleteForm) { deleteForm.action = res.delete_url; deleteForm.hidden = false; }
       }
-      if (res.explorer) swapExplorer(res.explorer);
-      var row = rowOf(res.id);
-      if (row) {
-        row.dataset.noteTitle = res.title;
-        row.querySelector(".nx-note__title").textContent = res.title;
-      }
-      if (!titleEl.value.trim() && document.activeElement !== titleEl) titleEl.value = res.title;
-      document.title = (titleEl.value.trim() || res.title) + titleSuffix;
+      var relabel = function () {
+        var row = rowOf(res.id);
+        if (!row) return;
+        row.dataset.noteTitle = title;
+        row.querySelector(".nx-note__title").textContent = title;
+      };
+      if (res.explorer) swapExplorer(res.explorer).then(relabel); else relabel();
+      document.title = title + titleSuffix;
     };
 
     var flush = function () {
@@ -442,16 +489,17 @@
       if (saving) { again = true; return saving; }
       if (!pending()) return Promise.resolve();
       if (state.id === null && !worthCreating()) return Promise.resolve();
-      var data = payload();
       var url = state.id === null ? state.create_url : state.save_url;
-      var sent = { title: dirty.title, body: dirty.body, folder: dirty.folder };
+      var sent = dirty;
       dirty = { title: false, body: false, folder: false };
       setStatus("note_saving");
-      saving = send(url, data)
-        .then(function (res) {
-          if (!res.ok) throw new Error(res.body && res.body.message);
-          settle(res.body);
-          setStatus(pending() ? "note_unsaved" : "note_saved");
+      saving = payload(sent)
+        .then(function (made) {
+          return send(url, made.data).then(function (res) {
+            if (!res.ok) throw new Error((res.body && res.body.message) || say("note_failed"));
+            settle(res.body, made.title);
+            setStatus(pending() ? "note_unsaved" : "note_saved");
+          });
         })
         .catch(function (err) {
           // Whatever did not land is still to save.
@@ -465,9 +513,11 @@
         });
       return saving;
     };
+    editor = { pending: function () { return pending() || !!saving; }, flush: flush };
 
     var changed = function (field) {
       dirty[field] = true;
+      Vault.touch();
       setStatus("note_unsaved");
       clearTimeout(timer);
       timer = setTimeout(flush, 700);
@@ -579,44 +629,165 @@
       }
     });
 
-    // Following a link with changes unsaved saves them first. pagehide
-    // covers the ways out a click handler never sees: the back button, a
-    // closed tab.
-    document.addEventListener("click", function (e) {
-      var link = e.target.closest && e.target.closest("a[href]");
-      if (!link || e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-      if (link.target === "_blank" || (!pending() && !saving)) return;
-      e.preventDefault();
-      var go = function () { window.location.href = link.href; };
-      flush().then(go, go);
-    });
-    window.addEventListener("pagehide", function () { if (pending()) flush(); });
-
     // A new note opens for writing, and so does one with nothing in it yet;
     // otherwise it opens the way the last one was left.
     var empty = state.id === null || !bodyEl.value.trim();
     setMode(empty ? "edit" : (recall("notes-mode") || "read"));
     if (state.id === null) {
-      if (titleEl.value) { bodyEl.focus(); } else { titleEl.focus(); }
+      if (titleEl.value) bodyEl.focus(); else titleEl.focus();
     }
   }
 
+  // Following a link with changes unsaved saves them first. Closing the tab
+  // or going back cannot wait for sealing and sending, so those ask first.
+  document.addEventListener("click", function (e) {
+    var link = e.target.closest && e.target.closest("a[href]");
+    if (!link || e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    if (link.target === "_blank" || !editor.pending()) return;
+    e.preventDefault();
+    var go = function () { window.location.href = link.href; };
+    editor.flush().then(go, go);
+  });
+  window.addEventListener("beforeunload", function (e) {
+    if (!editor.pending()) return;
+    editor.flush();
+    e.preventDefault();
+    e.returnValue = "";
+  });
+
   // ── Moving ────────────────────────────────────────────────────────────
   // A note dropped on a folder in the explorer (app.js does the dragging).
+  // Where a note sits is not secret, so this sends nothing sealed.
   document.addEventListener("note-drop", function (e) {
     var id = String(e.detail.id), folder = e.detail.folder;
     var row = rowOf(id);
-    if (!row || row.dataset.folder === folder) return;
+    if (!row || row.dataset.folder === folder || !Vault.alive()) return;
     shared.post("/notes/" + id, { folder: folder }).then(function (res) {
       if (!res.ok) { flash(res.body.message || say("note_move_failed"), "error"); return; }
-      if (res.body.explorer) swapExplorer(res.body.explorer);
       if (state && String(state.id) === id) {
         state.folder = res.body.folder;
         if (folderEl) folderEl.value = res.body.folder;
       }
-      var moved = rowOf(id);
-      // Open the folder it went into so it can be seen to have landed.
-      for (var f = moved && moved.closest("details"); f; f = f.parentElement.closest("details")) f.open = true;
+      return swapExplorer(res.body.explorer).then(function () {
+        var moved = rowOf(id);
+        // Open the folder it went into so it can be seen to have landed.
+        for (var f = moved && moved.closest("details"); f; f = f.parentElement.closest("details")) f.open = true;
+      });
     }).catch(function () { flash(say("network"), "error"); });
   });
+
+  // ── The vault ─────────────────────────────────────────────────────────
+  // Nothing opens until the notes key does. With no master password yet the
+  // page asks for one first; with one, it asks for it unless an earlier
+  // page left the key unlocked.
+  var vaultData = document.getElementById("vault-data");
+  var setupPanel = document.querySelector("[data-vault-setup]");
+  var unlockPanel = document.querySelector("[data-vault-unlock]");
+  var pane = document.querySelector("[data-note-pane]");
+  var lockButton = document.querySelector("[data-vault-lock]");
+
+  function panelStatus(panel, text, bad) {
+    var el = panel.querySelector("[data-vault-status]");
+    el.textContent = text;
+    el.classList.toggle("is-failed", !!bad);
+  }
+
+  function opened() {
+    if (setupPanel) setupPanel.hidden = true;
+    if (unlockPanel) unlockPanel.hidden = true;
+    if (lockButton) lockButton.hidden = false;
+    if (filter) filter.disabled = false;
+    return openTitles().then(function () {
+      pane.hidden = false;
+      if (!state || !titleEl) return;
+      if (state.id === null) return startEditor(draftTitle(), "");
+      return Promise.all([Vault.decrypt(state.title, "title"), Vault.decrypt(state.body, "body")])
+        .then(function (both) { startEditor(both[0], both[1]); },
+              function () { flash(say("note_unreadable"), "error"); });
+    });
+  }
+
+  function lockUp() {
+    var go = function () { Vault.lock().then(function () { window.location.reload(); }); };
+    editor.flush().then(go, go);
+  }
+
+  if (vaultData && Vault && pane) {
+    Vault.configure(JSON.parse(vaultData.textContent));
+    if (filter) filter.disabled = true;
+
+    if (!Vault.supported) {
+      flash(say("vault_unsupported"), "error");
+    } else if (!Vault.exists()) {
+      setupPanel.hidden = false;
+      setupPanel.querySelector("input").focus();
+    } else {
+      Vault.restore().then(function (ok) {
+        if (ok) return opened();
+        unlockPanel.hidden = false;
+        unlockPanel.querySelector("input[type=password]").focus();
+      });
+    }
+
+    if (setupPanel) {
+      setupPanel.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var form = e.target;
+        var pw = form.elements.master.value;
+        if (pw.length < 10) return panelStatus(setupPanel, say("vault_short"), true);
+        if (pw !== form.elements.master_again.value) return panelStatus(setupPanel, say("vault_mismatch"), true);
+        form.querySelector("button").disabled = true;
+        panelStatus(setupPanel, say("vault_creating"));
+        var vaultInfo = JSON.parse(vaultData.textContent);
+        // Notes written before there was a vault are sealed here and swapped
+        // in, together with the new key, in one go.
+        fetch(vaultInfo.plain_url, { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (plain) {
+            return Vault.create(pw).then(function (made) {
+              return Promise.all((plain.notes || []).map(function (n) {
+                return Promise.all([made.seal(n.title, "title"), made.seal(n.body || "", "body")])
+                  .then(function (s) { return { id: n.id, title: s[0], body: s[1] }; });
+              })).then(function (notes) {
+                var body = { salt: made.vault.salt, rounds: made.vault.rounds, key: made.vault.key, notes: notes };
+                return shared.post(vaultInfo.setup_url, body).then(function (res) {
+                  if (!res.ok) throw new Error(res.body.message || say("vault_failed"));
+                  return made.commit();
+                });
+              });
+            });
+          })
+          .then(function () { window.location.reload(); })
+          .catch(function (err) {
+            form.querySelector("button").disabled = false;
+            panelStatus(setupPanel, (err && err.message) || say("vault_failed"), true);
+          });
+      });
+    }
+
+    if (unlockPanel) {
+      unlockPanel.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var form = e.target, button = form.querySelector("button");
+        button.disabled = true;
+        panelStatus(unlockPanel, say("vault_unlocking"));
+        Vault.unlock(form.elements.master.value)
+          .then(function () { form.reset(); return opened(); },
+                function () {
+                  panelStatus(unlockPanel, say("vault_wrong"), true);
+                  form.elements.master.select();
+                })
+          .then(function () { button.disabled = false; });
+      });
+    }
+
+    if (lockButton) lockButton.addEventListener("click", lockUp);
+
+    // The idle lock: once the key has gone unused too long, save what is
+    // owed and lock.
+    setInterval(function () { if (Vault.exists() && !pane.hidden && !Vault.alive()) lockUp(); }, 15000);
+    ["keydown", "pointerdown"].forEach(function (kind) {
+      document.addEventListener(kind, function () { Vault.touch(); }, { passive: true });
+    });
+  }
 })();

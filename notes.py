@@ -5,17 +5,20 @@ folder in it, and each machination a folder inside its scheme. A note can sit
 at any of the three levels. The page is a file explorer down the left and the
 open note on the right, written in markdown and read rendered.
 
-Unlike the tree, the page does its rendering in the browser. The server
-stores a note's title and body and hands them back, but never reads them:
-markdown is turned into HTML by ``static/branchwork/notes.js``, and notes
-travel as JSON. That is deliberate. Notes are to be encrypted with a master
-password and only ever stored and sent encrypted, and a server that has
-never needed to read a note is one that can go on working once it cannot.
+Unlike the tree, the page does its rendering in the browser, because the
+server cannot: a note's title and body are sealed in the browser with the
+owner's notes key before they are sent, and stored and returned that way
+(see ``vault.py``). Markdown is turned into HTML by
+``static/branchwork/notes.js``, which also decrypts, sorts and searches the
+titles in the explorer. Until an account has chosen a master password the
+page asks for one and saves nothing.
 
   GET  /plots/<id>/notes              the explorer, no note open
   GET  /plots/<id>/notes/<note>       a note open
   GET  /plots/<id>/notes/new          a draft, saved on the first keystroke;
-                                      ?scheme= / ?machination= say where
+                                      ?scheme= / ?machination= say where.
+                                      A title to start with rides in the
+                                      #fragment, which never reaches here.
   POST /plots/<id>/notes              create (JSON)
   POST /notes/<note>                  save a title, body or folder (JSON)
   POST /notes/<note>/delete           delete (form)
@@ -31,6 +34,7 @@ from flask_login import current_user, login_required
 from copytext import tx
 from extensions import db
 from models import Branch, Note, Project, Task
+from vault import is_sealed, sealed_body, sealed_title
 
 notes_bp = Blueprint("notes", __name__)
 
@@ -122,11 +126,6 @@ def _page(project: Project, note: Note | None = None, *, draft: dict | None = No
                            folder=folder, shelves=_shelves(project, folder))
 
 
-def _title(raw) -> str:
-    title = " ".join(str(raw or "").split())[:200]
-    return title or tx("notes.untitled")
-
-
 def _refuse(key: str, status: int):
     return jsonify({"error": key.rsplit(".", 1)[-1], "message": tx(key)}), status
 
@@ -164,8 +163,7 @@ def new_note(project_id: int):
         place = None
     if place is _NOWHERE:
         abort(404)
-    title = " ".join((request.args.get("title") or "").split())[:200]
-    return _page(project, draft={"folder": _folder_of(place), "title": title})
+    return _page(project, draft={"folder": _folder_of(place)})
 
 
 # ── Saving ──────────────────────────────────────────────────────────────────
@@ -177,20 +175,21 @@ def create(project_id: int):
     now lives and the explorer re-rendered with it in."""
     project = _project(project_id)
     payload = request.get_json(silent=True) or {}
+    if not current_user.has_vault:
+        return _refuse("vault.missing", 409)
     if len(project.notes) >= current_app.config["MAX_NOTES_PER_PROJECT"]:
         return _refuse("notes.limit", 409)
-    body = str(payload.get("body") or "")
-    if len(body) > current_app.config["MAX_NOTE_CHARS"]:
-        return _refuse("notes.too_long", 413)
+    refused = _unsealed(payload, ("title", "body"))
+    if refused:
+        return refused
     place = _place(project, payload.get("folder"))
     if place is _NOWHERE:
         return _refuse("notes.not_in_plot", 404)
-    note = Note(project=project, title=_title(payload.get("title")), body=body)
+    note = Note(project=project, title=payload["title"], body=payload["body"])
     note.file_under(place)
     db.session.add(note)
     db.session.flush()
-    # The note's words stay out of the activity log: it is the one place
-    # they would be kept in the clear once notes are encrypted.
+    # Nothing of the note in the log: the server has nothing of it to put there.
     project.record("note")
     db.session.commit()
     return jsonify(_answer(note, explorer=True))
@@ -204,13 +203,15 @@ def save(note_id: int):
     in place and a body changes nothing in it."""
     note = _note(note_id)
     payload = request.get_json(silent=True) or {}
+    if not current_user.has_vault:
+        return _refuse("vault.missing", 409)
+    refused = _unsealed(payload, [k for k in ("title", "body") if k in payload])
+    if refused:
+        return refused
     if "body" in payload:
-        body = str(payload.get("body") or "")
-        if len(body) > current_app.config["MAX_NOTE_CHARS"]:
-            return _refuse("notes.too_long", 413)
-        note.body = body
+        note.body = payload["body"]
     if "title" in payload:
-        note.title = _title(payload.get("title"))
+        note.title = payload["title"]
     moved = False
     if "folder" in payload:
         place = _place(note.project, payload.get("folder"))
@@ -223,10 +224,21 @@ def save(note_id: int):
     return jsonify(_answer(note, explorer=moved))
 
 
+def _unsealed(payload: dict, fields) -> tuple | None:
+    """A refusal if any of ``fields`` is missing, unsealed or too long. The
+    browser holds the real limits; these only bound what is stored."""
+    for field in fields:
+        value = payload.get(field)
+        if not is_sealed(value):
+            return _refuse("vault.not_sealed", 400)
+        if not (sealed_title if field == "title" else sealed_body)(value):
+            return _refuse("notes.too_long", 413)
+    return None
+
+
 def _answer(note: Note, *, explorer: bool) -> dict:
     out = {
         "id": note.id,
-        "title": note.title,
         "folder": note.folder,
         "url": url_for("notes.show", project_id=note.project_id, note_id=note.id),
         "save_url": url_for("notes.save", note_id=note.id),

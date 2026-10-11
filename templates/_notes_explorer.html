@@ -2,13 +2,15 @@
    scheme, a folder per machination inside it. Rendered with the page, and
    again when a note is created or moved. Every folder row takes a dropped
    note; a note row is dragged to move it. Folders are folded except on the
-   way to the open note. #}
+   way to the open note. Note titles are ciphertext, so the page decrypts
+   them and puts each folder's notes in order. #}
 {% macro note_row(n) -%}
 <a class="nx-note{% if note and note.id == n.id %} is-current{% endif %}" href="{{ url_for('notes.show', project_id=project.id, note_id=n.id) }}"
-   draggable="true" data-note="{{ n.id }}" data-note-title="{{ n.title }}" data-folder="{{ n.folder }}"
+   draggable="true" data-note="{{ n.id }}" data-sealed-title="{{ n.title }}" data-folder="{{ n.folder }}"
    {% if note and note.id == n.id %}aria-current="page"{% endif %}>
   <svg class="nx-note__glyph" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"></path><path d="M14 3v5h5"></path></svg>
-  <span class="nx-note__title">{{ n.title }}</span>
+  {# Sealed: the page opens it once the notes key is unlocked. #}
+  <span class="nx-note__title"><span class="nx-note__sealed" aria-hidden="true"></span></span>
 </a>
 {%- endmacro %}
 {% macro add_here(label, url) -%}

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% set open_title = (note.title if note else (draft.title if draft else '')) %}
-{% block title %}{% if note or draft %}{{ open_title or t('notes.untitled') }} · {% endif %}{{ t('notes.title', name=project.name) }} · {{ SITE_NAME }}{% endblock %}
+{# A note's title is sealed, so the tab says "Note" until the page has opened it. #}
+{% block title %}{% if note or draft %}{{ t('notes.tab_note') }} · {% endif %}{{ t('notes.title', name=project.name) }} · {{ SITE_NAME }}{% endblock %}
 {% block body_class %}body--notes{% endblock %}
 {% block main_class %}page page--wide page--notes{% endblock %}
 
@@ -27,6 +27,9 @@
       <button class="icon-btn" type="button" data-nx-fold title="{{ t('notes.fold_all') }}" aria-label="{{ t('notes.fold_all') }}">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4l5 5 5-5"></path><path d="M7 20l5-5 5 5"></path></svg>
       </button>
+      <button class="icon-btn" type="button" data-vault-lock hidden title="{{ t('vault.lock') }}" aria-label="{{ t('vault.lock') }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+      </button>
     </div>
     <nav class="nx" id="note-explorer">
       {% include "_notes_explorer.html" %}
@@ -34,6 +37,46 @@
   </aside>
 
   <section class="notes__main">
+    {# Until the notes key is unlocked, one of these two stands in for the note. #}
+    <form class="vault-panel" data-vault-setup hidden autocomplete="off">
+      <svg class="vault-panel__glyph" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+      <h2>{{ t('vault.setup_heading') }}</h2>
+      <p class="muted">{{ t('vault.setup_about') }}</p>
+      <p class="vault-panel__warn">{{ t('vault.setup_warning') }}</p>
+      <div class="field">
+        <label class="field__label" for="vault-master">{{ t('vault.master') }}</label>
+        <input class="input" type="password" id="vault-master" name="master" autocomplete="new-password" minlength="10" required>
+      </div>
+      <div class="field">
+        <label class="field__label" for="vault-master-again">{{ t('vault.master_again') }}</label>
+        <input class="input" type="password" id="vault-master-again" name="master_again" autocomplete="new-password" minlength="10" required>
+      </div>
+      <label class="check"><input type="checkbox" name="understood" required> {{ t('vault.setup_understood') }}</label>
+      <div class="vault-panel__actions">
+        <button class="btn btn--primary" type="submit">{{ t('vault.setup_submit') }}</button>
+        <span class="vault-panel__status" data-vault-status role="status"></span>
+      </div>
+    </form>
+    <form class="vault-panel" data-vault-unlock hidden autocomplete="off">
+      <svg class="vault-panel__glyph" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+      <h2>{{ t('vault.unlock_heading') }}</h2>
+      <p class="muted">{{ t('vault.unlock_about') }}</p>
+      {# A hidden username lets a password manager file the master password
+         under this account rather than guess. #}
+      <input type="text" name="username" value="{{ current_user.email }}" autocomplete="username" hidden>
+      <div class="field">
+        <label class="field__label" for="vault-unlock">{{ t('vault.master') }}</label>
+        <input class="input" type="password" id="vault-unlock" name="master" autocomplete="current-password" required>
+      </div>
+      <div class="vault-panel__actions">
+        <button class="btn btn--primary" type="submit">{{ t('vault.unlock_submit') }}</button>
+        <span class="vault-panel__status" data-vault-status role="status"></span>
+      </div>
+      {% set reset_link %}<a href="{{ url_for('auth.account') }}">{{ t('vault.forgot_link') }}</a>{% endset %}
+      <p class="muted small">{{ t('vault.forgot', link=reset_link) }}</p>
+    </form>
+
+    <div data-note-pane hidden>
     {% if note or draft %}
     <div class="note-bar">
       <label class="note-bar__where" title="{{ t('notes.folder') }}">
@@ -64,18 +107,20 @@
       </form>
     </div>
 
-    <input class="note-title" type="text" data-note-name maxlength="200" autocomplete="off"
-           value="{{ open_title }}" placeholder="{{ t('notes.untitled') }}" aria-label="{{ t('notes.title_aria') }}">
-    <textarea class="note-editor" data-note-body spellcheck="true" aria-label="{{ t('notes.body_aria') }}"
-              placeholder="{{ t('notes.body_placeholder') }}">
-{{ note.body if note else '' }}</textarea>
+    <input class="note-title" type="text" data-note-name maxlength="200" autocomplete="off" disabled
+           placeholder="{{ t('notes.untitled') }}" aria-label="{{ t('notes.title_aria') }}">
+    <textarea class="note-editor" data-note-body spellcheck="true" disabled aria-label="{{ t('notes.body_aria') }}"
+              placeholder="{{ t('notes.body_placeholder') }}"></textarea>
     <article class="note-view md" data-note-view hidden></article>
     <p class="note-hint muted small">{{ t('notes.hint') }}</p>
 
-    {# What the script needs to save. The words of the note travel in the
-       fields above, not here. #}
+    {# What the script needs to open and save the note. Its title and body
+       are here sealed; the page opens them into the fields above. #}
     <script type="application/json" id="note-data">{{ {
       "id": note.id if note else none,
+      "title": note.title if note else none,
+      "body": note.body if note else none,
+      "max_chars": config.MAX_NOTE_CHARS,
       "folder": folder,
       "create_url": url_for('notes.create', project_id=project.id),
       "save_url": url_for('notes.save', note_id=note.id) if note else none,
@@ -89,10 +134,13 @@
       <a class="btn btn--primary" href="{{ here_url }}">{{ t('notes.new') }}</a>
     </div>
     {% endif %}
+    </div>
   </section>
 </div>
 {% endblock %}
 
 {% block scripts %}
+{% include "_vault_data.html" %}
+<script src="{{ url_for('static', filename='branchwork/vault.js') }}"></script>
 <script src="{{ url_for('static', filename='branchwork/notes.js') }}"></script>
 {% endblock %}

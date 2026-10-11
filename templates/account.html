@@ -27,6 +27,50 @@
     </div>
   </form>
 </div>
+<div class="card vault-card" id="notes-vault">
+  <div class="card__head"><h2>{{ t('vault.account_heading') }}</h2></div>
+  {% if current_user.has_vault %}
+  <p class="muted">{{ t('vault.account_set') }}</p>
+  {# Handled by vault.js: the old password unseals the notes key in the
+     browser and the new one seals it again. Neither is ever sent. #}
+  <form class="form" method="post" action="{{ url_for('vault.rekey') }}" data-vault-rekey autocomplete="off">
+    <fieldset class="fieldset">
+      <legend>{{ t('vault.change_legend') }}</legend>
+      <input type="text" name="username" value="{{ current_user.email }}" autocomplete="username" hidden>
+      <div class="field">
+        <label class="field__label" for="old_master">{{ t('vault.old_master') }}</label>
+        <input class="input" type="password" id="old_master" name="old_master" autocomplete="current-password" required>
+      </div>
+      <div class="field">
+        <label class="field__label" for="new_master">{{ t('vault.new_master') }}</label>
+        <input class="input" type="password" id="new_master" name="new_master" autocomplete="new-password" minlength="10" required>
+      </div>
+      <div class="field">
+        <label class="field__label" for="new_master_again">{{ t('vault.new_master_again') }}</label>
+        <input class="input" type="password" id="new_master_again" name="new_master_again" autocomplete="new-password" minlength="10" required>
+      </div>
+      <div class="vault-panel__actions">
+        <button class="btn btn--primary btn--sm" type="submit">{{ t('vault.change_submit') }}</button>
+        <span class="vault-panel__status" data-vault-status role="status"></span>
+      </div>
+    </fieldset>
+  </form>
+  <form class="form" method="post" action="{{ url_for('vault.reset') }}" data-confirm="{{ t('vault.reset_confirm') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <fieldset class="fieldset fieldset--danger">
+      <legend>{{ t('vault.reset_legend') }}</legend>
+      <p class="muted small">{{ t('vault.reset_about') }}</p>
+      <div class="field">
+        <label class="field__label" for="reset_password">{{ t('vault.reset_password') }}</label>
+        <input class="input" type="password" id="reset_password" name="password" autocomplete="current-password" required>
+      </div>
+      <div><button class="btn btn--danger btn--sm" type="submit">{{ t('vault.reset_submit') }}</button></div>
+    </fieldset>
+  </form>
+  {% else %}
+  <p class="muted">{{ t('vault.account_none') }}</p>
+  {% endif %}
+</div>
 <div class="card settings-link">
   <div>
     <strong>{{ t('account.statuses_heading') }}</strong>
@@ -45,4 +89,11 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <button class="btn btn--ghost" type="submit">{{ t('account.sign_out') }}</button>
 </form>
+{% endblock %}
+
+{% block scripts %}
+{% if current_user.has_vault %}
+{% include "_vault_data.html" %}
+<script src="{{ url_for('static', filename='branchwork/vault.js') }}"></script>
+{% endif %}
 {% endblock %}

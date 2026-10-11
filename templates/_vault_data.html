@@ -1,0 +1,8 @@
+{# What vault.js needs to unlock the notes key: never the key itself, only
+   the salt, the rounds and the key sealed under the master password. #}
+<script type="application/json" id="vault-data">{{ {
+  "user": current_user.id,
+  "vault": current_user.vault,
+  "plain_url": url_for('vault.plain'),
+  "setup_url": url_for('vault.setup'),
+}|tojson }}</script>

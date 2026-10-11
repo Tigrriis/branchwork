@@ -1,9 +1,22 @@
-"""Notes: a notebook per plot, foldered by scheme and machination."""
-from conftest import copy_in, login, make_branch, make_project, make_task, make_user
+"""Notes: a notebook per plot, foldered by scheme and machination.
+
+Titles and bodies are sealed in the browser, so these tests send stand-ins
+in the sealed shape (``conftest.sealed``); the server never looks inside.
+"""
+from conftest import copy_in, login, make_branch, make_project, make_task, make_user, make_vault, sealed
 from models import ActivityEvent, Note
 
 
+def make_user_with_vault(*args):
+    user = make_user(*args)
+    make_vault(user)
+    return user
+
+
 def _create(client, project, **payload):
+    for field in ("title", "body"):
+        if field in payload and not payload[field].startswith("v1."):
+            payload[field] = sealed(payload[field])
     return client.post(f"/plots/{project.id}/notes", json=payload)
 
 
@@ -46,7 +59,7 @@ def test_the_explorer_mirrors_the_plot(client, db):
 
 
 def test_creating_a_note_at_each_level(client, db):
-    user = make_user()
+    user = make_user_with_vault()
     login(client)
     project = make_project(user)
     design = make_branch(project, "Design")
@@ -56,21 +69,21 @@ def test_creating_a_note_at_each_level(client, db):
     assert root["folder"] == "plot"
     scheme = _create(client, project, title="Design notes", body="", folder=f"scheme:{design.id}").get_json()
     assert scheme["folder"] == f"scheme:{design.id}"
-    res = _create(client, project, title="", body="Ask about the lifts", folder=f"machination:{brief.id}")
+    body = sealed("Ask about the lifts")
+    res = _create(client, project, title="Lifts", body=body, folder=f"machination:{brief.id}")
     assert res.status_code == 200
     made = res.get_json()
     assert made["folder"] == f"machination:{brief.id}"
-    assert copy_in(made["title"], "notes.untitled")
     assert made["url"] == f"/plots/{project.id}/notes/{made['id']}"
     # The explorer comes back with the new note in its folder.
     assert f'data-note="{made["id"]}"' in made["explorer"]
 
     note = db.session.get(Note, made["id"])
-    assert (note.task_id, note.branch_id, note.body) == (brief.id, design.id, "Ask about the lifts")
+    assert (note.task_id, note.branch_id, note.body) == (brief.id, design.id, body)
 
-    # Opened, the note's words are on the page for the editor.
+    # Opened, the sealed note is on the page for the browser to open.
     page = client.get(made["url"]).data.decode()
-    assert "Ask about the lifts" in page
+    assert body in page
     assert 'aria-current="page"' in page
 
     # Starting a note counts as work on the plot, and keeps its words out of the log.
@@ -79,30 +92,32 @@ def test_creating_a_note_at_each_level(client, db):
 
 
 def test_saving_renaming_and_moving(client, db):
-    user = make_user()
+    user = make_user_with_vault()
     login(client)
     project = make_project(user)
     design = make_branch(project, "Design")
     brief = make_task(design, "Brief")
     made = _create(client, project, title="Plan", body="one", folder="plot").get_json()
 
-    res = client.post(made["save_url"], json={"body": "two"})
+    two = sealed("two")
+    res = client.post(made["save_url"], json={"body": two})
     assert res.status_code == 200
     # Nothing moved, so no explorer to swap.
     assert "explorer" not in res.get_json()
-    assert db.session.get(Note, made["id"]).body == "two"
+    assert db.session.get(Note, made["id"]).body == two
 
-    assert client.post(made["save_url"], json={"title": "  The   plan "}).get_json()["title"] == "The plan"
+    title = sealed("The plan")
+    assert client.post(made["save_url"], json={"title": title}).status_code == 200
     moved = client.post(made["save_url"], json={"folder": f"machination:{brief.id}"}).get_json()
     assert moved["folder"] == f"machination:{brief.id}" and "explorer" in moved
     back = client.post(made["save_url"], json={"folder": "plot"}).get_json()
     assert back["folder"] == "plot"
     note = db.session.get(Note, made["id"])
-    assert (note.title, note.branch_id, note.task_id) == ("The plan", None, None)
+    assert (note.title, note.branch_id, note.task_id) == (title, None, None)
 
 
 def test_a_folder_must_belong_to_the_plot(client, db):
-    user = make_user()
+    user = make_user_with_vault()
     login(client)
     project = make_project(user)
     elsewhere = make_task(make_branch(make_project(user)), "Far away")
@@ -117,7 +132,7 @@ def test_a_folder_must_belong_to_the_plot(client, db):
 
 
 def test_notes_fall_back_a_folder_rather_than_vanish(client, db):
-    user = make_user()
+    user = make_user_with_vault()
     login(client)
     project = make_project(user)
     design, build = make_branch(project, "Design"), make_branch(project, "Build", "red")
@@ -147,20 +162,20 @@ def test_notes_fall_back_a_folder_rather_than_vanish(client, db):
 
 
 def test_notes_are_owner_only(client, db):
-    owner = make_user("owner@example.com")
+    owner = make_user_with_vault("owner@example.com")
     project = make_project(owner)
-    note = Note(project=project, title="Secret", body="the plan")
+    note = Note(project=project, title=sealed("Secret"), body=sealed("the plan"))
     db.session.add(note)
     db.session.commit()
 
-    intruder = make_user("intruder@example.com")
+    intruder = make_user_with_vault("intruder@example.com")
     login(client, "intruder@example.com")
     assert client.get(f"/plots/{project.id}/notes").status_code == 404
     assert client.get(f"/plots/{project.id}/notes/{note.id}").status_code == 404
     assert _create(client, project, title="Mine", body="", folder="plot").status_code == 404
-    assert client.post(f"/notes/{note.id}", json={"body": "gone"}).status_code == 404
+    assert client.post(f"/notes/{note.id}", json={"body": sealed("gone")}).status_code == 404
     assert client.post(f"/notes/{note.id}/delete").status_code == 404
-    assert db.session.get(Note, note.id).body == "the plan"
+    assert db.session.get(Note, note.id).body == note.body
 
     # A note only opens under its own plot's address.
     other = make_project(intruder)
@@ -168,7 +183,7 @@ def test_notes_are_owner_only(client, db):
 
 
 def test_deleting_a_note(client, db):
-    user = make_user()
+    user = make_user_with_vault()
     login(client)
     project = make_project(user)
     made = _create(client, project, title="Plan", body="", folder="plot").get_json()
@@ -178,14 +193,16 @@ def test_deleting_a_note(client, db):
 
 
 def test_limits(app, client, db):
-    user = make_user()
+    user = make_user_with_vault()
     login(client)
     project = make_project(user)
+    # The browser holds the real limit, on the words; the server can only
+    # bound the sealed text, which runs up to six times longer.
     app.config["MAX_NOTE_CHARS"] = 10
-    res = _create(client, project, title="Plan", body="x" * 11, folder="plot")
+    res = _create(client, project, title="Plan", body="x" * 100, folder="plot")
     assert res.status_code == 413 and copy_in(res.get_json()["message"], "notes.too_long")
     made = _create(client, project, title="Plan", body="x" * 10, folder="plot").get_json()
-    assert client.post(made["save_url"], json={"body": "y" * 11}).status_code == 413
+    assert client.post(made["save_url"], json={"body": sealed("y" * 100)}).status_code == 413
 
     app.config["MAX_NOTES_PER_PROJECT"] = 1
     res = _create(client, project, title="Another", body="", folder="plot")
