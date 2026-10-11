@@ -15,11 +15,16 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def _database_url() -> str:
-    """Return a SQLAlchemy URL, normalising Render's Postgres scheme."""
+    """Return a SQLAlchemy URL, normalising Render's Postgres scheme.
+
+    The driver is named outright: a bare ``postgresql://`` means psycopg2 to
+    SQLAlchemy 2.0 but psycopg 3 to 2.1, and psycopg2 is what is installed.
+    """
     url = os.environ.get(
         "DATABASE_URL", "sqlite:///" + os.path.join(BASE_DIR, "instance", "branchwork.db"))
-    if url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql://", 1)
+    for bare in ("postgres://", "postgresql://"):
+        if url.startswith(bare):
+            url = "postgresql+psycopg2://" + url[len(bare):]
     return url
 
 
