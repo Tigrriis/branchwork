@@ -18,6 +18,7 @@
 <section class="list-branch">
   <h2 class="list-branch__name list-branch__name--{{ branch.hue }}">{{ branch.name }} <span class="muted">{{ branch.points_done }} / {{ branch.points_max }}</span>
     {% if branch.is_locked %}<span class="pill">{{ t('list.locked') }}</span>{% endif %}</h2>
+  <div class="table-wrap">
   <table class="table">
     <thead><tr><th>{{ t('list.col_tier') }}</th><th>{{ t('list.col_machination') }}</th><th>{{ t('list.col_points') }}</th><th>{{ t('list.col_state') }}</th><th></th></tr></thead>
     <tbody>
@@ -33,6 +34,7 @@
       {% if not branch.tasks %}<tr><td colspan="5" class="muted">{{ t('list.no_machinations') }}</td></tr>{% endif %}
     </tbody>
   </table>
+  </div>
 </section>
 {% else %}
 <div class="empty"><p>{{ t('list.no_schemes') }}</p><a class="btn btn--primary" href="{{ url_for('projects.new_branch', project_id=project.id) }}">{{ t('tree.add_scheme') }}</a></div>

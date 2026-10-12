@@ -91,7 +91,43 @@
   if (tree) {
     var busy = false;
 
+    // Touch has no shift-click, and iOS no right-click, so pressing and
+    // holding takes a point away (or a claim back). Android raises its own
+    // contextmenu for the same hold; whichever comes first does it, and the
+    // click that ends the hold adds nothing.
+    var hold = null, held = 0;
+    var holdTarget = function (e) {
+      var target = e.target.closest(".tile__box, .ultimate__box");
+      return target && !target.disabled && !target.classList.contains("tile__box--add") ? target : null;
+    };
+    var takeBack = function (target) {
+      held = Date.now();
+      if (target.classList.contains("ultimate__box")) {
+        claimUltimate(target.closest(".ultimate"), false);
+        return;
+      }
+      var tile = target.closest(".tile");
+      if (tile && tile.dataset.task) movePoints(tile, -1);
+    };
+    var letGo = function () { clearTimeout(hold); hold = null; };
+    tree.addEventListener("pointerdown", function (e) {
+      if (e.pointerType !== "touch") return;
+      var target = holdTarget(e);
+      if (!target) return;
+      letGo();
+      hold = setTimeout(function () {
+        hold = null;
+        if (navigator.vibrate) navigator.vibrate(12);
+        takeBack(target);
+      }, 500);
+    });
+    // A scroll starting under the finger cancels the pointer, and the hold.
+    ["pointerup", "pointercancel", "pointerleave"].forEach(function (kind) {
+      tree.addEventListener(kind, letGo);
+    });
+
     tree.addEventListener("click", function (e) {
+      if (Date.now() - held < 800) { e.preventDefault(); return; }
       var disc = e.target.closest(".ultimate__box");
       if (disc) {
         if (disc.disabled) return;
@@ -108,6 +144,12 @@
     });
 
     tree.addEventListener("contextmenu", function (e) {
+      if (Date.now() - held < 800) { e.preventDefault(); return; }
+      if (hold !== null) {
+        var target = holdTarget(e);
+        letGo();
+        if (target) { e.preventDefault(); takeBack(target); return; }
+      }
       var disc = e.target.closest(".ultimate__box");
       if (disc) {
         if (disc.disabled) return;

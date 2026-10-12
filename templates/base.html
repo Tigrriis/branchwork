@@ -27,7 +27,7 @@
       <a class="brand" href="{{ url_for('dashboard.today') }}">
         <img class="brand__mark" src="{{ url_for('static', filename='branchwork/img/logo.svg') }}"
              width="22" height="22" alt="">
-        {{ SITE_NAME }}
+        <span class="brand__name">{{ SITE_NAME }}</span>
       </a>
       {% block topnav %}{% endblock %}
     </div>

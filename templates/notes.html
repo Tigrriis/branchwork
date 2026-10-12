@@ -16,7 +16,13 @@
 
 {% block content %}
 <div class="notes" id="notes">
-  <aside class="notes__side" aria-label="{{ t('notes.explorer_aria') }}">
+  {# On a phone the explorer folds away above the note; this bar opens it. #}
+  <aside class="notes__side{% if note or draft %} is-folded{% endif %}" aria-label="{{ t('notes.explorer_aria') }}">
+    <button class="notes__fold" type="button" data-nx-toggle aria-expanded="{{ 'false' if note or draft else 'true' }}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+      <span>{{ t('notes.files', n=shelves.count) }}</span>
+      <svg class="notes__fold-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+    </button>
     <div class="notes__tools">
       <input class="input input--xs notes__filter" type="search" data-nx-filter autocomplete="off"
              placeholder="{{ t('notes.filter_placeholder') }}" aria-label="{{ t('notes.filter_placeholder') }}">
@@ -107,8 +113,10 @@
       </form>
     </div>
 
-    <input class="note-title" type="text" data-note-name maxlength="200" autocomplete="off" disabled
-           placeholder="{{ t('notes.untitled') }}" aria-label="{{ t('notes.title_aria') }}">
+    {# A one-line textarea rather than an input, so a long title wraps on a
+       narrow screen instead of running off it. Enter still moves on. #}
+    <textarea class="note-title" data-note-name maxlength="200" rows="1" autocomplete="off" disabled
+              spellcheck="true" placeholder="{{ t('notes.untitled') }}" aria-label="{{ t('notes.title_aria') }}"></textarea>
     <textarea class="note-editor" data-note-body spellcheck="true" disabled aria-label="{{ t('notes.body_aria') }}"
               placeholder="{{ t('notes.body_placeholder') }}"></textarea>
     <article class="note-view md" data-note-view hidden></article>

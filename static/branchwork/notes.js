@@ -373,6 +373,16 @@
     if (foldAll) {
       foldAll.addEventListener("click", function () { folders().forEach(function (f) { f.open = false; }); });
     }
+    // On a phone the explorer folds away above the note (CSS decides when
+    // the bar shows); opening a note from it folds it again by loading.
+    var side = explorer.closest(".notes__side");
+    var fold = document.querySelector("[data-nx-toggle]");
+    if (side && fold) {
+      fold.addEventListener("click", function () {
+        var folded = side.classList.toggle("is-folded");
+        fold.setAttribute("aria-expanded", folded ? "false" : "true");
+      });
+    }
     var current = explorer.querySelector(".nx-note.is-current");
     if (current && current.scrollIntoView) current.scrollIntoView({ block: "nearest" });
   }
@@ -528,8 +538,19 @@
       bodyEl.style.height = "auto";
       bodyEl.style.height = bodyEl.scrollHeight + 2 + "px";
     };
+    // The title is a textarea so it can wrap; it is still one line of text.
+    var growTitle = function () {
+      titleEl.style.height = "auto";
+      titleEl.style.height = titleEl.scrollHeight + "px";
+    };
     bodyEl.addEventListener("input", function () { grow(); changed("body"); });
-    titleEl.addEventListener("input", function () { changed("title"); });
+    titleEl.addEventListener("input", function () {
+      if (/[\r\n]/.test(titleEl.value)) titleEl.value = titleEl.value.replace(/\s*[\r\n]+\s*/g, " ");
+      growTitle();
+      changed("title");
+    });
+    window.addEventListener("resize", growTitle);
+    growTitle();
     titleEl.addEventListener("keydown", function (e) {
       if (e.key === "Enter") { e.preventDefault(); setMode("edit"); bodyEl.focus(); }
     });

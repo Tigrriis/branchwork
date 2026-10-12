@@ -991,8 +991,9 @@ body.is-dragging-note [data-drop-folder].is-drop { background: color-mix(in srgb
 .note-bar__delete .icon-btn:hover { color: var(--danger); }
 
 .note-title {
-  width: 100%; padding: 0; margin: 0 0 14px; border: none; background: transparent; color: var(--fg);
+  display: block; width: 100%; padding: 0; margin: 0 0 14px; border: none; background: transparent; color: var(--fg);
   font: inherit; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2;
+  resize: none; overflow: hidden;
 }
 .note-title:focus { outline: none; }
 .note-title::placeholder { color: var(--line2); }
@@ -1032,7 +1033,9 @@ body.is-dragging-note [data-drop-folder].is-drop { background: color-mix(in srgb
 .md img { max-width: 100%; border-radius: var(--radius-sm); }
 .md-table { overflow-x: auto; }
 .md table { border-collapse: collapse; font-size: 14px; }
-.md th, .md td { padding: 6px 12px; border: 1px solid var(--line2); text-align: left; }
+/* Whole words in a cell: a table too wide for the screen scrolls sideways
+   (.md-table) rather than splitting "Boardroom" into "Boardr / oom". */
+.md th, .md td { padding: 6px 12px; border: 1px solid var(--line2); text-align: left; overflow-wrap: normal; min-width: 4.5em; }
 .md th { background: var(--card); color: var(--fg); }
 .md-callout { padding: 10px 14px; border-radius: var(--radius-sm); border-left: 3px solid var(--link); background: color-mix(in srgb, var(--link) 9%, transparent); }
 .md-callout__title { font-weight: 800; color: var(--link); margin-bottom: 4px; }
@@ -1096,3 +1099,111 @@ body.is-dragging-note [data-drop-folder].is-drop { background: color-mix(in srgb
 .tnotes__hint { margin: 0; }
 .tnotes__unlock { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .tnotes__unlock .input { width: 220px; }
+
+/* ── Touch screens ────────────────────────────────────────────────────── */
+/* What a mouse finds by hovering has to be there already on a finger. */
+.hint--touch, .notes__fold { display: none; }
+.table-wrap { overflow-x: auto; border-radius: var(--radius); }
+/* Tapping a tile repeatedly is the whole interaction: no double-tap zoom
+   in between, and no callout or text selection on a long press. */
+.tile__box, .ultimate__box { touch-action: manipulation; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+@media (hover: none) {
+  .hint--pointer { display: none; }
+  .hint--touch { display: block; }
+  .tile__note, .tile--add, .col__tools, .nx__add { opacity: 1; }
+  /* Threads are drawn by dragging, which touch screens do not offer; the
+     machination form's "comes after" does the same job. */
+  .tile__thread { display: none; }
+  .tile__note { right: 3px; }
+}
+
+/* ── Phones ───────────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  /* The top bar: the logo without its name, and the page's main action as
+     a round "+", so tabs, action and account all fit on one line. */
+  .topbar { padding: 0 12px; gap: 8px; }
+  .topbar__left, .topbar__right { gap: 10px; min-width: 0; }
+  .brand__name { display: none; }
+  .segmented__item { padding: 5px 10px; }
+  .topbar__right .btn--primary {
+    width: 36px; height: 36px; padding: 0; border-radius: 999px;
+    font-size: 0; line-height: 0; flex: none;
+  }
+  .topbar__right .btn--primary::before { content: "+"; font-size: 22px; font-weight: 700; line-height: 1; }
+
+  /* Less gutter, so a form's fields get the width rather than its margins. */
+  .page, .page--wide { padding: 16px 14px 28px; }
+  .card { padding: 18px 16px; border-radius: var(--radius-lg); }
+  .card__head { flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 16px; }
+  .page-head { flex-direction: column; align-items: stretch; gap: 12px; }
+  .page-head__side { justify-content: flex-start; }
+  .fieldset { padding: 12px; }
+  .flashes { top: 64px; left: 12px; right: 12px; }
+
+  /* 16px and up, or iOS zooms the page in on every tap into a field. */
+  .input, .input--sm, .input--xs, textarea.input, select.input { font-size: 16px; }
+  .input--xs { height: 36px; }
+
+  /* The plot's head: the name on a line of its own, its details below. */
+  .tree-head__title { flex-wrap: wrap; row-gap: 4px; }
+  .tree-head__title h1 { flex-basis: 100%; }
+  .next-action-bar { padding: 10px 12px; }
+  .next-action-bar .field__label { display: none; }
+  /* A scheme a little narrower than the screen, so the next one peeks in
+     and says there is more to the side. */
+  .tree { gap: 12px; scroll-snap-type: x mandatory; }
+  .col { flex-basis: calc(100vw - 52px); max-width: 400px; scroll-snap-align: start; }
+  .col--add { flex-basis: 180px; }
+
+  /* The list view: tighter cells, and a sideways scroll if it still needs one. */
+  .table th, .table td { padding: 8px; }
+
+  /* Plot statuses: name on the first line, colour, kind and cap below it. */
+  .status-row {
+    grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) 64px;
+    grid-template-areas: "count name name moves" ". hue kind cap";
+    padding-bottom: 10px; border-bottom: 1px solid var(--line);
+  }
+  .status-row__count { grid-area: count; }
+  .status-row [name="status_name"] { grid-area: name; }
+  .status-row [name="status_hue"] { grid-area: hue; }
+  .status-row [name="status_kind"] { grid-area: kind; }
+  .status-row [name="status_cap"] { grid-area: cap; }
+  .status-row__moves { grid-area: moves; justify-content: flex-end; }
+
+  /* Rows that put a label beside its buttons stack them instead. */
+  .settings-link, .tmpl-row, .shelf-row { flex-wrap: wrap; }
+  .due-row { flex-direction: column; align-items: stretch; }
+  .due-row__actions { flex-wrap: wrap; }
+}
+
+/* ── Notes on a phone ─────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .notes { display: block; }
+  .notes__side {
+    position: sticky; top: 56px; z-index: 5; height: auto; max-height: 55vh;
+    margin: -16px -14px 0; padding: 10px 14px 12px;
+    border-right: none; border-bottom: 1px solid var(--line);
+  }
+  /* Folded, only the bar shows; open, the folders drop down over the note. */
+  .notes__fold {
+    display: flex; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 0 4px;
+    border: none; background: none; color: var(--fg2); font: inherit; font-weight: 700; cursor: pointer;
+  }
+  .notes__fold-chevron { margin-left: auto; transition: transform 0.15s ease; }
+  .notes__side:not(.is-folded) .notes__fold-chevron { transform: rotate(180deg); }
+  .notes__side.is-folded { padding-bottom: 2px; }
+  .notes__side.is-folded .notes__tools, .notes__side.is-folded .nx { display: none; }
+  .notes__side:not(.is-folded) .nx { max-height: calc(55vh - 110px); }
+  .notes__main { padding: 18px 0 32px; }
+  .note-bar { gap: 8px 10px; margin-bottom: 14px; }
+  .note-bar__where { flex-basis: 100%; min-width: 0; }
+  .note-bar__where select { max-width: none; flex: 1; min-width: 0; }
+  .note-bar__mode { margin-left: auto; }
+  .note-title { font-size: 24px; }
+  .note-editor { font-size: 16px; min-height: 50vh; }
+  .md { font-size: 16px; }
+  .md li.md-task { margin-left: -18px; }
+  .vault-panel { margin-top: 24px; }
+  .nx__row, .nx-note { min-height: 36px; }
+}

@@ -243,6 +243,8 @@ since_touch = "{n}d since a touch"
 # {done} and {max} are counts
 points = "{done} / {max} points"
 click_hint = "Click a tile to add a point. Shift-click (or right-click) to take one away."
+# The same, on a touch screen
+touch_hint = "Tap a tile to add a point. Press and hold to take one away."
 tile_aria = "{title}: {done} of {max} points"
 add_to_tier_title = "Add a machination to tier {tier}"
 tier = "Tier {tier}"
@@ -352,6 +354,8 @@ new = "+ New note"
 # The + on a folder in the explorer
 new_in = "New note in {folder}"
 explorer_aria = "Notes by folder"
+# The bar that opens the folders on a phone; {n} is how many notes the plot has
+files = "Files · {n}"
 filter_placeholder = "Find a note"
 filter_none = "No notes match."
 hide_empty = "Hide empty folders"
