@@ -534,15 +534,18 @@
     };
 
     // ── Editing ──
-    var grow = function () {
-      bodyEl.style.height = "auto";
-      bodyEl.style.height = bodyEl.scrollHeight + 2 + "px";
+    // Size a textarea to its text. Measuring means letting it collapse for
+    // a moment, which shortens the page, and the browser pulls the scroll up
+    // to fit; put it back, so typing near the bottom never moves the page.
+    var fit = function (el, extra) {
+      var x = window.scrollX, y = window.scrollY;
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + extra + "px";
+      if (window.scrollX !== x || window.scrollY !== y) window.scrollTo(x, y);
     };
+    var grow = function () { fit(bodyEl, 2); };
     // The title is a textarea so it can wrap; it is still one line of text.
-    var growTitle = function () {
-      titleEl.style.height = "auto";
-      titleEl.style.height = titleEl.scrollHeight + "px";
-    };
+    var growTitle = function () { fit(titleEl, 0); };
     bodyEl.addEventListener("input", function () { grow(); changed("body"); });
     titleEl.addEventListener("input", function () {
       if (/[\r\n]/.test(titleEl.value)) titleEl.value = titleEl.value.replace(/\s*[\r\n]+\s*/g, " ");
