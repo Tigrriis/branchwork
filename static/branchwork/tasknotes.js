@@ -14,6 +14,28 @@
   Vault.configure(JSON.parse(data.textContent));
 
   var rows = Array.prototype.slice.call(box.querySelectorAll(".tnote"));
+  var stamp = window.Intl && Intl.DateTimeFormat
+    ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }) : null;
+  Array.prototype.forEach.call(box.querySelectorAll("[data-when]"), function (el) {
+    var d = new Date(el.dataset.when);
+    if (!isNaN(d)) el.textContent = stamp ? stamp.format(d) : d.toLocaleString();
+  });
+
+  // The same order the Notes page's Sort picker was last left on.
+  function sortRows() {
+    var mode;
+    try { mode = localStorage.getItem("notes-sort") || "name"; } catch (e) { mode = "name"; }
+    var list = box.querySelector(".tnotes__list");
+    if (!list) return;
+    var title = function (row) { return row.querySelector(".tnote__title").textContent; };
+    var byName = function (a, b) { return title(a).localeCompare(title(b), undefined, { sensitivity: "base", numeric: true }); };
+    var byCreated = function (a, b) {
+      var x = a.dataset.created, y = b.dataset.created;
+      return x < y ? -1 : x > y ? 1 : byName(a, b);
+    };
+    var order = mode === "newest" ? function (a, b) { return byCreated(b, a); } : mode === "oldest" ? byCreated : byName;
+    rows.slice().sort(order).forEach(function (row) { list.appendChild(row.parentNode); });
+  }
   var unlock = box.querySelector("[data-tnotes-unlock]");
 
   // The first line with words in it, without the markdown around them.
@@ -29,9 +51,9 @@
     // Text the old notes box held becomes a note first, then the list shows it.
     return Vault.absorb().then(function (made) {
       if (made) { window.location.reload(); return; }
-      rows.forEach(function (row) {
+      return Promise.all(rows.map(function (row) {
         var title = row.querySelector(".tnote__title"), snippet = row.querySelector(".tnote__snippet");
-        Promise.all([Vault.decrypt(row.dataset.sealedTitle, "title"), Vault.decrypt(row.dataset.sealedBody, "body")])
+        return Promise.all([Vault.decrypt(row.dataset.sealedTitle, "title"), Vault.decrypt(row.dataset.sealedBody, "body")])
           .then(function (both) {
             title.textContent = both[0];
             snippet.textContent = firstLine(both[1]);
@@ -39,7 +61,7 @@
             title.textContent = say("note_unreadable");
             row.classList.add("is-broken");
           });
-      });
+      })).then(sortRows);
     });
   }
 

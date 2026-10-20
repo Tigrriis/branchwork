@@ -63,11 +63,12 @@
         <ul class="tnotes__list">
           {% for n in notes %}
           <li><a class="tnote" href="{{ url_for('notes.show', project_id=project.id, note_id=n.id) }}"
-                 data-sealed-title="{{ n.title }}" data-sealed-body="{{ n.body }}">
+                 data-sealed-title="{{ n.title }}" data-sealed-body="{{ n.body }}" data-created="{{ n.created_iso }}">
             <svg class="tnote__glyph" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"></path><path d="M14 3v5h5"></path></svg>
             <span class="tnote__text">
               <span class="tnote__title"><span class="nx-note__sealed" aria-hidden="true"></span></span>
               <span class="tnote__snippet"></span>
+              <span class="tnote__date" data-when="{{ n.created_iso }}"></span>
             </span>
           </a></li>
           {% endfor %}

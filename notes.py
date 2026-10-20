@@ -85,12 +85,13 @@ def _folder_of(place: Branch | Task | None) -> str:
 
 
 def _filed(project: Project) -> dict[str, list[Note]]:
-    """Every note of the plot by folder, each folder's notes by title."""
+    """Every note of the plot by folder, each folder's notes oldest first.
+    Titles are sealed, so sorting by name is the page's to do."""
     by_folder: dict[str, list[Note]] = {}
     for note in project.notes:
         by_folder.setdefault(note.folder, []).append(note)
     for notes in by_folder.values():
-        notes.sort(key=lambda n: (n.title.casefold(), n.id))
+        notes.sort(key=lambda n: n.id)
     return by_folder
 
 
@@ -258,6 +259,8 @@ def _answer(note: Note, *, explorer: bool) -> dict:
         "url": url_for("notes.show", project_id=note.project_id, note_id=note.id),
         "save_url": url_for("notes.save", note_id=note.id),
         "delete_url": url_for("notes.delete", note_id=note.id),
+        "created": note.created_iso,
+        "updated": note.updated_iso,
     }
     if explorer:
         # Rendered as the page would be after a reload with this note open,

@@ -281,12 +281,34 @@
     })).then(sortTitles);
   }
 
+  // Each folder's notes in the order the Sort picker says: by name, or by
+  // when they were written. Folders keep the tree's order either way.
+  var sortSelect = document.querySelector("[data-nx-sort]");
+  var SORTS = ["name", "newest", "oldest"];
+  var sortMode = SORTS.indexOf(recall("notes-sort")) !== -1 ? recall("notes-sort") : "name";
+  if (sortSelect) {
+    sortSelect.value = sortMode;
+    sortSelect.addEventListener("change", function () {
+      sortMode = sortSelect.value;
+      remember("notes-sort", sortMode === "name" ? null : sortMode);
+      sortTitles();
+    });
+  }
+
+  function byName(a, b) {
+    return (a.dataset.noteTitle || "").localeCompare(b.dataset.noteTitle || "", undefined, { sensitivity: "base", numeric: true });
+  }
+  function byCreated(a, b) {
+    var x = a.dataset.created || "", y = b.dataset.created || "";
+    return x < y ? -1 : x > y ? 1 : byName(a, b);
+  }
+
   function sortTitles() {
+    var order = sortMode === "newest" ? function (a, b) { return byCreated(b, a); }
+              : sortMode === "oldest" ? byCreated : byName;
     Array.prototype.forEach.call(explorer.querySelectorAll(".nx__items"), function (box) {
       var rows = Array.prototype.filter.call(box.children, function (el) { return el.classList.contains("nx-note"); });
-      rows.sort(function (a, b) {
-        return (a.dataset.noteTitle || "").localeCompare(b.dataset.noteTitle || "", undefined, { sensitivity: "base", numeric: true });
-      });
+      rows.sort(order);
       rows.forEach(function (row) { box.appendChild(row); });
     });
   }
@@ -400,6 +422,22 @@
   // Shared with the idle lock, which must not drop the key with a save owed.
   var editor = { pending: function () { return false; }, flush: function () { return Promise.resolve(); } };
 
+  // "12 Oct 2026, 2:05 pm", in the reader's own time zone and words.
+  var stamp = window.Intl && Intl.DateTimeFormat
+    ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }) : null;
+  function when(iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? "" : (stamp ? stamp.format(d) : d.toLocaleString());
+  }
+  function showDates() {
+    var el = document.querySelector("[data-note-dates]");
+    if (!el || !state || !state.created) return;
+    var made = when(state.created), changed = state.updated ? when(state.updated) : made;
+    el.textContent = say("note_created", { when: made }) +
+      (changed && changed !== made ? " · " + say("note_edited", { when: changed }) : "");
+    el.title = state.created;
+  }
+
   function setStatus(key, failed) {
     if (!statusEl) return;
     statusEl.textContent = say(key);
@@ -433,6 +471,7 @@
     titleEl.value = title;
     bodyEl.value = body;
     titleEl.disabled = bodyEl.disabled = false;
+    showDates();
     if (state.id !== null) document.title = (title || state.untitled) + titleSuffix;
 
     var dirty = { title: false, body: false, folder: false };
@@ -480,6 +519,9 @@
       state.id = res.id;
       state.save_url = res.save_url;
       state.folder = res.folder;
+      state.created = res.created;
+      state.updated = res.updated;
+      showDates();
       if (made) {
         if (window.history && history.replaceState) history.replaceState(null, "", res.url);
         if (deleteForm) { deleteForm.action = res.delete_url; deleteForm.hidden = false; }

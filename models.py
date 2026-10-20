@@ -97,6 +97,12 @@ CADENCES = _Labels("cadence", (7, 14, 30, 90, 0))
 EVENT_KINDS = ("points", "task", "touch", "phase", "git", "review", "park", "routine", "note")
 
 
+def _iso(dt: datetime | None) -> str:
+    """UTC, to the second, with a Z: what Date.parse reads everywhere."""
+    dt = _aware(dt) or _utcnow()
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def _aware(dt: datetime | None) -> datetime | None:
     """SQLite hands naive datetimes back; treat them as UTC."""
     if dt is not None and dt.tzinfo is None:
@@ -799,6 +805,17 @@ class Note(db.Model):
 
     def touch(self) -> None:
         self.updated_at = _utcnow()
+
+    # When it was written and last changed, as ISO 8601 in UTC for the page
+    # to show in the reader's own time and to sort by. Not sealed: the server
+    # sets them, and they say nothing of what a note says.
+    @property
+    def created_iso(self) -> str:
+        return _iso(self.created_at)
+
+    @property
+    def updated_iso(self) -> str:
+        return _iso(self.updated_at or self.created_at)
 
 
 class Routine(db.Model):

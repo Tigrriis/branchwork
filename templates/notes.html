@@ -37,6 +37,14 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
       </button>
     </div>
+    <label class="notes__sortby">
+      <span>{{ t('notes.sort_label') }}</span>
+      <select class="notes__sort" data-nx-sort>
+        <option value="name">{{ t('notes.sort_name') }}</option>
+        <option value="newest">{{ t('notes.sort_newest') }}</option>
+        <option value="oldest">{{ t('notes.sort_oldest') }}</option>
+      </select>
+    </label>
     <nav class="nx" id="note-explorer">
       {% include "_notes_explorer.html" %}
     </nav>
@@ -98,6 +106,8 @@
           {% endfor %}
         </select>
       </label>
+      {# Filled in by the page, in the reader's own time and words. #}
+      <span class="note-bar__dates" data-note-dates></span>
       <span class="note-bar__status" data-note-status>{% if note %}{{ t('notes.status_saved') }}{% else %}{{ t('notes.status_draft') }}{% endif %}</span>
       <div class="segmented note-bar__mode" role="group" aria-label="{{ t('notes.mode_aria') }}">
         <button class="segmented__item" type="button" data-note-mode="edit" title="{{ t('notes.mode_hint') }}">{{ t('notes.mode_edit') }}</button>
@@ -128,6 +138,8 @@
       "id": note.id if note else none,
       "title": note.title if note else none,
       "body": note.body if note else none,
+      "created": note.created_iso if note else none,
+      "updated": note.updated_iso if note else none,
       "max_chars": config.MAX_NOTE_CHARS,
       "folder": folder,
       "create_url": url_for('notes.create', project_id=project.id),

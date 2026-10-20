@@ -274,3 +274,29 @@ def test_the_machination_form_lists_its_notes_in_place_of_the_box(client, db):
     # A new machination has nowhere to file a note yet.
     html = client.get(f"/schemes/{task.branch_id}/machinations/new").data.decode()
     assert copy_in(html, "machination.notes_after_save")
+
+
+def test_notes_carry_when_they_were_written(client, db):
+    from datetime import datetime, timezone
+    user = make_user_with_vault()
+    login(client)
+    project = make_project(user)
+    task = make_task(make_branch(project), "Brief")
+    made = _create(client, project, title="Plan", body="one", folder=f"machination:{task.id}").get_json()
+    assert made["created"].endswith("Z") and made["updated"] == made["created"]
+
+    note = db.session.get(Note, made["id"])
+    note.created_at = note.updated_at = datetime(2026, 3, 4, 5, 6, 7, tzinfo=timezone.utc)
+    db.session.commit()
+    saved = client.post(made["save_url"], json={"body": sealed("two")}).get_json()
+    # Saving moves "edited", never "created".
+    assert saved["created"] == "2026-03-04T05:06:07Z" and saved["updated"] > saved["created"]
+
+    # The explorer, the open note and the machination form all have it, for
+    # the page to show in the reader's own time and to sort by.
+    page = client.get(made["url"]).data.decode()
+    assert 'data-created="2026-03-04T05:06:07Z"' in page
+    assert '"created": "2026-03-04T05:06:07Z"' in page and "data-note-dates" in page
+    assert 'data-nx-sort' in page
+    form = client.get(f"/machinations/{task.id}/edit").data.decode()
+    assert 'data-when="2026-03-04T05:06:07Z"' in form
