@@ -66,6 +66,31 @@ next_label = "Next action"
 next_placeholder = "The one concrete step that moves it forward"
 park_until_label = "If parking, until"
 
+[landing]
+_screen = "Landing page"
+_about = "What a signed-out visitor sees at the site's address: the pitch, a sign-up box, and an example plot drawn as its tree."
+# In the browser tab, after the product name
+title = "Grand plans, one tier at a time"
+heading = "Grand plans, one tier at a time."
+lede = "Split a plot into schemes and stack the machinations in tiers. Each tier fills with its scheme's colour, and the next opens once it's full."
+# The button in the top bar
+sign_in = "Sign in"
+form_heading = "Start your first plot"
+submit = "Create account"
+# {link} becomes a link whose words are have_one_link
+have_one = "Already have one? {link}"
+have_one_link = "Sign in"
+footnote = "No email step. Every plot is private to its owner, and notes are encrypted end to end."
+# The example plot beside the sign-up box. Scheme 3 waits on scheme 2.
+demo_plot = "Take over the city council"
+demo_status = "Plot · Building"
+demo_scheme_1 = "Infiltration"
+demo_scheme_2 = "Funding"
+demo_scheme_3 = "The Device"
+demo_ultimate = "A seat on the council"
+# Read out by screen readers in place of the example plot
+demo_caption = "An example plot drawn as a skill tree in three coloured columns: Infiltration nearly complete with its ultimate reached, Funding about half done, and The Device locked until Funding is complete."
+
 [login]
 _screen = "Sign in"
 _about = "The first screen a signed-out visitor sees."

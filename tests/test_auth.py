@@ -23,9 +23,11 @@ def test_login_bad_password(client):
 
 
 def test_anonymous_is_redirected_to_login(client):
-    r = client.get("/")
-    assert r.status_code == 302 and "/login" in r.headers["Location"]
+    # The home address is the landing page when signed out (test_landing.py);
+    # everything behind it still asks for a sign-in.
     r = client.get("/plots/1")
+    assert r.status_code == 302 and "/login" in r.headers["Location"]
+    r = client.get("/board")
     assert r.status_code == 302 and "/login" in r.headers["Location"]
 
 

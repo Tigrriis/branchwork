@@ -12,6 +12,12 @@ the Render services all keep their original names (`Project`, `Branch`,
 `Task`, `branchwork`), because renaming them would break deployments for no
 one's benefit. The rest of this file uses the code's names.
 
+Signed out, the home address is the **landing page**: one screen with the
+pitch, a sign-up box that posts to `/register`, and an example plot drawn
+as its tree. The example is built in `landing.py` rather than read from the
+database, but its points are real sums, so its tier fills, gates and totals
+always agree. Its words sit under `[landing]` in the copy file.
+
 Above the trees sits the portfolio layer, built for someone who starts many
 projects and forgets to move them along:
 

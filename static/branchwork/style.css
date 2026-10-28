@@ -124,6 +124,105 @@ select.input { appearance: none; width: 100%; min-width: 0; text-overflow: ellip
 .auth-card__head { display: flex; flex-direction: column; gap: 4px; }
 .auth-alt { margin: 0; color: var(--muted); font-size: 13px; }
 
+/* ── Landing: / when signed out ───────────────────────────────────────────
+   One screen on a desktop, no scroll: the pitch and sign-up box on the left,
+   an example plot's tree on the right with its columns running down to the
+   bottom edge. On a phone it stacks and scrolls like any page. */
+.landing {
+  display: flex; flex-wrap: wrap; align-items: stretch; gap: 32px 56px;
+  max-width: 1320px; min-height: calc(100vh - 56px); margin: 0 auto; padding: 28px 32px 0;
+}
+.landing__pitch { flex: 0 1 480px; min-width: 0; align-self: center; padding-bottom: 32px; }
+.landing__title {
+  font-size: clamp(36px, 3.7vw, 54px); line-height: 1.04; letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.landing__lede { margin: 18px 0 0; max-width: 440px; font-size: 17px; line-height: 1.55; color: var(--fg2); text-wrap: pretty; }
+.landing__form {
+  margin-top: 28px; padding: 26px 28px 24px; border-radius: 16px;
+  background: var(--card); border: 1px solid var(--line); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+}
+.landing__form h2 { font-size: 20px; }
+.landing__form .auth-alt { text-align: center; }
+.landing__foot { margin: 16px 0 0; font-size: 13px; color: var(--muted); text-wrap: pretty; }
+
+/* Tiles shrink a little on a laptop so three still sit in a row. */
+.ltree { --lt: clamp(50px, 4.2vw, 60px); flex: 1 1 560px; min-width: 0; min-height: 600px; margin: 0; display: flex; flex-direction: column; }
+.ltree__head {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 8px 20px; padding: 0 2px 14px;
+}
+.ltree__plot { font-size: 16px; font-weight: 800; }
+.ltree__status { margin-left: 10px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.ltree__total { display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 800; }
+.ltree__bar, .lcol__bar { display: block; height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.ltree__bar { width: 140px; }
+.ltree__bar > span, .lcol__bar > span { display: block; height: 100%; background: var(--full); }
+.ltree__cols { flex: 1 1 auto; display: flex; flex-wrap: wrap; gap: 14px; }
+
+.lcol {
+  position: relative; overflow: hidden; flex: 1 1 200px; min-width: 0; min-height: 540px;
+  display: flex; flex-direction: column;
+  background: var(--tint-bg); border: 1px solid var(--tint-edge); border-bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+/* The column's watermark, as on the real tree. */
+.lcol__mark { position: absolute; right: -14px; bottom: 96px; color: var(--tint-wm); opacity: 0.16; }
+.lcol__mark svg { display: block; }
+.ltier { position: relative; padding: 16px 12px; }
+.ltier + .ltier, .lult { border-top: 1px dashed var(--tint-edge); }
+/* A tier fills with its scheme's colour as its points reach the gate. */
+.ltier__fill { position: absolute; left: 0; right: 0; bottom: 0; background: var(--tint-wm); opacity: 0.16; }
+.ltier__note {
+  position: relative; display: flex; align-items: center; gap: 6px; margin: 0 4px 12px;
+  font-size: 12px; font-weight: 600; color: var(--tint-fg); text-wrap: balance;
+}
+.ltier__note svg { flex: none; }
+.ltier__tiles { position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.ltier.is-shut .ltier__tiles { opacity: 0.5; }
+.ltile { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.ltile__icon {
+  display: flex; align-items: center; justify-content: center; width: var(--lt); height: var(--lt);
+  border-radius: 12px; border: 2px solid var(--empty); background: var(--card2); color: var(--muted);
+}
+.ltile__pts {
+  width: var(--lt); padding: 1px 0; border-radius: 6px; border: 1px solid var(--empty);
+  color: var(--muted); font-size: 12px; font-weight: 800; text-align: center;
+}
+.ltile--full .ltile__icon { border-color: var(--full); color: var(--fg); }
+.ltile--part .ltile__icon { border-color: var(--part); color: var(--fg); }
+.ltile--full .ltile__pts { border-color: var(--full); background: var(--full); color: var(--on-accent); }
+.ltile--part .ltile__pts { border-color: var(--part); background: var(--part); color: var(--on-accent); }
+.lult { position: relative; display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 24px 12px 0; }
+.lult__disc {
+  display: flex; align-items: center; justify-content: center; width: 56px; height: 56px;
+  border-radius: 50%; border: 3px dashed var(--tint-edge); color: var(--tint-fg);
+}
+.lult.is-reached .lult__disc {
+  border: 3px solid var(--tint-wm);
+  box-shadow: 0 0 0 7px color-mix(in srgb, var(--tint-wm) 14%, transparent),
+              0 0 30px color-mix(in srgb, var(--tint-wm) 40%, transparent);
+}
+.lult__title { font-size: 12px; font-weight: 700; text-align: center; color: var(--tint-fg); }
+.lcol__foot {
+  position: relative; margin-top: auto; padding: 14px 16px 20px;
+  border-top: 1px solid var(--tint-edge); background: var(--tint-bg);
+}
+.lcol__name { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: var(--tint-fg); font-size: 13px; font-weight: 700; }
+.lcol__name strong { font-size: 18px; font-weight: 800; }
+.lcol__bar { height: 6px; margin-top: 10px; background: rgba(255, 255, 255, 0.08); }
+.lcol__bar > span { background: var(--tint-wm); }
+@media (max-width: 900px) {
+  .landing { min-height: 0; padding: 20px 16px 0; gap: 28px; }
+  .landing__pitch { flex-basis: 100%; padding-bottom: 0; }
+  .landing__form { padding: 22px 18px 20px; }
+  .ltree, .lcol { min-height: 0; }
+  .ltree { --lt: 60px; }
+  .lcol { border-bottom: 1px solid var(--tint-edge); border-radius: var(--radius-lg); }
+  .lcol__mark { display: none; }
+  .ltree { padding-bottom: 24px; }
+}
+
 /* ── Projects list ────────────────────────────────────────────────────── */
 .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
 .project-card {

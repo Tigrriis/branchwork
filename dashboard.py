@@ -18,6 +18,7 @@ from flask_login import current_user, login_required
 
 from copytext import tx
 from extensions import db
+from landing import demo_plot, glyph
 from models import CADENCES, InboxItem, Project
 from routines import next_routine, ready_routines
 
@@ -124,8 +125,9 @@ def _review_state(reviewing: bool, under_review: list[Project], done: str) -> di
 
 @dashboard_bp.route("/")
 def today():
+    # Signed out, the same address is the front door: the pitch and a sign-up box.
     if not current_user.is_authenticated:
-        return redirect(url_for("auth.login"))
+        return render_template("landing.html", demo=demo_plot(), glyph=glyph)
     return render_template("today.html", **_today_context(
         reviewing=request.args.get("review") == "1", done=request.args.get("done", "")))
 

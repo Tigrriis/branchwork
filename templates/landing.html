@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ SITE_NAME }} · {{ t('landing.title') }}{% endblock %}
+{% block main_class %}landing{% endblock %}
+
+{% block topactions %}
+  <a class="btn btn--ghost" href="{{ url_for('auth.login') }}">{{ t('landing.sign_in') }}</a>
+{% endblock %}
+
+{% block content %}
+<div class="landing__pitch">
+  <h1 class="landing__title">{{ t('landing.heading') }}</h1>
+  <p class="landing__lede">{{ t('landing.lede') }}</p>
+
+  <form class="landing__form form" method="post" action="{{ url_for('auth.register') }}" aria-labelledby="landing-form-title">
+    <h2 id="landing-form-title">{{ t('landing.form_heading') }}</h2>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label class="field__label" for="landing-email">{{ t('common.email') }}</label>
+      <input class="input" type="email" id="landing-email" name="email" required autocomplete="email">
+    </div>
+    <div class="field">
+      <label class="field__label" for="landing-password">{{ t('common.password') }} <span class="muted">{{ t('register.password_hint') }}</span></label>
+      <input class="input" type="password" id="landing-password" name="password" required minlength="8" autocomplete="new-password">
+    </div>
+    <button class="btn btn--primary btn--block" type="submit">{{ t('landing.submit') }}</button>
+    {% set link %}<a href="{{ url_for('auth.login') }}">{{ t('landing.have_one_link') }}</a>{% endset %}
+    <p class="auth-alt">{{ t('landing.have_one', link=link) }}</p>
+  </form>
+  <p class="landing__foot">{{ t('landing.footnote') }}</p>
+</div>
+
+{# The example plot: a picture of the tree, so it is hidden from screen
+   readers and summed up in the caption instead. #}
+<figure class="ltree">
+  <figcaption class="visually-hidden">{{ t('landing.demo_caption') }}</figcaption>
+  <div class="ltree__head" aria-hidden="true">
+    <span><span class="ltree__plot">{{ demo.name }}</span><span class="ltree__status">{{ t('landing.demo_status') }}</span></span>
+    <span class="ltree__total">{{ t('common.pts', done=demo.done, max=demo.max) }}<span class="ltree__bar"><span style="width: {{ demo.pct }}%"></span></span></span>
+  </div>
+  <div class="ltree__cols" aria-hidden="true">
+    {% for scheme in demo.schemes %}
+    <div class="lcol col--{{ scheme.hue }}">
+      <span class="lcol__mark">{{ glyph(scheme.mark, 200, 0.9) }}</span>
+      {% for tier in scheme.tiers %}
+      <div class="ltier{% if tier.shut %} is-shut{% endif %}">
+        <span class="ltier__fill" style="height: {{ tier.fill }}%"></span>
+        {% if tier.note %}<p class="ltier__note">{{ glyph('lock', 13, 2) }}{{ tier.note }}</p>{% endif %}
+        <div class="ltier__tiles">
+          {% for tile in tier.tiles %}
+          <span class="ltile ltile--{{ tile.state }}">
+            <span class="ltile__icon">{{ glyph(tile.glyph) }}</span>
+            <span class="ltile__pts">{{ tile.done }}/{{ tile.max }}</span>
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+      {% if scheme.ultimate %}
+      <div class="lult{% if scheme.ultimate_reached %} is-reached{% endif %}">
+        <span class="lult__disc">{{ glyph('crown', 22) }}</span>
+        <span class="lult__title">{{ scheme.ultimate }}</span>
+      </div>
+      {% endif %}
+      <div class="lcol__foot">
+        <div class="lcol__name"><strong>{{ scheme.name }}</strong><span>{{ t('common.pts', done=scheme.done, max=scheme.max) }}</span></div>
+        <span class="lcol__bar"><span style="width: {{ scheme.pct }}%"></span></span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</figure>
+{% endblock %}
