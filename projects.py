@@ -483,10 +483,12 @@ def task_points(task_id: int):
 @projects_bp.route("/machinations/<int:task_id>/move", methods=["POST"])
 @login_required
 def move_task(task_id: int):
-    """Move a machination to another tier or scheme of its plot: the drop
-    handler for dragging a tile. Body: JSON ``{"branch_id": n, "tier": n}``.
+    """Move a machination within its tier, or to another tier or scheme of
+    its plot: the drop handler for dragging a tile. Body: JSON
+    ``{"branch_id": n, "tier": n, "before": task id or null}``.
 
-    It lands at the end of that tier and keeps its points: moving is
+    It lands just before ``before`` when that machination is in the tier,
+    and at the end of the tier otherwise. It keeps its points: moving is
     planning, so a finished machination dropped behind a closed gate stays
     finished. Its notes follow it to the new scheme's folder. Answers like
     the points endpoint, with the re-rendered tree and the plot's totals.
@@ -498,17 +500,28 @@ def move_task(task_id: int):
     if target is None or target.project_id != project.id:
         return jsonify({"error": "not_in_plot", "message": tx("scheme.not_in_plot")}), 404
     tier = _int(payload.get("tier"), task.tier, 1, 50)
-    moved = target is not task.branch or tier != task.tier
+    changes_place = target is not task.branch or tier != task.tier
+    if changes_place and target is not task.branch \
+            and len(target.tasks) >= current_app.config["MAX_TASKS_PER_BRANCH"]:
+        return jsonify({"error": "full", "message": tx("machination.limit")}), 409
+
+    # The tier as it stands, then as it will be with this one dropped in.
+    current = [t for t in target.tasks if t.tier == tier]
+    others = [t for t in current if t is not task]
+    before = _int(payload.get("before"), 0, 0, 2**31 - 1)
+    at = next((i for i, t in enumerate(others) if t.id == before), len(others))
+    order = others[:at] + [task] + others[at:]
+    moved = changes_place or order != current
     if moved:
-        if (target is not task.branch
-                and len(target.tasks) >= current_app.config["MAX_TASKS_PER_BRANCH"]):
-            return jsonify({"error": "full", "message": tx("machination.limit")}), 409
-        position = len([t for t in target.tasks if t.tier == tier and t is not task])
-        task.branch, task.tier, task.position = target, tier, position
-        # Its notes go with it, as when the form moves it.
-        for note in task.filed_notes:
-            note.file_under(task)
-        project.record("task", task=task, note=f"Moved {task.title}"[:200])
+        if changes_place:
+            task.branch, task.tier = target, tier
+            # Its notes go with it, as when the form moves it.
+            for note in task.filed_notes:
+                note.file_under(task)
+        for position, t in enumerate(order):
+            t.position = position
+        verb = "Moved" if changes_place else "Reordered"
+        project.record("task", task=task, note=f"{verb} {task.title}"[:200])
         db.session.commit()
     return jsonify({
         "moved": moved,

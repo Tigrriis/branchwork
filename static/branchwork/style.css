@@ -488,9 +488,16 @@ body.is-dragging-task .tier-add[data-branch].is-drop {
   outline: 2px dashed var(--fg); outline-offset: 4px;
   background: rgba(255, 255, 255, 0.08);
 }
-body.is-dragging-idea .tile--add,
-body.is-dragging-task .tile--add { opacity: 0; }   /* stop it fighting the drop zone */
+body.is-dragging-idea .tier__row .tile--add,
+body.is-dragging-task .tier__row .tile--add { opacity: 0; }   /* stop it fighting the drop zone */
 .tile.is-dragging { opacity: 0.4; }
+/* Where a dragged tile will land: a bar in the gap beside its neighbour. */
+.tile.is-insert-before::before, .tile.is-insert-after::after {
+  content: ""; position: absolute; top: 0; width: 3px; height: 80px; border-radius: 2px;
+  background: var(--fg); box-shadow: 0 0 8px rgba(255, 255, 255, 0.5); pointer-events: none;
+}
+.tile.is-insert-before::before { left: -8px; }
+.tile.is-insert-after::after { right: -8px; }
 body.is-dragging-task .tile__thread, body.is-dragging-task .tile__note { opacity: 0; }
 
 /* ── Today: focus vs backburner ───────────────────────────────────────── */

@@ -82,9 +82,10 @@ Two rules give the tree its shape:
 Each tier fills with its branch's colour as its points add up, and is full
 at exactly the gate points that open the tier below.
 
-**Tiles drag**: drop a machination on any tier of its plot, in its own scheme
-or another, or on a scheme's "+ New tier" to start one. It lands at the end
-of that tier, keeping its points, and its notes follow it. On a touch screen,
+**Tiles drag**: drop a machination between two tiles to reorder its tier, or
+on any other tier of its plot, in its own scheme or another, or on a
+scheme's "+ New tier" to start one. A bar shows where it will land. It keeps
+its points, and its notes follow it. On a touch screen,
 where holding a tile takes a point away, the machination form moves it.
 
 A scheme can **move to another plot** from its edit page. Its machinations,

@@ -232,8 +232,30 @@
   }
 
   function clearZones() {
-    Array.prototype.forEach.call(document.querySelectorAll(".is-drop"),
-      function (el) { el.classList.remove("is-drop"); });
+    Array.prototype.forEach.call(document.querySelectorAll(".is-drop, .is-insert-before, .is-insert-after"),
+      function (el) { el.classList.remove("is-drop", "is-insert-before", "is-insert-after"); });
+  }
+
+  // Where in a tier a dragged tile would land: before the first tile the
+  // pointer is ahead of, reading the row left to right and line by line
+  // (rows wrap), or after the last one. The tile being dragged is skipped,
+  // so dropping it back on its own spot changes nothing.
+  function insertSpot(zone, x, y) {
+    if (!zone.classList.contains("tier__row")) return null;
+    var tiles = Array.prototype.filter.call(zone.querySelectorAll(".tile[data-task]"),
+      function (t) { return t.dataset.task !== String(drag.id); });
+    for (var i = 0; i < tiles.length; i++) {
+      var r = tiles[i].getBoundingClientRect();
+      if (y < r.top || (y <= r.bottom && x < r.left + r.width / 2)) return { tile: tiles[i], after: false };
+    }
+    return tiles.length ? { tile: tiles[tiles.length - 1], after: true } : null;
+  }
+
+  function markInsert(zone, x, y) {
+    Array.prototype.forEach.call(document.querySelectorAll(".is-insert-before, .is-insert-after"),
+      function (el) { el.classList.remove("is-insert-before", "is-insert-after"); });
+    var spot = insertSpot(zone, x, y);
+    if (spot) spot.tile.classList.add(spot.after ? "is-insert-after" : "is-insert-before");
   }
 
   function promoteIdea(ideaId, branchId, tier) {
@@ -251,11 +273,14 @@
       .catch(function () { flash(say("network"), "error"); });
   }
 
-  // A tile dropped on a tier row, or on a scheme's "+ New tier", lands at the
-  // end of that tier. The tree comes back re-rendered, as it does for points.
-  function moveTask(taskId, branchId, tier) {
+  // A tile dropped on a tier row lands where the marker showed, in its own
+  // tier or another; on a scheme's "+ New tier", at the start of a new one.
+  // The tree comes back re-rendered, as it does for points.
+  function moveTask(taskId, branchId, tier, beforeId) {
     if (!taskId || !branchId || !tier) return;
-    post("/machinations/" + taskId + "/move", { branch_id: Number(branchId), tier: Number(tier) })
+    post("/machinations/" + taskId + "/move", {
+      branch_id: Number(branchId), tier: Number(tier), before: beforeId ? Number(beforeId) : null
+    })
       .then(function (res) {
         if (!res.ok) { flash(res.body.message || say("move_failed"), "error"); return; }
         if (!res.body.moved) return;
@@ -333,6 +358,7 @@
     e.preventDefault();                       // without this, drop never fires
     e.dataTransfer.dropEffect = "move";
     if (!zone.classList.contains("is-drop")) { clearZones(); zone.classList.add("is-drop"); }
+    if (drag.kind === "task") markInsert(zone, e.clientX, e.clientY);
   });
 
   document.addEventListener("dragleave", function (e) {
@@ -351,7 +377,9 @@
     } else if (moving.kind === "thread") {
       threadTasks(moving.id, zone.dataset.task, zone.dataset.ultimate);
     } else if (moving.kind === "task") {
-      if (zone !== moving.from) moveTask(moving.id, zone.dataset.branch, zone.dataset.tier);
+      var spot = insertSpot(zone, e.clientX, e.clientY);
+      var before = spot && !spot.after ? spot.tile.dataset.task : null;
+      moveTask(moving.id, zone.dataset.branch, zone.dataset.tier, before);
     } else if (moving.kind === "note") {
       // The notes script owns the explorer, so it does the moving.
       document.dispatchEvent(new CustomEvent("note-drop",

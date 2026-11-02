@@ -112,3 +112,65 @@ def test_tiles_are_draggable_and_tiers_say_where_they_are(client, db):
     assert f'data-branch="{design.id}" data-tier="1"' in html
     assert f'data-branch="{design.id}" data-tier="2"' in html   # its "+ New tier"
     assert copy_in(html, "tree.click_hint")
+
+
+def _titles(branch, tier=1):
+    return [t.title for t in branch.tasks if t.tier == tier]
+
+
+def test_tiles_reorder_within_a_tier(client, db):
+    user = make_user()
+    login(client)
+    project = make_project(user)
+    design = make_branch(project, "Design")
+    a, b, c = (make_task(design, name) for name in "ABC")
+
+    body = client.post(f"/machinations/{c.id}/move",
+                       json={"branch_id": design.id, "tier": 1, "before": a.id}).get_json()
+    assert body["moved"]
+    db.session.expire_all()
+    assert _titles(design) == ["C", "A", "B"]
+    assert [t.position for t in design.tasks] == [0, 1, 2]
+    assert project.events[-1].note == "Reordered C"
+
+    # No "before" is the end of the tier.
+    client.post(f"/machinations/{c.id}/move", json={"branch_id": design.id, "tier": 1})
+    db.session.expire_all()
+    assert _titles(design) == ["A", "B", "C"]
+
+
+def test_dropping_a_tile_back_on_its_own_spot_changes_nothing(client, db):
+    user = make_user()
+    login(client)
+    project = make_project(user)
+    design = make_branch(project, "Design")
+    a, b, c = (make_task(design, name) for name in "ABC")
+    events = len(project.events)
+    for before in (c.id, None):   # just before its right-hand neighbour, or the end for C
+        mover = b if before else c
+        body = client.post(f"/machinations/{mover.id}/move",
+                           json={"branch_id": design.id, "tier": 1, "before": before}).get_json()
+        assert body["moved"] is False
+    db.session.expire_all()
+    assert _titles(design) == ["A", "B", "C"] and len(project.events) == events
+
+
+def test_a_tile_lands_at_a_chosen_spot_in_another_scheme(client, db):
+    user = make_user()
+    login(client)
+    project = make_project(user)
+    design, build = make_branch(project, "Design"), make_branch(project, "Build")
+    sketch = make_task(design, "Sketch")
+    weld = make_task(build, "Weld")
+    make_task(build, "Paint")
+    later = make_task(build, "Later", tier=2)
+
+    client.post(f"/machinations/{sketch.id}/move",
+                json={"branch_id": build.id, "tier": 1, "before": weld.id})
+    db.session.expire_all()
+    assert _titles(build) == ["Sketch", "Weld", "Paint"]
+    # A "before" that is not in that tier falls back to the end.
+    client.post(f"/machinations/{sketch.id}/move",
+                json={"branch_id": build.id, "tier": 1, "before": later.id})
+    db.session.expire_all()
+    assert _titles(build) == ["Weld", "Paint", "Sketch"]

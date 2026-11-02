@@ -267,7 +267,7 @@ code = "Plot {code}"
 since_touch = "{n}d since a touch"
 # {done} and {max} are counts
 points = "{done} / {max} points"
-click_hint = "Click a tile to add a point. Shift-click (or right-click) to take one away. Drag it to another tier or scheme."
+click_hint = "Click a tile to add a point. Shift-click (or right-click) to take one away. Drag it to reorder, or to another tier or scheme."
 # The same, on a touch screen
 touch_hint = "Tap a tile to add a point. Press and hold to take one away."
 tile_aria = "{title}: {done} of {max} points"
