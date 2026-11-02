@@ -258,6 +258,28 @@ def move_branch(branch_id: int):
     return redirect(url_for("projects.tree", project_id=project.id))
 
 
+@projects_bp.route("/schemes/<int:branch_id>/reorder", methods=["POST"])
+@login_required
+def reorder_branch(branch_id: int):
+    """Put a scheme just before another of its plot's schemes, or last: the
+    drop handler for dragging a column by its name. Body: JSON
+    ``{"before": scheme id or null}``. Answers with the re-rendered tree."""
+    branch = _branch(branch_id)
+    project = branch.project
+    payload = request.get_json(silent=True) or {}
+    current = list(project.branches)
+    others = [b for b in current if b is not branch]
+    before = _int(payload.get("before"), 0, 0, 2**31 - 1)
+    at = next((i for i, b in enumerate(others) if b.id == before), len(others))
+    order = others[:at] + [branch] + others[at:]
+    moved = order != current
+    if moved:
+        for position, b in enumerate(order):
+            b.position = position
+        db.session.commit()
+    return jsonify({"moved": moved, "html": render_template("_tree.html", project=project)})
+
+
 def _crossing_links(branch: Branch) -> tuple[list, list[Branch]]:
     """What ties a scheme to the rest of its plot: threads with one end in
     the scheme and the other outside it, and the schemes on either side of

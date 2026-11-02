@@ -217,6 +217,7 @@
     project: { handle: ".ptile, .btile", zone: "[data-focus-zone]" },
     thread: { handle: ".tile__thread", zone: ".tile[data-task], .ultimate[data-ultimate]" },
     task: { handle: ".tile[data-task]", zone: ".tier__row, .tier-add[data-branch]" },
+    scheme: { handle: ".col__foot", zone: ".col[data-branch], .col--add" },
     note: { handle: ".nx-note", zone: "[data-drop-folder]" }
   };
 
@@ -234,6 +235,49 @@
   function clearZones() {
     Array.prototype.forEach.call(document.querySelectorAll(".is-drop, .is-insert-before, .is-insert-after"),
       function (el) { el.classList.remove("is-drop", "is-insert-before", "is-insert-after"); });
+    var marker = document.querySelector(".col-marker");
+    if (marker) marker.remove();
+  }
+
+  // Where a dragged scheme would land: before the column under the pointer
+  // when it is over that column's left half, after it over the right half,
+  // and last when over "Add a scheme". ``gap`` is the column whose left or
+  // right gap the marker sits in.
+  function columnSpot(zone, x) {
+    if (zone.classList.contains("col--add")) return { before: null, gap: zone, side: "left" };
+    var r = zone.getBoundingClientRect();
+    if (x < r.left + r.width / 2) return { before: zone.dataset.branch, gap: zone, side: "left" };
+    var next = zone.nextElementSibling;
+    while (next && !next.matches(".col[data-branch], .col--add")) next = next.nextElementSibling;
+    return { before: next && next.dataset.branch ? next.dataset.branch : null, gap: zone, side: "right" };
+  }
+
+  function markColumn(zone, x) {
+    if (!tree) return;
+    var spot = columnSpot(zone, x);
+    var marker = tree.querySelector(".col-marker");
+    if (!marker) {
+      marker = document.createElement("div");
+      marker.className = "col-marker";
+      marker.setAttribute("aria-hidden", "true");
+      tree.appendChild(marker);
+    }
+    var half = (parseFloat(getComputedStyle(tree).columnGap) || 24) / 2;
+    var col = spot.gap;
+    var left = spot.side === "left" ? col.offsetLeft - half : col.offsetLeft + col.offsetWidth + half;
+    marker.style.left = Math.max(0, left - 1.5) + "px";
+    marker.style.top = col.offsetTop + "px";
+    marker.style.height = col.offsetHeight + "px";
+  }
+
+  function reorderScheme(branchId, beforeId) {
+    if (!branchId || String(branchId) === String(beforeId)) return;
+    post("/schemes/" + branchId + "/reorder", { before: beforeId ? Number(beforeId) : null })
+      .then(function (res) {
+        if (!res.ok) { flash(res.body.message || say("scheme_move_failed"), "error"); return; }
+        if (res.body.moved) swapTree(res.body.html);
+      })
+      .catch(function () { flash(say("network"), "error"); });
   }
 
   // Where in a tier a dragged tile would land: before the first tile the
@@ -327,16 +371,22 @@
     if (!kind) return;
     var handle = e.target.closest(KINDS[kind].handle);
     if (kind === "task" && lastPointer === "touch") { e.preventDefault(); return; }
+    // A scheme is dragged by its name bar but moves as the whole column.
+    var moving = kind === "scheme" ? handle.closest(".col") : handle;
     drag = {
       kind: kind,
-      id: kind === "task" ? handle.dataset.task :
+      id: kind === "task" ? handle.dataset.task : kind === "scheme" ? moving.dataset.branch :
         handle.dataset.idea || handle.dataset.project || handle.dataset.threadFrom || handle.dataset.note,
       from: handle.closest("[data-focus-zone], .tier__row")
     };
     e.dataTransfer.effectAllowed = "move";
     // Firefox refuses to start a drag with nothing on the transfer.
     e.dataTransfer.setData("text/plain", drag.id);
-    handle.classList.add("is-dragging");
+    if (kind === "scheme" && e.dataTransfer.setDragImage) {
+      var box = moving.getBoundingClientRect();
+      e.dataTransfer.setDragImage(moving, e.clientX - box.left, e.clientY - box.top);
+    }
+    moving.classList.add("is-dragging");
     document.body.classList.add("is-dragging-" + kind);
   });
 
@@ -359,6 +409,7 @@
     e.dataTransfer.dropEffect = "move";
     if (!zone.classList.contains("is-drop")) { clearZones(); zone.classList.add("is-drop"); }
     if (drag.kind === "task") markInsert(zone, e.clientX, e.clientY);
+    if (drag.kind === "scheme") markColumn(zone, e.clientX);
   });
 
   document.addEventListener("dragleave", function (e) {
@@ -380,6 +431,8 @@
       var spot = insertSpot(zone, e.clientX, e.clientY);
       var before = spot && !spot.after ? spot.tile.dataset.task : null;
       moveTask(moving.id, zone.dataset.branch, zone.dataset.tier, before);
+    } else if (moving.kind === "scheme") {
+      reorderScheme(moving.id, columnSpot(zone, e.clientX).before);
     } else if (moving.kind === "note") {
       // The notes script owns the explorer, so it does the moving.
       document.dispatchEvent(new CustomEvent("note-drop",

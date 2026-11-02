@@ -111,7 +111,7 @@
     <a class="tier-add tier-add--ultimate" href="{{ url_for('ultimates.edit_ultimate', branch_id=branch.id) }}">{{ t('tree.set_ultimate') }}</a>
     {% endif %}
   </div>
-  <div class="col__foot">
+  <div class="col__foot" draggable="true" title="{{ t('tree.drag_scheme_title') }}">
     <span class="col__name">{{ branch.name }}</span>
     <span class="col__pts">{{ t('common.pts', done=branch.points_done, max=branch.points_max) }}</span>
     <span class="col__tools">

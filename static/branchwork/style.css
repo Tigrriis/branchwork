@@ -279,6 +279,14 @@ select.input { appearance: none; width: 100%; min-width: 0; text-overflow: ellip
   position: relative; display: flex; align-items: center; gap: 10px; margin-top: auto;
   padding: 12px 18px 14px; border-top: 1px solid var(--tint-edge, var(--line));
 }
+.col__foot[draggable="true"] { cursor: grab; }
+.col__foot[draggable="true"]:active { cursor: grabbing; }
+.col.is-dragging { opacity: 0.4; }
+/* Where a dragged scheme will land: a bar in the gap between two columns. */
+.col-marker {
+  position: absolute; z-index: 4; width: 3px; border-radius: 2px; pointer-events: none;
+  background: var(--fg); box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
 .col__name { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; color: var(--tint-fg, var(--fg)); }
 .col__pts { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--tint-fg, var(--fg)); }
 .col__tools { display: flex; align-items: center; gap: 2px; opacity: 0; transition: opacity 0.15s; }

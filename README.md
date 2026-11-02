@@ -85,7 +85,9 @@ at exactly the gate points that open the tier below.
 **Tiles drag**: drop a machination between two tiles to reorder its tier, or
 on any other tier of its plot, in its own scheme or another, or on a
 scheme's "+ New tier" to start one. A bar shows where it will land. It keeps
-its points, and its notes follow it. On a touch screen,
+its points, and its notes follow it. Schemes reorder the same way: drag a column
+by its name bar at the foot and drop it between two others, or on "Add a
+scheme" to send it last (the ‹ › buttons do it too, for touch and keyboard). On a touch screen,
 where holding a tile takes a point away, the machination form moves it.
 
 A scheme can **move to another plot** from its edit page. Its machinations,
