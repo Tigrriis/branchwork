@@ -260,7 +260,10 @@ select.input { appearance: none; width: 100%; min-width: 0; text-overflow: ellip
 .points { display: flex; align-items: center; gap: 10px; margin-left: 12px; color: var(--fg); }
 .hint { margin: 14px 0 0; font-size: 12px; }
 
-.tree { position: relative; display: flex; gap: 24px; align-items: stretch; overflow-x: auto; padding-bottom: 8px; }
+/* Scrolls sideways only. overflow-x on its own makes the tree a vertical
+   scroller too, which takes the wheel off the page the moment anything in it
+   reaches a pixel past the columns. */
+.tree { position: relative; display: flex; gap: 24px; align-items: stretch; overflow-x: auto; overflow-y: hidden; padding-bottom: 8px; }
 
 .col {
   position: relative; flex: 0 0 400px; min-height: 420px;

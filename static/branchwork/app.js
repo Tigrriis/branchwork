@@ -519,6 +519,12 @@
     if (!tree) return;
     var svg = tree.querySelector(".threads");
     if (!svg) return;
+    // Measure the tree without the overlay. It sits inside the tree, so
+    // sized from the tree's scroll size it would count itself, and could only
+    // ever grow: once the columns got shorter, the tree kept a band of empty
+    // height below them and a scrollbar of its own that swallowed the wheel.
+    svg.setAttribute("width", 0);
+    svg.setAttribute("height", 0);
     var width = tree.scrollWidth, height = tree.scrollHeight;
     svg.setAttribute("width", width);
     svg.setAttribute("height", height);
