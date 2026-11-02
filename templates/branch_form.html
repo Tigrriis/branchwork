@@ -42,6 +42,27 @@
   </form>
 </div>
 {% if not is_new %}
+<section class="card scheme-move" aria-labelledby="scheme-move-heading">
+  <h2 id="scheme-move-heading">{{ t('scheme.move_heading') }}</h2>
+  {% if move_targets %}
+  <p class="muted">{{ t('scheme.move_help') }}</p>
+  <form method="post" action="{{ url_for('projects.move_branch_to_plot', branch_id=branch.id) }}" class="scheme-move__form"{% if move_cuts %} data-confirm="{{ t('scheme.move_confirm', n=move_cuts) }}"{% endif %}>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label class="field__label" for="move_project_id">{{ t('scheme.move_to') }}</label>
+      <select class="input" id="move_project_id" name="project_id" required>
+        <option value="">{{ t('scheme.move_choose') }}</option>
+        {% for p in move_targets %}
+        <option value="{{ p.id }}">{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn" type="submit">{{ t('scheme.move') }}</button>
+  </form>
+  {% else %}
+  <p class="muted">{{ t('scheme.move_none') }}</p>
+  {% endif %}
+</section>
 <form method="post" action="{{ url_for('projects.delete_branch', branch_id=branch.id) }}" class="inline-form" data-confirm="{{ t('scheme.delete_confirm', n=branch.tasks|length) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <button class="btn btn--danger" type="submit">{{ t('scheme.delete') }}</button>

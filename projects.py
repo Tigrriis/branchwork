@@ -234,7 +234,11 @@ def edit_branch(branch_id: int):
         db.session.commit()
         flash(tx("scheme.saved"), "success")
         return redirect(url_for("projects.tree", project_id=project.id))
-    return render_template("branch_form.html", project=project, branch=branch, is_new=False)
+    threads, locks = _crossing_links(branch)
+    move_targets = sorted((p for p in current_user.projects if p.id != project.id),
+                          key=lambda p: p.name.lower())
+    return render_template("branch_form.html", project=project, branch=branch, is_new=False,
+                           move_targets=move_targets, move_cuts=len(threads) + len(locks))
 
 
 @projects_bp.route("/schemes/<int:branch_id>/move", methods=["POST"])
@@ -252,6 +256,84 @@ def move_branch(branch_id: int):
             b.position = pos
         db.session.commit()
     return redirect(url_for("projects.tree", project_id=project.id))
+
+
+def _crossing_links(branch: Branch) -> tuple[list, list[Branch]]:
+    """What ties a scheme to the rest of its plot: threads with one end in
+    the scheme and the other outside it, and the schemes on either side of
+    its "opens after" lock. Neither can cross to another plot."""
+    task_ids = {t.id for t in branch.tasks}
+    ultimate_id = branch.ultimate.id if branch.ultimate else None
+    threads = []
+    for thread in branch.project.threads:
+        starts_inside = thread.from_task_id in task_ids
+        ends_inside = (thread.to_task_id in task_ids if thread.to_task_id is not None
+                       else ultimate_id is not None and thread.to_ultimate_id == ultimate_id)
+        if starts_inside != ends_inside:
+            threads.append(thread)
+    locks = [b for b in branch.project.branches
+             if b is not branch and b.requires_branch_id == branch.id]
+    if branch.requires is not None:
+        locks.append(branch)
+    return threads, locks
+
+
+def _move_to_plot(branch: Branch, target: Project) -> int:
+    """Move a scheme, with its machinations, ultimate, threads within it and
+    notes, to the end of another plot. Links that would cross plots are cut,
+    and how many is returned."""
+    source = branch.project
+    task_ids = {t.id for t in branch.tasks}
+    crossing, locks = _crossing_links(branch)
+    for thread in crossing:
+        db.session.delete(thread)
+    for b in locks:
+        b.requires = None
+    # Threads wholly inside the scheme travel with it.
+    for thread in list(source.threads):
+        if thread.from_task_id in task_ids and thread not in crossing:
+            thread.project = target
+    # Its folder in the notebook, and every machination folder inside it.
+    # Notes are sealed with the owner's key, not the plot's, so they read
+    # the same wherever they are filed.
+    for note in list(source.notes):
+        if note.branch_id == branch.id or note.task_id in task_ids:
+            note.project = target
+            if note.task_id in task_ids:
+                note.branch = branch
+    # Ideas that became these machinations belong to the new plot's list now.
+    for item in current_user.inbox_items:
+        if item.task_id in task_ids:
+            item.project = target
+    position = len(target.branches)
+    branch.project = target
+    branch.position = position
+    for pos, b in enumerate(b for b in source.branches if b is not branch):
+        b.position = pos
+    source.record("touch", note=f"Scheme moved out: {branch.name}"[:200])
+    target.record("touch", note=f"Scheme moved in: {branch.name}"[:200])
+    return len(crossing) + len(locks)
+
+
+@projects_bp.route("/schemes/<int:branch_id>/move-to", methods=["POST"])
+@login_required
+def move_branch_to_plot(branch_id: int):
+    branch = _branch(branch_id)
+    source = branch.project
+    raw = request.form.get("project_id") or ""
+    target = db.session.get(Project, int(raw)) if raw.isdigit() else None
+    if target is None or target.owner_id != current_user.id or target.id == source.id:
+        flash(tx("scheme.move_pick"), "error")
+        return redirect(url_for("projects.edit_branch", branch_id=branch.id))
+    if len(target.branches) >= current_app.config["MAX_BRANCHES_PER_PROJECT"]:
+        flash(tx("scheme.move_full", plot=target.name), "error")
+        return redirect(url_for("projects.edit_branch", branch_id=branch.id))
+    cut = _move_to_plot(branch, target)
+    db.session.commit()
+    flash(tx("scheme.moved", name=branch.name, plot=target.name), "success")
+    if cut:
+        flash(tx("scheme.moved_cut", n=cut), "info")
+    return redirect(url_for("projects.tree", project_id=target.id))
 
 
 @projects_bp.route("/schemes/<int:branch_id>/delete", methods=["POST"])

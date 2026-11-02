@@ -82,6 +82,11 @@ Two rules give the tree its shape:
 Each tier fills with its branch's colour as its points add up, and is full
 at exactly the gate points that open the tier below.
 
+A scheme can **move to another plot** from its edit page. Its machinations,
+ultimate, the threads between them and its notes go with it, to the end of
+the other plot. Threads to other schemes and "opens after" locks are cut,
+since neither can cross plots; the page warns how many before it moves.
+
 **Threads** tie one task to another, usually in a different branch, and draw
 a bold arrow across the tree: grey until the task it leads from is done, then
 glowing orange while the sequence is under way, and green once both of its

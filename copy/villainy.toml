@@ -509,6 +509,20 @@ limit = "This plot has reached the scheme limit."
 added = "Scheme “{name}” added."
 saved = "Scheme saved."
 deleted = "Scheme deleted."
+# The "move to another plot" box under the scheme form
+move_heading = "Move to another plot"
+move_help = "Its machinations, ultimate and notes go with it, to the end of the other plot. Threads to other schemes here and “opens after” links can't cross plots, so they are cut."
+move_to = "Plot"
+move_choose = "Choose a plot…"
+move = "Move scheme"
+# Shown in place of the box when this is the only plot
+move_none = "There's no other plot to move it to yet."
+# Asked before moving, only when something would be cut
+move_confirm = "Moving this scheme cuts {n} link(s) to other schemes in this plot. Move it anyway?"
+move_pick = "Choose a plot to move the scheme to."
+move_full = "{plot} has reached the scheme limit."
+moved = "Moved “{name}” to {plot}."
+moved_cut = "{n} link(s) to other schemes were cut."
 
 [machination]
 _screen = "Machination form"
