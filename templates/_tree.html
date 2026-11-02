@@ -47,7 +47,7 @@
       {% endif %}
       <div class="tier__row" data-branch="{{ branch.id }}" data-tier="{{ row.tier }}">
         {% for task in row.tasks %}
-        <div class="tile tile--{{ task.state }} {% if row.open %}tile--live{% endif %}" data-task="{{ task.id }}" title="{{ task.title }}">
+        <div class="tile tile--{{ task.state }} {% if row.open %}tile--live{% endif %}" data-task="{{ task.id }}" draggable="true" title="{{ task.title }}">
           <button type="button" class="tile__box" {% if not row.open %}disabled{% endif %} aria-label="{{ t('tree.tile_aria', title=task.title, done=task.points_done, max=task.points_max) }}">
             {{ icon(task.icon, 32) }}
           </button>

@@ -206,16 +206,25 @@
 
   // ── Dragging ──────────────────────────────────────────────────────────
   // One set of listeners: an idea onto a tier of the tree, a project between
-  // the focus and backburner lanes, a thread from tile to tile, and a note
-  // onto a folder of the notes explorer.
+  // the focus and backburner lanes, a thread from tile to tile, a tile to
+  // another tier or scheme, and a note onto a folder of the notes explorer.
   var drag = null;   // {kind, id, from}
 
+  // The first kind whose handle the drag starts in wins, so a tile's thread
+  // handle, which sits inside the tile, still starts a thread.
   var KINDS = {
     idea: { handle: ".idea", zone: ".tier__row, .tier-add" },
     project: { handle: ".ptile, .btile", zone: "[data-focus-zone]" },
     thread: { handle: ".tile__thread", zone: ".tile[data-task], .ultimate[data-ultimate]" },
+    task: { handle: ".tile[data-task]", zone: ".tier__row, .tier-add[data-branch]" },
     note: { handle: ".nx-note", zone: "[data-drop-folder]" }
   };
+
+  // On a touch screen pressing and holding a tile takes a point away, so a
+  // tile is only dragged with a mouse or pen. The machination form moves it
+  // there instead.
+  var lastPointer = "mouse";
+  document.addEventListener("pointerdown", function (e) { lastPointer = e.pointerType; }, true);
 
   function zoneFor(node) {
     if (!drag || !node || !node.closest) return null;
@@ -238,6 +247,22 @@
         updateStats(res.body);
         flash(say("idea_added", { title: res.body.title, scheme: res.body.branch, tier: res.body.tier }),
               "success");
+      })
+      .catch(function () { flash(say("network"), "error"); });
+  }
+
+  // A tile dropped on a tier row, or on a scheme's "+ New tier", lands at the
+  // end of that tier. The tree comes back re-rendered, as it does for points.
+  function moveTask(taskId, branchId, tier) {
+    if (!taskId || !branchId || !tier) return;
+    post("/machinations/" + taskId + "/move", { branch_id: Number(branchId), tier: Number(tier) })
+      .then(function (res) {
+        if (!res.ok) { flash(res.body.message || say("move_failed"), "error"); return; }
+        if (!res.body.moved) return;
+        swapTree(res.body.html);
+        updateStats(res.body);
+        var again = tree && tree.querySelector('[data-task="' + taskId + '"]');
+        if (again) again.classList.add("is-flash");
       })
       .catch(function () { flash(say("network"), "error"); });
   }
@@ -276,10 +301,12 @@
     })[0];
     if (!kind) return;
     var handle = e.target.closest(KINDS[kind].handle);
+    if (kind === "task" && lastPointer === "touch") { e.preventDefault(); return; }
     drag = {
       kind: kind,
-      id: handle.dataset.idea || handle.dataset.project || handle.dataset.threadFrom || handle.dataset.note,
-      from: handle.closest("[data-focus-zone]")
+      id: kind === "task" ? handle.dataset.task :
+        handle.dataset.idea || handle.dataset.project || handle.dataset.threadFrom || handle.dataset.note,
+      from: handle.closest("[data-focus-zone], .tier__row")
     };
     e.dataTransfer.effectAllowed = "move";
     // Firefox refuses to start a drag with nothing on the transfer.
@@ -296,17 +323,21 @@
     clearZones();
   });
 
+  // One zone lit at a time: whichever the pointer is over, and none over
+  // anywhere a drop would do nothing. Leaving is judged here rather than on
+  // dragleave, which also fires crossing the tiles inside a zone and, in
+  // Chrome, without saying where the pointer went.
   document.addEventListener("dragover", function (e) {
     var zone = zoneFor(e.target);
-    if (!zone) return;
+    if (!zone) { if (drag) clearZones(); return; }
     e.preventDefault();                       // without this, drop never fires
     e.dataTransfer.dropEffect = "move";
-    zone.classList.add("is-drop");
+    if (!zone.classList.contains("is-drop")) { clearZones(); zone.classList.add("is-drop"); }
   });
 
   document.addEventListener("dragleave", function (e) {
     var zone = zoneFor(e.target);
-    if (zone && !zone.contains(e.relatedTarget)) zone.classList.remove("is-drop");
+    if (zone && e.relatedTarget && !zone.contains(e.relatedTarget)) zone.classList.remove("is-drop");
   });
 
   document.addEventListener("drop", function (e) {
@@ -319,6 +350,8 @@
       promoteIdea(moving.id, zone.dataset.branch, zone.dataset.tier);
     } else if (moving.kind === "thread") {
       threadTasks(moving.id, zone.dataset.task, zone.dataset.ultimate);
+    } else if (moving.kind === "task") {
+      if (zone !== moving.from) moveTask(moving.id, zone.dataset.branch, zone.dataset.tier);
     } else if (moving.kind === "note") {
       // The notes script owns the explorer, so it does the moving.
       document.dispatchEvent(new CustomEvent("note-drop",

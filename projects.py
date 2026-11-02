@@ -480,6 +480,46 @@ def task_points(task_id: int):
     })
 
 
+@projects_bp.route("/machinations/<int:task_id>/move", methods=["POST"])
+@login_required
+def move_task(task_id: int):
+    """Move a machination to another tier or scheme of its plot: the drop
+    handler for dragging a tile. Body: JSON ``{"branch_id": n, "tier": n}``.
+
+    It lands at the end of that tier and keeps its points: moving is
+    planning, so a finished machination dropped behind a closed gate stays
+    finished. Its notes follow it to the new scheme's folder. Answers like
+    the points endpoint, with the re-rendered tree and the plot's totals.
+    """
+    task = _task(task_id)
+    project = task.branch.project
+    payload = request.get_json(silent=True) or {}
+    target = db.session.get(Branch, _int(payload.get("branch_id"), 0, 0, 2**31 - 1))
+    if target is None or target.project_id != project.id:
+        return jsonify({"error": "not_in_plot", "message": tx("scheme.not_in_plot")}), 404
+    tier = _int(payload.get("tier"), task.tier, 1, 50)
+    moved = target is not task.branch or tier != task.tier
+    if moved:
+        if (target is not task.branch
+                and len(target.tasks) >= current_app.config["MAX_TASKS_PER_BRANCH"]):
+            return jsonify({"error": "full", "message": tx("machination.limit")}), 409
+        position = len([t for t in target.tasks if t.tier == tier and t is not task])
+        task.branch, task.tier, task.position = target, tier, position
+        # Its notes go with it, as when the form moves it.
+        for note in task.filed_notes:
+            note.file_under(task)
+        project.record("task", task=task, note=f"Moved {task.title}"[:200])
+        db.session.commit()
+    return jsonify({
+        "moved": moved,
+        "html": render_template("_tree.html", project=project),
+        "points_done": project.points_done,
+        "points_max": project.points_max,
+        "percent": project.percent,
+        "counts": {s: project.count_state(s) for s in ("full", "part", "empty")},
+    })
+
+
 # ── Project ideas ───────────────────────────────────────────────────────────
 # A per-project inbox for thoughts that are not tasks yet: no tier, no points,
 # no bearing on progress. Dragging one onto a tier is what turns it into a

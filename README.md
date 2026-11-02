@@ -82,6 +82,11 @@ Two rules give the tree its shape:
 Each tier fills with its branch's colour as its points add up, and is full
 at exactly the gate points that open the tier below.
 
+**Tiles drag**: drop a machination on any tier of its plot, in its own scheme
+or another, or on a scheme's "+ New tier" to start one. It lands at the end
+of that tier, keeping its points, and its notes follow it. On a touch screen,
+where holding a tile takes a point away, the machination form moves it.
+
 A scheme can **move to another plot** from its edit page. Its machinations,
 ultimate, the threads between them and its notes go with it, to the end of
 the other plot. Threads to other schemes and "opens after" locks are cut,

@@ -473,17 +473,25 @@ code { font-family: Consolas, monospace; font-size: 12px; color: var(--fg2); }
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
-/* While an idea is in flight, show where it can land. */
+/* While an idea or a tile is in flight, show where it can land. */
 body.is-dragging-idea .tier__row,
-body.is-dragging-idea .tier-add {
-  outline: 1px dashed var(--line2); outline-offset: 4px; border-radius: var(--radius-sm);
+body.is-dragging-idea .tier-add,
+body.is-dragging-task .tier__row,
+body.is-dragging-task .tier-add[data-branch] {
+  outline: 1px dashed rgba(255, 255, 255, 0.3); outline-offset: 4px; border-radius: var(--radius-sm);
 }
 body.is-dragging-idea .tier__row.is-drop,
-body.is-dragging-idea .tier-add.is-drop {
-  outline: 2px dashed var(--accent); outline-offset: 4px;
-  background: rgba(63, 207, 99, 0.08);
+body.is-dragging-idea .tier-add.is-drop,
+body.is-dragging-task .tier__row.is-drop,
+body.is-dragging-task .tier-add[data-branch].is-drop {
+  /* Light rather than the accent: it has to show on every scheme's tint. */
+  outline: 2px dashed var(--fg); outline-offset: 4px;
+  background: rgba(255, 255, 255, 0.08);
 }
-body.is-dragging-idea .tile--add { opacity: 0; }   /* stop it fighting the drop zone */
+body.is-dragging-idea .tile--add,
+body.is-dragging-task .tile--add { opacity: 0; }   /* stop it fighting the drop zone */
+.tile.is-dragging { opacity: 0.4; }
+body.is-dragging-task .tile__thread, body.is-dragging-task .tile__note { opacity: 0; }
 
 /* ── Today: focus vs backburner ───────────────────────────────────────── */
 .lanes { display: flex; flex-direction: column; gap: 18px; }
