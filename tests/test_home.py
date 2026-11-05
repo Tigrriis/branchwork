@@ -13,7 +13,7 @@ def _tile(html, project_id):
     return rest[: end.start() + 1] if end else rest
 
 
-def test_old_pages_land_on_the_home_page(client, db):
+def test_old_pages_land_on_the_home_page(client, db, review_on):
     make_user()
     login(client)
     r = client.get("/board")
@@ -106,7 +106,21 @@ def test_parked_and_closed_plots_sit_on_shelves(client, db):
     assert f'id="p{parked.id}"' not in html and f'id="p{finished.id}"' not in html
 
 
-def test_review_mode_flips_every_live_tile(client, db):
+def test_the_weekly_review_is_off_by_default(client, db):
+    user = make_user()
+    login(client)
+    p = make_project(user); p.phase = "building"
+    db.session.commit()
+    assert 'href="/?review=1"' not in client.get("/").data.decode()
+    # The old address and the mode both land on plain Today.
+    r = client.get("/review?done=4")
+    assert r.status_code == 302 and r.headers["Location"] == "/"
+    html = client.get("/?review=1").data.decode()
+    assert '<article class="rtile' not in html and '<article class="ptile' in html
+    assert client.post(f"/review/{p.id}", data={"decision": "keep"}).status_code == 404
+
+
+def test_review_mode_flips_every_live_tile(client, db, review_on):
     user = make_user()
     login(client)
     doing = make_project(user); doing.name, doing.phase = "Doing", "building"

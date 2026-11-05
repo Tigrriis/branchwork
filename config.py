@@ -64,6 +64,10 @@ class Config:
     MAX_WIP_BUILDING_LIMIT = 20
     MAX_OPEN_IDEAS = 200
 
+    # The weekly review (Today's ?review=1 mode) is switched off. Set
+    # WEEKLY_REVIEW=1 to bring it back; the code and copy are kept for that.
+    WEEKLY_REVIEW = os.environ.get("WEEKLY_REVIEW", "0") == "1"
+
     MAX_PROJECTS_PER_USER = 50
     MAX_BRANCHES_PER_PROJECT = 12
     MAX_TASKS_PER_BRANCH = 200

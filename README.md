@@ -47,7 +47,9 @@ projects and forgets to move them along:
   and anything back from the shelf, to one decision each: keep, advance,
   park or drop, with the objective and next action to edit. The whole scope
   stays on one page, and a decided tile stays put, marked. The old `/board`
-  and `/review` addresses redirect here.
+  and `/review` addresses redirect here. **Review is switched off**: set
+  `WEEKLY_REVIEW=1` to bring it back. While it is off, the link is hidden,
+  `?review=1` shows plain Today, and decisions posted to `/review/<id>` 404.
 * **Ideas** are loose thoughts for one project, listed under its tree.
   They carry no points and count towards nothing until you drag one onto a
   tier, which is the moment it becomes a task. Dragging is the quick path;

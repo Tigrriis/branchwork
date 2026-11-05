@@ -132,7 +132,7 @@ def test_another_accounts_status_ids_are_ignored(client, db):
     assert user.statuses[-1].name == "Hijacked" and user.statuses[-1].user_id == user.id
 
 
-def test_picking_a_plot_back_up_returns_it_where_it_was(client, db):
+def test_picking_a_plot_back_up_returns_it_where_it_was(client, db, review_on):
     user = make_user()
     login(client)
     p = make_project(user)
@@ -146,7 +146,7 @@ def test_picking_a_plot_back_up_returns_it_where_it_was(client, db):
     assert p.phase == "building" and p.shelved_from is None
 
 
-def test_review_closes_only_onto_closed_statuses(client, db):
+def test_review_closes_only_onto_closed_statuses(client, db, review_on):
     user = make_user()
     login(client)
     p = make_project(user)

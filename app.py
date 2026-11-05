@@ -4,7 +4,7 @@ Villainy: plan large, multi-stranded plots as a skill tree.
   /                      Today: projects due for a touch. Signed
                          out, the landing page: the pitch and a sign-up box
   /board                 every project by status: columns and shelves
-  /review                the weekly review: keep / advance / park / drop
+  /review                the weekly review (off unless WEEKLY_REVIEW=1)
   /plots/<id>            the tree (branches as columns, tasks in tiers)
   /plots/<id>/notes      the plot's notebook, foldered by scheme and machination
   /plots/<id>/list       the same tasks as a table (no longer linked from the tabs)

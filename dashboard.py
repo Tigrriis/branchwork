@@ -1,17 +1,17 @@
-"""The portfolio layer: one home page and the weekly review.
+"""The portfolio layer: one home page and the weekly review (switched off).
 
 The home page answers "what am I neglecting": plots in focus as tiles with
 their tree in miniature, the backburner beneath, and parked plots whose date
 has come. Each tile carries its status, which is what the board used to be
 for, and the parked and closed plots sit on shelves underneath.
 Review is a mode of the same page that flips every live tile to one decision:
-keep, advance, park or drop.
+keep, advance, park or drop. It is off unless ``WEEKLY_REVIEW`` is set.
 """
 from collections import Counter
 from datetime import date, timedelta
 
 from flask import (
-    Blueprint, abort, flash, jsonify, redirect, render_template,
+    Blueprint, abort, current_app, flash, jsonify, redirect, render_template,
     request, url_for,
 )
 from flask_login import current_user, login_required
@@ -30,6 +30,10 @@ def _project(project_id: int) -> Project:
     if project is None or project.owner_id != current_user.id:
         abort(404)
     return project
+
+
+def _review_enabled() -> bool:
+    return bool(current_app.config.get("WEEKLY_REVIEW"))
 
 
 def _parse_date(value: str | None, default_days: int = 30) -> date:
@@ -91,6 +95,7 @@ def _today_context(reviewing: bool = False, done: str = ""):
         # The bar across the top: routines ready on any live plot.
         "ready_routines": ready_routines(current_user),
         "next_routine": next_routine(current_user),
+        "review_enabled": _review_enabled(),
         **_review_state(reviewing, focus + backburner + resurfaced, done),
     }
 
@@ -115,7 +120,8 @@ def today():
     if not current_user.is_authenticated:
         return render_template("landing.html", demo=demo_plot(), glyph=glyph)
     return render_template("today.html", **_today_context(
-        reviewing=request.args.get("review") == "1", done=request.args.get("done", "")))
+        reviewing=_review_enabled() and request.args.get("review") == "1",
+        done=request.args.get("done", "")))
 
 
 @dashboard_bp.route("/plots/<int:project_id>/focus", methods=["POST"])
@@ -201,12 +207,16 @@ def set_next_action(project_id: int):
 @login_required
 def review():
     """Review became a mode of the home page. Old links, ticks and all, land there."""
+    if not _review_enabled():
+        return redirect(url_for("dashboard.today"))
     return redirect(url_for("dashboard.today", review=1, done=request.args.get("done") or None))
 
 
 @dashboard_bp.route("/review/<int:project_id>", methods=["POST"])
 @login_required
 def review_decide(project_id: int):
+    if not _review_enabled():
+        abort(404)
     project = _project(project_id)
     decision = request.form.get("decision") or "keep"
     project.objective = (request.form.get("objective") or "").strip()[:300] or None

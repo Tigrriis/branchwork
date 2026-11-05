@@ -55,6 +55,12 @@ def app():
 
 
 @pytest.fixture
+def review_on(app):
+    """The weekly review is off by default; tests of it switch it on."""
+    app.config["WEEKLY_REVIEW"] = True
+
+
+@pytest.fixture
 def client(app):
     return app.test_client()
 

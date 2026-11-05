@@ -7,7 +7,8 @@
 {% block content %}
 {# The one home page. Focus and backburner as tiles, each plot's status on its
    tile, and the shelves underneath. Review is a mode of the
-   same page (?review=1) that flips every live tile to one decision. #}
+   same page (?review=1) that flips every live tile to one decision; it is
+   off unless WEEKLY_REVIEW is set. #}
 {% if reviewing %}
 <div class="page-head">
   <div>
@@ -40,7 +41,7 @@
       <span class="chip {% if due %}chip--warn{% endif %}" data-chip-due>{{ t('today.chip_due', n=n_due) }}</span>
       <span class="chip {% if no_action %}chip--warn{% endif %}" data-chip-noaction>{{ t('today.chip_noaction', n=n_noaction) }}</span>
     </div>
-    {% if active_projects or resurfaced %}
+    {% if review_enabled and (active_projects or resurfaced) %}
     <a class="btn btn--ghost btn--sm" href="{{ url_for('dashboard.today', review=1) }}">{{ t('today.review_link') }}</a>
     {% endif %}
   </div>
