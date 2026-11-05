@@ -75,9 +75,8 @@ projects and forgets to move them along:
 next action, tempo, gate points, code and description are on the plot's Edit
 page once it exists.
 
-**Templates** decide the branches a new project starts with. Six are built
-in (Simple, the default, then Blank, Lifecycle, Engineering job, Software,
-Running business) and you
+**Templates** decide the branches a new project starts with. Three are
+built in (Simple, the default, then Blank and Lifecycle) and you
 can copy any of them under Account → Project templates to get an editable
 version: rename branches, change colours, set which ones wait on the one
 before, and give each a few starting tasks (one per line, ` | 3` for the
