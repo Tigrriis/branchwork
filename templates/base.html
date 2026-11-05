@@ -36,8 +36,10 @@
       </button>
       {% endif %}
       <a class="brand" href="{{ url_for('dashboard.today') }}">
-        <img class="brand__mark" src="{{ url_for('static', filename='branchwork/img/logo.svg') }}"
-             width="22" height="22" alt="">
+        <span class="brand__badge" aria-hidden="true">
+          <img class="brand__mark" src="{{ url_for('static', filename='branchwork/img/logo.svg') }}"
+               width="20" height="20" alt="">
+        </span>
         <span class="brand__name">{{ SITE_NAME }}</span>
       </a>
       {% block topnav %}{% endblock %}
