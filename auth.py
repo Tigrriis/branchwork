@@ -9,11 +9,12 @@ forms carry a hidden field that people never see and bots fill in.
 from urllib.parse import urlparse
 
 from flask import (
-    Blueprint, flash, redirect, render_template, request, session, url_for,
+    Blueprint, current_app, flash, redirect, render_template, request, session, url_for,
 )
 from flask_login import current_user, login_required, login_user, logout_user
 
 from copytext import tx
+from example import add_example_plot
 from extensions import db
 from models import User
 from ratelimit import (
@@ -66,12 +67,16 @@ def register():
             user = User(email=email, display_name=display_name or None)
             user.set_password(password)
             db.session.add(user)
+            # Something to click on the first visit, rather than an empty page.
+            add_example_plot(user)
             db.session.commit()
             login_user(user)
             # Picked up by the next page, which tells analytics (base.html).
             session["analytics_event"] = "Signup"
             flash(tx("auth.welcome"), "success")
-            return _after_login()
+            nxt = request.args.get("next")
+            return redirect(nxt if _safe_next(nxt)
+                            else url_for("projects.tree", project_id=user.projects[0].id))
     return render_template("register.html")
 
 
@@ -139,3 +144,18 @@ def beta():
     db.session.commit()
     flash(tx("auth.beta_updated"), "success")
     return redirect(url_for("auth.account") + "#beta")
+
+
+@auth_bp.route("/account/first-visit", methods=["POST"])
+@login_required
+def replay_first_visit():
+    """What a new account sees, for an account that is not new: the example
+    plot added alongside everything else, the guide shown again, and the
+    welcome. Nothing already in the account changes."""
+    if len(current_user.projects) >= current_app.config["MAX_PROJECTS_PER_USER"]:
+        flash(tx("plot.limit"), "error")
+        return redirect(url_for("auth.account"))
+    project = add_example_plot(current_user)
+    db.session.commit()
+    flash(tx("auth.welcome"), "success")
+    return redirect(url_for("projects.tree", project_id=project.id, guide=1))

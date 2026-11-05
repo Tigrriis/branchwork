@@ -1,7 +1,8 @@
 {# Plots off the lanes: one shelf per parked or closed status, as the board
-   kept them. A parked shelf with anything on it opens by itself. #}
+   kept them. A parked shelf with anything on it opens by itself, and an
+   empty shelf is not shown at all. #}
 <div class="shelves">
-  {% for status, projects in shelves %}
+  {% for status, projects in shelves if projects %}
   <details class="shelf" {% if projects and status.is_parked %}open{% endif %}>
     <summary class="shelf__head"><span class="phase hue--{{ status.hue }}">{{ status.name }}</span> <span class="muted">{{ projects|length }}</span></summary>
     <div class="shelf__body">

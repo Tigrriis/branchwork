@@ -104,6 +104,16 @@
   </div>
   <a class="btn btn--ghost btn--sm" href="{{ url_for('starters.template_list') }}">{{ t('account.templates_manage') }}</a>
 </div>
+<div class="card settings-link">
+  <div>
+    <strong>{{ t('account.first_visit_heading') }}</strong>
+    <div class="muted small">{{ t('account.first_visit_help') }}</div>
+  </div>
+  <form method="post" action="{{ url_for('auth.replay_first_visit') }}" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn--ghost btn--sm" type="submit">{{ t('account.first_visit_submit') }}</button>
+  </form>
+</div>
 <form method="post" action="{{ url_for('auth.logout') }}" class="inline-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <button class="btn btn--ghost" type="submit">{{ t('account.sign_out') }}</button>

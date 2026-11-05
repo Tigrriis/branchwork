@@ -346,7 +346,7 @@
     });
     [["due", "[data-chip-due]"], ["no_action", "[data-chip-noaction]"]].forEach(function (pair) {
       var chip = document.querySelector(pair[1]);
-      if (chip) chip.classList.toggle("chip--warn", counts[pair[0]] > 0);
+      if (chip) chip.hidden = !(counts[pair[0]] > 0);
     });
   }
 
@@ -825,6 +825,111 @@
     };
     window.addEventListener("resize", laterDraw);
     if (window.ResizeObserver) new ResizeObserver(laterDraw).observe(tree);
+  }
+
+  // ── Quick add ─────────────────────────────────────────────────────────
+  // A tier's "+" and the "New tier" link open a box in place: type a title,
+  // press Enter, and the machination is added with one point and the box
+  // stays open for the next. Escape, or leaving it empty, closes it. A
+  // modified click still follows the link to the full form.
+  if (tree) {
+    var quickBusy = false;
+
+    var closeQuick = function () {
+      var open = tree.querySelector(".quick-add");
+      if (!open) return;
+      var hidden = tree.querySelector("[data-quick-hidden]");
+      if (hidden) { hidden.hidden = false; hidden.removeAttribute("data-quick-hidden"); }
+      open.remove();
+    };
+
+    var openQuick = function (anchor) {
+      closeQuick();
+      var spot = anchor.closest("[data-tier]");
+      if (!spot) return;
+      var branch = spot.dataset.branch, tier = spot.dataset.tier;
+      var form = document.createElement("form");
+      form.className = "quick-add";
+      var input = document.createElement("input");
+      input.className = "input input--sm";
+      input.maxLength = 120;
+      input.placeholder = say("quick_placeholder");
+      input.setAttribute("aria-label", say("quick_placeholder"));
+      form.appendChild(input);
+      if (anchor.classList.contains("tile--add")) {
+        spot.parentNode.insertBefore(form, spot.nextSibling);
+      } else {
+        anchor.parentNode.insertBefore(form, anchor);
+      }
+      anchor.hidden = true;
+      anchor.setAttribute("data-quick-hidden", "");
+      input.focus();
+
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") { e.preventDefault(); closeQuick(); }
+      });
+      input.addEventListener("blur", function () {
+        setTimeout(function () {
+          if (!quickBusy && form.isConnected && !input.value.trim()) closeQuick();
+        }, 150);
+      });
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var title = input.value.trim();
+        if (!title) { closeQuick(); return; }
+        if (quickBusy) return;
+        quickBusy = true;
+        input.disabled = true;
+        post("/schemes/" + branch + "/machinations/quick", { title: title, tier: Number(tier) })
+          .then(function (res) {
+            if (!res.ok) {
+              flash(res.body.message || say("network"), "error");
+              input.disabled = false;
+              input.focus();
+              return;
+            }
+            swapTree(res.body.html);
+            updateStats(res.body);
+            var added = tree.querySelector('[data-task="' + res.body.task + '"]');
+            if (added) added.classList.add("is-flash");
+            var again = tree.querySelector('.tier__row[data-branch="' + branch + '"][data-tier="' + tier + '"] .tile--add');
+            if (again) openQuick(again);
+          })
+          .catch(function () { flash(say("network"), "error"); input.disabled = false; })
+          .finally(function () { quickBusy = false; });
+      });
+    };
+
+    tree.addEventListener("click", function (e) {
+      var anchor = e.target.closest(".tile--add, .tier-add[data-tier]");
+      if (!anchor || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      openQuick(anchor);
+    });
+  }
+
+  // ── How a plot works ──────────────────────────────────────────────────
+  // Shown until it is closed once in this browser. Storage can be missing
+  // or refuse (private windows), in which case it simply shows each time.
+  var guide = document.getElementById("guide");
+  if (guide) {
+    var seen = false;
+    // ?guide=1 (replaying the first visit) shows it again, as if never closed.
+    if (guide.hasAttribute("data-guide-force")) {
+      try { localStorage.removeItem("guide-seen"); } catch (e) { /* not kept */ }
+    }
+    try { seen = localStorage.getItem("guide-seen") === "1"; } catch (e) { /* not kept */ }
+    guide.hidden = seen;
+    guide.addEventListener("click", function (e) {
+      if (!e.target.closest("[data-guide-close]")) return;
+      guide.hidden = true;
+      try { localStorage.setItem("guide-seen", "1"); } catch (err) { /* not kept */ }
+    });
+    var reopen = document.querySelector("[data-guide-open]");
+    if (reopen) reopen.addEventListener("click", function () {
+      guide.hidden = false;
+      guide.scrollIntoView({ block: "nearest" });
+    });
   }
 
   // ── Flashes ───────────────────────────────────────────────────────────

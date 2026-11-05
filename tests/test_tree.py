@@ -222,3 +222,30 @@ def test_only_a_multi_press_machination_shows_its_count(client, db):
     assert ">1/3<" in html and ">1/1<" not in html
     # The one-press tile keeps a blank plate, so labels in the row stay level.
     assert html.count("tile__plate--blank") == 1
+
+
+def test_quick_add_makes_a_one_point_machination_with_an_icon(client, db):
+    user = make_user()
+    login(client)
+    branch = make_branch(make_project(user))
+    r = client.post(f"/schemes/{branch.id}/machinations/quick",
+                    json={"title": "  Pay the editor  ", "tier": 2})
+    assert r.status_code == 200
+    body = r.get_json()
+    from models import Task
+    task = db.session.get(Task, body["task"])
+    assert (task.title, task.tier, task.points_max, task.points_done) == ("Pay the editor", 2, 1, 0)
+    assert task.icon == "coin"
+    assert f'data-task="{task.id}"' in body["html"] and body["points_max"] == 1
+
+
+def test_quick_add_needs_a_title_and_an_owner(client, db):
+    owner = make_user()
+    branch = make_branch(make_project(owner))
+    make_user("other@example.com")
+    login(client, "other@example.com")
+    assert client.post(f"/schemes/{branch.id}/machinations/quick", json={"title": "x"}).status_code == 404
+    client.post("/logout")
+    login(client)
+    assert client.post(f"/schemes/{branch.id}/machinations/quick", json={"title": "  "}).status_code == 400
+    assert branch.tasks == []

@@ -19,7 +19,7 @@ from flask_login import current_user, login_required
 
 from copytext import tx
 from extensions import db
-from icons import DEFAULT_ICON, clean_icon
+from icons import DEFAULT_ICON, clean_icon, suggest_icon
 from models import CADENCES, HUES, Branch, InboxItem, Project, Task
 from starters import DEFAULT_STARTER, apply_starter, choices_for
 from threads import find_target, thread_tasks
@@ -77,11 +77,16 @@ def _int(value, default: int, lo: int, hi: int) -> int:
 # ── Projects ────────────────────────────────────────────────────────────────
 
 def _read_project_form(project: Project) -> bool:
+    """The plot form. A new plot's form asks only for a name and a template,
+    so everything else keeps its default until the Edit page, which always
+    posts a status and so is told apart by it."""
     name = (request.form.get("name") or "").strip()[:120]
     if not name:
         flash(tx("plot.name_required"), "error")
         return False
     project.name = name
+    if "phase" not in request.form:
+        return True
     project.code = (request.form.get("code") or "").strip()[:40] or None
     project.description = (request.form.get("description") or "").strip() or None
     project.gate_points = _int(request.form.get("gate_points"),
@@ -91,7 +96,9 @@ def _read_project_form(project: Project) -> bool:
     project.focused = bool(request.form.get("focused"))
     project.objective = (request.form.get("objective") or "").strip()[:300] or None
     project.next_action = (request.form.get("next_action") or "").strip()[:200] or None
-    project.repo_path = (request.form.get("repo_path") or "").strip()[:400] or None
+    # No longer on the form; a folder set before keeps feeding `flask sync-git`.
+    if "repo_path" in request.form:
+        project.repo_path = (request.form.get("repo_path") or "").strip()[:400] or None
     status = current_user.status(request.form.get("phase") or project.phase)
     if status is not None and status.key != project.phase:
         if project.id is None:
@@ -394,7 +401,9 @@ def _read_task_form(task: Task, project: Project, default_branch: Branch | None 
     elif task.branch is None and default_branch is not None:
         task.branch = default_branch
     task.title = title
-    task.icon = clean_icon(request.form.get("icon"))
+    # "auto" (the new form's default) picks one from the title.
+    chosen = request.form.get("icon")
+    task.icon = suggest_icon(title) if chosen in (None, "", "auto") else clean_icon(chosen)
     task.tier = _int(request.form.get("tier"), task.tier or 1, 1, 50)
     task.points_max = _int(request.form.get("points_max"), 1, 1,
                            current_app.config["MAX_POINTS_PER_TASK"])
@@ -443,6 +452,39 @@ def new_task(branch_id: int):
         flash(tx("machination.added", title=task.title), "success")
         return redirect(url_for("projects.tree", project_id=project.id))
     return render_template("task_form.html", project=project, task=task, branch=branch, is_new=True)
+
+
+@projects_bp.route("/schemes/<int:branch_id>/machinations/quick", methods=["POST"])
+@login_required
+def quick_task(branch_id: int):
+    """Add a machination from just its title, typed into a tier on the tree.
+    Body: JSON ``{"title": str, "tier": n}``. One point, an icon picked from
+    the title; the full form is still there for anything else. Answers like
+    the points endpoint, with the re-rendered tree and the plot's totals."""
+    branch = _branch(branch_id)
+    project = branch.project
+    payload = request.get_json(silent=True) or {}
+    title = str(payload.get("title") or "").strip()[:120]
+    if not title:
+        return jsonify({"error": "title", "message": tx("machination.title_required")}), 400
+    if len(branch.tasks) >= current_app.config["MAX_TASKS_PER_BRANCH"]:
+        return jsonify({"error": "full", "message": tx("machination.limit")}), 409
+    tier = _int(payload.get("tier"), branch.next_tier, 1, 50)
+    task = Task(branch=branch, tier=tier, title=title, icon=suggest_icon(title),
+                points_max=1, points_done=0,
+                position=len([t for t in branch.tasks if t.tier == tier]))
+    db.session.add(task)
+    db.session.flush()
+    project.record("task", task=task, note=f"Added {task.title}"[:200])
+    db.session.commit()
+    return jsonify({
+        "task": task.id,
+        "html": render_template("_tree.html", project=project),
+        "points_done": project.points_done,
+        "points_max": project.points_max,
+        "percent": project.percent,
+        "counts": {s: project.count_state(s) for s in ("full", "part", "empty")},
+    })
 
 
 @projects_bp.route("/machinations/<int:task_id>/edit", methods=["GET", "POST"])
@@ -596,7 +638,7 @@ def promote_idea(item_id: int):
 
     tier = _int(payload.get("tier"), branch.next_tier, 1, 50)
     title = item.text.strip().splitlines()[0][:120]
-    task = Task(branch=branch, tier=tier, title=title, icon=DEFAULT_ICON,
+    task = Task(branch=branch, tier=tier, title=title, icon=suggest_icon(title),
                 points_max=1, points_done=0,
                 notes=item.text if len(item.text) > len(title) else None,
                 position=len([t for t in branch.tasks if t.tier == tier]))

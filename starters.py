@@ -16,13 +16,19 @@ from flask_login import current_user, login_required
 
 from copytext import tx
 from extensions import db
-from icons import DEFAULT_ICON
+from icons import DEFAULT_ICON, suggest_icon
 from models import HUES, Branch, Project, Task, Template, TemplateBranch
 
 starters_bp = Blueprint("starters", __name__)
 
 STARTERS: dict[str, dict] = {
     # Names and descriptions live in the copy catalogue under [starter.<key>].
+    # The default: three columns, nothing locked, so a first plot opens with
+    # every scheme ready to take a machination.
+    "simple": {
+        "branches": [("First steps", "green"), ("Main work", "blue"), ("Finishing", "amber")],
+        "chain": False,
+    },
     "blank": {"branches": [], "chain": False},
     "lifecycle": {
         "branches": [("Idea", "violet"), ("Prototype", "blue"), ("Build", "green"),
@@ -60,7 +66,7 @@ STARTERS: dict[str, dict] = {
         },
     },
 }
-DEFAULT_STARTER = "lifecycle"
+DEFAULT_STARTER = "simple"
 MAX_TEMPLATES = 30
 MAX_TEMPLATE_BRANCHES = 12
 
@@ -75,7 +81,9 @@ def _make(project: Project, name: str, hue: str, position: int,
     if waits and previous is not None:
         branch.requires = previous
     for index, (title, icon, points) in enumerate(tasks):
-        Task(branch=branch, tier=1, position=index, title=title, icon=icon,
+        # The default icon here means nobody chose one, so the title picks.
+        Task(branch=branch, tier=1, position=index, title=title,
+             icon=suggest_icon(title) if icon == DEFAULT_ICON else icon,
              points_max=points, points_done=0)
     return branch
 

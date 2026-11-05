@@ -9,8 +9,11 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="field">
       <label class="field__label" for="name">{{ t('common.name') }}</label>
-      <input class="input" type="text" id="name" name="name" maxlength="120" required autofocus value="{{ project.name or '' }}">
+      <input class="input" type="text" id="name" name="name" maxlength="120" required autofocus value="{{ project.name or '' }}"
+             {% if is_new %}placeholder="{{ t('plot.name_placeholder') }}"{% endif %}>
+      {% if is_new %}<span class="muted small">{{ t('plot.new_help') }}</span>{% endif %}
     </div>
+    {% if not is_new %}
     <div class="field-row">
       <div class="field">
         <label class="field__label" for="code">{{ t('plot.code') }} <span class="muted">{{ t('common.optional') }}</span></label>
@@ -50,6 +53,7 @@
       <label class="field__label" for="next_action">{{ t('fields.next_label') }}</label>
       <input class="input" type="text" id="next_action" name="next_action" maxlength="200" value="{{ project.next_action or '' }}" placeholder="{{ t('fields.next_placeholder') }}">
     </div>
+    {% endif %}
     {% if is_new %}
     <div class="field">
       <span class="field__label">{{ t('plot.start_from') }}</span>
@@ -67,16 +71,12 @@
       <a class="link-quiet" href="{{ url_for('starters.template_list') }}">{{ t('plot.make_templates') }}</a>
     </div>
     {% endif %}
-    <div class="field">
-      <label class="field__label" for="repo_path">{{ t('plot.repo') }} <span class="muted">{{ t('common.optional') }}</span></label>
-      <input class="input" type="text" id="repo_path" name="repo_path" maxlength="400" value="{{ project.repo_path or '' }}" placeholder="{{ t('plot.repo_placeholder') }}">
-      {% set command %}<code>flask sync-git</code>{% endset %}
-      <span class="muted small">{{ t('plot.repo_help', command=command) }}</span>
-    </div>
+    {% if not is_new %}
     <div class="field">
       <label class="field__label" for="description">{{ t('plot.description') }} <span class="muted">{{ t('common.optional') }}</span></label>
       <textarea class="input" id="description" name="description" rows="3">{{ project.description or '' }}</textarea>
     </div>
+    {% endif %}
     <div class="form__actions">
       <button class="btn btn--primary" type="submit">{% if is_new %}{{ t('plot.create') }}{% else %}{{ t('common.save') }}{% endif %}</button>
       <a class="btn btn--ghost" href="{{ url_for('projects.tree', project_id=project.id) if not is_new else url_for('dashboard.today') }}">{{ t('common.cancel') }}</a>
