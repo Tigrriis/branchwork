@@ -49,6 +49,7 @@
         {% endfor %}
       </div>
     </div>
+    {% if current_user.notes_beta %}
     {# The machination's notes: the same encrypted notes as the Notes page,
        filed in this machination's folder. Titles and first lines arrive
        sealed; tasknotes.js opens them once the notes key is unlocked. #}
@@ -91,6 +92,14 @@
       </div>
       {% endif %}
     </div>
+    {% elif not is_new and task.notes and task.notes.strip() %}
+    {# Notes are off (a beta, under Account), but text an idea brought with
+       it still shows, read-only, until they are switched on and absorb it. #}
+    <div class="field">
+      <span class="field__label">{{ t('machination.notes') }}</span>
+      <p class="muted small tnotes__plain">{{ task.notes }}</p>
+    </div>
+    {% endif %}
     {% if not is_new and (project.tasks|length > 1 or project.ultimates) %}
     <fieldset class="fieldset">
       <legend>{{ t('thread.form_legend') }}</legend>
@@ -146,7 +155,7 @@
 {% endblock %}
 
 {% block scripts %}
-{% if not is_new and current_user.has_vault %}
+{% if not is_new and current_user.notes_beta and current_user.has_vault %}
 {% include "_vault_data.html" %}
 <script src="{{ url_for('static', filename='branchwork/vault.js') }}"></script>
 <script src="{{ url_for('static', filename='branchwork/tasknotes.js') }}"></script>

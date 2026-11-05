@@ -39,6 +39,14 @@ from vault import is_sealed, sealed_body, sealed_title
 notes_bp = Blueprint("notes", __name__)
 
 
+@notes_bp.before_request
+def _beta_only():
+    """Notes are an opt-in beta (Account). Signed out falls through to the
+    login redirect each route already has."""
+    if current_user.is_authenticated and not current_user.notes_beta:
+        abort(404)
+
+
 # ── Lookups ─────────────────────────────────────────────────────────────────
 
 def _project(project_id: int) -> Project:

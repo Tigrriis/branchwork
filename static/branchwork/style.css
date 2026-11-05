@@ -629,6 +629,11 @@ body.is-dragging-project .lane.is-drop {
 }
 
 /* ── Custom project templates ─────────────────────────────────────────── */
+.beta-card { margin-top: 14px; }
+.beta-card .check { align-items: flex-start; }
+.beta-card .check input { margin-top: 3px; }
+.beta-help { display: block; margin-top: 2px; }
+.beta-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; background: var(--card2); color: var(--fg2); vertical-align: middle; }
 .settings-link { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; padding: 18px; }
 .tmpl-row {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
@@ -1214,6 +1219,7 @@ body.is-dragging-note [data-drop-folder].is-drop { background: color-mix(in srgb
 .tnote__snippet:empty { display: none; }
 .tnote.is-broken .tnote__title { color: var(--danger); }
 .tnotes__hint { margin: 0; }
+.tnotes__plain { margin: 0; white-space: pre-line; }
 .tnotes__unlock { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .tnotes__unlock .input { width: 220px; }
 

@@ -117,7 +117,16 @@ edited or removed. Threads can end at an ultimate, so tasks in other branches
 can lead into it: drop a tile's handle on the disc, or use "leads to" on the
 task form or "comes after" on the ultimate's.
 
-**Notes** are each plot's notebook, kept the way Obsidian keeps a vault:
+**Notes** are an opt-in **beta**: each account switches them on under
+Account, Beta features. Off (the default for new accounts), the Notes tab,
+the note links and pencil on tiles, the notes on the machination form and the
+master password card are hidden, and every notes and vault route answers 404.
+Nothing is deleted, so switching back on brings everything back. Accounts
+that already had a master password or a note were switched on when the
+setting arrived. While notes are off, text an idea brought onto the tree
+shows read-only on the machination form.
+
+Notes are each plot's notebook, kept the way Obsidian keeps a vault:
 a file explorer down the left, the open note on the right, written in
 markdown and read rendered (Ctrl E switches). The folders are the plot's own
 shape: the plot is the root, each scheme a folder, each machination a folder

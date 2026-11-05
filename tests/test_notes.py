@@ -3,7 +3,12 @@
 Titles and bodies are sealed in the browser, so these tests send stand-ins
 in the sealed shape (``conftest.sealed``); the server never looks inside.
 """
-from conftest import copy_in, login, make_branch, make_project, make_task, make_user, make_vault, sealed
+from conftest import copy_in, login, make_branch, make_project, make_task, make_user as _make_user, make_vault, sealed
+
+
+def make_user(*args, **kwargs):
+    """Notes are an opt-in beta; everyone in these tests has opted in."""
+    return _make_user(*args, notes_beta=True, **kwargs)
 from models import ActivityEvent, Note
 
 
@@ -300,3 +305,48 @@ def test_notes_carry_when_they_were_written(client, db):
     assert 'data-nx-sort' in page
     form = client.get(f"/machinations/{task.id}/edit").data.decode()
     assert 'data-when="2026-03-04T05:06:07Z"' in form
+
+
+# ── The beta switch ─────────────────────────────────────────────────────────
+
+def test_notes_are_off_until_opted_into(client, db):
+    user = _make_user()
+    login(client)
+    p = make_project(user)
+    task = make_task(make_branch(p), "Lay the trap")
+    tree = client.get(f"/plots/{p.id}").data.decode()
+    assert f"/plots/{p.id}/notes" not in tree and "tile__note" not in tree
+    assert client.get(f"/plots/{p.id}/notes").status_code == 404
+    assert client.get("/notes/vault/plain").status_code == 404
+    form = client.get(f"/machinations/{task.id}/edit").data.decode()
+    assert "data-task-notes" not in form and "vault.js" not in form
+    account = client.get("/account").data.decode()
+    assert copy_in(account, "account.beta_notes") and 'id="notes-vault"' not in account
+
+
+def test_opting_in_and_out_from_the_account_page(client, db):
+    user = _make_user()
+    login(client)
+    p = make_project(user)
+    r = client.post("/account/beta", data={"notes_beta": "1"}, follow_redirects=True)
+    assert copy_in(r.data, "auth.beta_updated") and 'id="notes-vault"' in r.data.decode()
+    db.session.refresh(user)
+    assert user.notes_beta
+    assert client.get(f"/plots/{p.id}/notes").status_code == 200
+
+    # Opting out hides notes and deletes nothing.
+    make_vault(user)
+    db.session.add(Note(project=p, title=sealed("t"), body=sealed("b"))); db.session.commit()
+    client.post("/account/beta", data={})
+    db.session.refresh(user)
+    assert not user.notes_beta and user.has_vault and Note.query.count() == 1
+    assert client.get(f"/plots/{p.id}/notes").status_code == 404
+
+
+def test_text_from_an_idea_still_shows_with_notes_off(client, db):
+    user = _make_user()
+    login(client)
+    task = make_task(make_branch(make_project(user)), "Recruit henchmen")
+    task.notes = "Ask at the docks first"; db.session.commit()
+    form = client.get(f"/machinations/{task.id}/edit").data.decode()
+    assert "Ask at the docks first" in form and "data-task-notes" not in form

@@ -124,12 +124,13 @@ bad_login = "Invalid email or password."
 wrong_password = "Current password is wrong."
 new_password_short = "New password must be at least {min} characters."
 account_updated = "Account updated."
+beta_updated = "Beta features updated."
 # Too many sign-in or sign-up attempts in a short time
 slow_down = "Too many attempts. Wait a few minutes and try again."
 
 [account]
 _screen = "Account"
-_about = "Settings: name, password, and the ways into plot statuses and templates."
+_about = "Settings: name, password, beta features, and the ways into plot statuses and templates."
 title = "Account"
 heading = "Account"
 password_legend = "Change password"
@@ -142,6 +143,12 @@ templates_manage = "Manage"
 statuses_heading = "Plot statuses"
 statuses_help = "The columns and shelves on the board, their order, and the cap on any of them."
 statuses_manage = "Manage"
+beta_heading = "Beta features"
+beta_about = "Features still being worked on. Switch them on to try them; switching one off hides it and deletes nothing."
+beta_tag = "Beta"
+beta_notes = "Encrypted notes"
+beta_notes_help = "A notebook in every plot, foldered by scheme and machination, encrypted in your browser under a master password the server never sees."
+beta_save = "Save"
 sign_out = "Sign out"
 
 [error]

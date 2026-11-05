@@ -5,7 +5,12 @@ is exercised there; here the server's side of the bargain is checked: it
 stores only sealed notes, swaps the notes from before the vault in one go,
 and never takes a note in the clear.
 """
-from conftest import copy_in, login, make_branch, make_project, make_task, make_user, make_vault, sealed
+from conftest import copy_in, login, make_branch, make_project, make_task, make_user as _make_user, make_vault, sealed
+
+
+def make_user(*args, **kwargs):
+    """Notes are an opt-in beta; everyone in these tests has opted in."""
+    return _make_user(*args, notes_beta=True, **kwargs)
 from models import Note, User
 
 KEY = {"salt": "AAAAAAAAAAAAAAAAAAAAAA", "rounds": 600_000}

@@ -27,6 +27,24 @@
     </div>
   </form>
 </div>
+<div class="card beta-card" id="beta">
+  <div class="card__head"><h2>{{ t('account.beta_heading') }}</h2></div>
+  <p class="muted small">{{ t('account.beta_about') }}</p>
+  <form method="post" action="{{ url_for('auth.beta') }}" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="check">
+      <input type="checkbox" name="notes_beta" value="1" {% if current_user.notes_beta %}checked{% endif %}>
+      <span>
+        <strong>{{ t('account.beta_notes') }}</strong><span class="beta-tag">{{ t('account.beta_tag') }}</span>
+        <span class="muted small beta-help">{{ t('account.beta_notes_help') }}</span>
+      </span>
+    </label>
+    <div class="form__actions">
+      <button class="btn btn--primary btn--sm" type="submit">{{ t('account.beta_save') }}</button>
+    </div>
+  </form>
+</div>
+{% if current_user.notes_beta %}
 <div class="card vault-card" id="notes-vault">
   <div class="card__head"><h2>{{ t('vault.account_heading') }}</h2></div>
   {% if current_user.has_vault %}
@@ -71,6 +89,7 @@
   <p class="muted">{{ t('vault.account_none') }}</p>
   {% endif %}
 </div>
+{% endif %}
 <div class="card settings-link">
   <div>
     <strong>{{ t('account.statuses_heading') }}</strong>
@@ -92,7 +111,7 @@
 {% endblock %}
 
 {% block scripts %}
-{% if current_user.has_vault %}
+{% if current_user.notes_beta and current_user.has_vault %}
 {% include "_vault_data.html" %}
 <script src="{{ url_for('static', filename='branchwork/vault.js') }}"></script>
 {% endif %}

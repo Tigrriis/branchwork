@@ -128,3 +128,14 @@ def account():
         flash(tx("auth.account_updated"), "success")
         return redirect(url_for("auth.account"))
     return render_template("account.html")
+
+
+@auth_bp.route("/account/beta", methods=["POST"])
+@login_required
+def beta():
+    """Opt in or out of beta features. Opting out of notes hides them and
+    deletes nothing, so opting back in brings them all back."""
+    current_user.notes_beta = bool(request.form.get("notes_beta"))
+    db.session.commit()
+    flash(tx("auth.beta_updated"), "success")
+    return redirect(url_for("auth.account") + "#beta")

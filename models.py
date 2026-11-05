@@ -129,6 +129,12 @@ class User(UserMixin, db.Model):
     vault_key = db.Column(db.String(200), nullable=True)
     vault_set_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
+    # Encrypted notes are an opt-in beta, switched on under Account. Off,
+    # the Notes tab, the note links on tiles and the machination form's
+    # notes are hidden, and the notes and vault routes answer 404. Nothing
+    # is deleted, so switching it back on brings every note back.
+    notes_beta = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+
     projects = db.relationship(
         "Project", backref="owner", order_by="Project.created_at",
         cascade="all, delete-orphan")

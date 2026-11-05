@@ -70,8 +70,8 @@ def db(app):
     return _db
 
 
-def make_user(email="ruben@example.com", password="hunter2hunter2") -> User:
-    user = User(email=email)
+def make_user(email="ruben@example.com", password="hunter2hunter2", *, notes_beta=False) -> User:
+    user = User(email=email, notes_beta=notes_beta)
     user.set_password(password)
     _db.session.add(user)
     _db.session.commit()

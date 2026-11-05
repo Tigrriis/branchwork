@@ -38,7 +38,7 @@ import re
 from datetime import datetime, timezone
 
 from flask import (
-    Blueprint, current_app, flash, jsonify, redirect, request, url_for,
+    Blueprint, abort, current_app, flash, jsonify, redirect, request, url_for,
 )
 from flask_login import current_user, login_required
 
@@ -47,6 +47,13 @@ from extensions import db
 from models import Branch, Note, Project, Task
 
 vault_bp = Blueprint("vault", __name__)
+
+
+@vault_bp.before_request
+def _beta_only():
+    """The vault belongs to Notes, an opt-in beta (Account)."""
+    if current_user.is_authenticated and not current_user.notes_beta:
+        abort(404)
 
 SEALED = re.compile(r"^v1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]{22,}$")
 SALT = re.compile(r"^[A-Za-z0-9_-]{22,64}$")
