@@ -12,12 +12,15 @@ the Render services all keep their original names (`Project`, `Branch`,
 `Task`, `branchwork`), because renaming them would break deployments for no
 one's benefit. The rest of this file uses the code's names.
 
-A new account starts with an **example plot**, the one the landing page
-draws, made real by `example.py`: same schemes, points and lock, with a
-title on every machination. Signing up lands on it. It is an ordinary plot,
-so it can be edited or deleted. Account → Replay the first visit gives any account
-the example plot again and shows the plot guide as if it had never been
-closed, which is how to see the first visit without a new account.
+A new account starts with a **walkthrough**: signing up lands on
+`/?tour=1`, and `static/branchwork/tour.js` points at one thing at a time
+with a pop-up while the person builds a real plot: start a plot, name it,
+add a scheme, name it, add a machination, score its point, then a word each
+on tiers, ultimates and more schemes. Each step moves on by itself once its
+goal is met, so forms and quick-add need no special handling. Progress lives
+in the browser (localStorage), so it survives page loads; Skip ends it.
+Account → Walkthrough → Replay starts it again. Its words are under
+`[tour]` in the copy file.
 
 Signed out, the home address is the **landing page**: one screen with the
 pitch, a sign-up box that posts to `/register`, and an example plot drawn

@@ -30,6 +30,7 @@ def _referenced():
     # anyone renders it, the way a refusal reaches whoever flashes it.
     keys |= {k for k in copytext.catalogue() if f'"{k}"' in python}
     keys |= {k for k in copytext.catalogue() if k.startswith("js.") and f'"{k[3:]}"' in js}
+    keys |= {k for k in copytext.catalogue() if k.startswith("tour.") and f'"{k[5:]}"' in js}
     # t('state.' ~ task.state) captures as "state.": a computed prefix, not a key.
     return {k for k in keys if not k.endswith(".")}
 

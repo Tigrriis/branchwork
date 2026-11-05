@@ -120,33 +120,20 @@ def test_signups_per_ip(client):
     assert User.query.filter_by(email="other@example.com").first() is not None
 
 
-# --- the example plot ----------------------------------------------------
+# --- the walkthrough -----------------------------------------------------
 
-def test_new_accounts_start_with_the_example_plot(client):
-    from landing import demo_plot
-    _register(client, "fresh@example.com")
+def test_signing_up_starts_the_walkthrough_with_no_plots(client):
+    r = _register(client, "fresh@example.com")
+    assert r.headers["Location"].endswith("/?tour=1")
     user = User.query.filter_by(email="fresh@example.com").one()
-    assert len(user.projects) == 1
-    plot = user.projects[0]
-    # The same picture as the landing page: names, points and the lock.
-    demo = demo_plot()
-    assert plot.name == demo["name"] and plot.focused
-    assert [b.name for b in plot.branches] == [s["name"] for s in demo["schemes"]]
-    assert [(b.points_done, b.points_max) for b in plot.branches] == \
-        [(s["done"], s["max"]) for s in demo["schemes"]]
-    assert plot.branches[2].is_locked and not plot.branches[1].is_locked
-    assert plot.branches[0].ultimate.state == "open"
+    assert user.projects == []
+    page = client.get("/?tour=1").data.decode()
+    assert "tour.js" in page and copy_in(page, "auth.welcome")
 
 
-def test_an_existing_account_can_replay_the_first_visit(client):
-    from conftest import make_project
-    user = make_user()
-    mine = make_project(user)
+def test_the_walkthrough_can_be_replayed_and_is_not_offered_signed_out(client):
+    make_user()
+    assert "tour.js" not in client.get("/").data.decode()
     login(client)
-    assert copy_in(client.get("/account").data, "account.first_visit_heading")
-    r = client.post("/account/first-visit")
-    assert len(user.projects) == 2 and user.projects[0] is mine
-    example = user.projects[1]
-    assert r.headers["Location"].endswith(f"/plots/{example.id}?guide=1")
-    page = client.get(r.headers["Location"]).data.decode()
-    assert "data-guide-force" in page and copy_in(page, "auth.welcome")
+    account = client.get("/account").data.decode()
+    assert 'href="/?tour=1"' in account and copy_in(account, "account.tour_heading")

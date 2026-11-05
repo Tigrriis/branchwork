@@ -91,25 +91,6 @@ demo_ultimate = "A seat on the council"
 # Read out by screen readers in place of the example plot
 demo_caption = "An example plot drawn as a skill tree in three coloured columns: Infiltration nearly complete with its ultimate reached, Funding about half done, and The Device locked until Funding is complete."
 
-[example]
-_screen = "Example plot"
-_about = "The plot every new account starts with: the landing page's example made real. Its plot, scheme and ultimate names are the landing page's, above; these are the rest."
-objective = "An example to click around in. Delete it from Edit when you are ready to plan your own."
-next_action = "Click a tile in Funding to add a point"
-m_minutes = "Study the council minutes"
-m_town_hall = "Get a job at the town hall"
-m_aide = "Win over the mayor's aide"
-m_reference = "Forge a glowing reference"
-m_ballot = "Rig the staff ballot"
-m_account = "Open an offshore account"
-m_bake_sale = "Launder the bake-sale takings"
-m_key = "Copy the treasurer's key"
-m_grant = "Intercept the grant letter"
-m_volcano = "Survey the dormant volcano"
-m_henchmen = "Recruit henchmen"
-m_device = "Assemble the device"
-m_pond = "Test it on a small pond"
-
 [login]
 _screen = "Sign in"
 _about = "The first screen a signed-out visitor sees."
@@ -139,8 +120,8 @@ _about = "Pop-up messages from signing in, signing up and the account page."
 invalid_email = "Enter a valid email address."
 password_short = "Password must be at least {min} characters."
 email_taken = "That email is already registered. Sign in instead."
-# Shown on the example plot a new account lands on
-welcome = "Welcome. This is an example plot: click a tile to add a point, or start your own with + New plot."
+# Shown on Today after signing up, as the walkthrough starts
+welcome = "Welcome to Villainy."
 bad_login = "Invalid email or password."
 wrong_password = "Current password is wrong."
 new_password_short = "New password must be at least {min} characters."
@@ -163,10 +144,10 @@ templates_manage = "Manage"
 statuses_heading = "Plot statuses"
 statuses_help = "The columns and shelves on the board, their order, and the cap on any of them."
 statuses_manage = "Manage"
-# Adds the example plot and shows the plot guide again, as a new account sees them
-first_visit_heading = "Replay the first visit"
-first_visit_help = "Adds the example plot a new account starts with, and shows the guide to the words again. Your own plots are left as they are."
-first_visit_submit = "Replay"
+# Starts the step-by-step walkthrough a new account gets
+tour_heading = "Walkthrough"
+tour_help = "The step-by-step tour a new account gets: start a plot, add a scheme and a machination, and score a point."
+tour_start = "Replay"
 sign_out = "Sign out"
 
 [error]
@@ -361,6 +342,38 @@ ultimate_term = "Ultimate"
 ultimate = "A scheme's end goal, the disc at its foot. Claim it with a click once the last tier is full."
 lock_term = "Locks"
 lock = "A scheme can wait on another, and stays locked until that one is complete."
+
+[tour]
+_screen = "Walkthrough"
+_about = "The pop-ups that walk a new account through building its first plot, one step at a time. Each moves on by itself once its step is done."
+# Above each pop-up; {n} is this step and {total} how many there are
+count = "Step {n} of {total}"
+skip = "Skip the walkthrough"
+next = "Next"
+finish = "Finish"
+new_plot_title = "Start a plot"
+new_plot_body = "A plot is a project: anything with more than one moving part. Click the highlighted button to start your first."
+plot_form_title = "Name your plot"
+plot_form_body = "Give it a name, then Create plot. It is set to start Blank so you build its schemes yourself; next time, a template can set them up for you."
+add_scheme_title = "Add a scheme"
+add_scheme_body = "Schemes are the columns: strands of the plot that move along side by side, like Recording and Marketing for a podcast. Add the first one."
+scheme_form_title = "Name the scheme"
+scheme_form_body = "Name it, pick a colour, then Add scheme. Leave “Opens after” alone for now: it is for a scheme that has to wait on another."
+add_machination_title = "Add machinations"
+add_machination_body = "Machinations are the tasks. Click Add the first machination, type one and press Enter. The box stays open, so add two or three."
+score_title = "Score a point"
+score_body = "Click a machination to add a point. A plain one is worth a single point and turns green when it is done. Shift-click or right-click takes a point back."
+# The same, on a touch screen
+score_body_touch = "Tap a machination to add a point. A plain one is worth a single point and turns green when it is done. Press and hold to take a point back."
+tiers_title = "Tiers"
+# {gate} is the plot's points to open the next tier
+tiers_body = "Machinations stack in tiers. The next tier opens once this one holds {gate} points, so the groundwork comes first. + New tier starts one."
+ultimate_title = "The ultimate"
+ultimate_body = "Every scheme can end in an ultimate: its end goal, the disc at its foot, claimed once the last tier is full. Set one when you know what done looks like."
+more_title = "More schemes"
+more_body = "Add a scheme for each other strand of the plot. On a scheme's edit page, “Opens after” makes it wait until another is complete."
+done_title = "That is the loop"
+done_body = "Plots hold schemes, schemes hold machinations in tiers, and points open the way. Today keeps every plot in view, and How it works at the top of a plot recaps the words."
 
 [tree]
 _screen = "Plot · Tree"

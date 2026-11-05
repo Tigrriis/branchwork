@@ -1391,3 +1391,29 @@ body.is-dragging-note [data-drop-folder].is-drop { background: color-mix(in srgb
   .guide__list dd { font-size: 12px; line-height: 1.4; }
 }
 .link-btn { background: none; border: 0; padding: 0; font-family: inherit; cursor: pointer; }
+
+/* The walkthrough (tour.js): a card in a corner, away from what it points
+   at, and a pulsing ring around the thing to click. */
+.tour {
+  position: fixed; z-index: 40; right: 20px; bottom: 20px; width: min(340px, calc(100vw - 32px));
+  padding: 14px 16px; border: 1px solid var(--accent); border-radius: var(--radius);
+  background: var(--card); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.tour[hidden] { display: none; }
+.tour--left { right: auto; left: calc(var(--rail-w) + 20px); }
+.tour--top { bottom: auto; top: 72px; }
+.tour__count { margin: 0 0 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.tour__title { margin: 0 0 6px; font-size: 16px; }
+.tour__body { margin: 0; font-size: 13px; line-height: 1.5; color: var(--fg2); text-wrap: pretty; }
+.tour__actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.tour__skip { font-size: 12px; color: var(--muted); }
+.tour__skip:hover { color: var(--fg); }
+.tour__next[hidden], .tour__skip[hidden] { display: none; }
+.tour__actions:has(.tour__skip[hidden]) { justify-content: flex-end; }
+.tour-ring { outline: 2px solid var(--accent); outline-offset: 3px; animation: tour-pulse 1.6s ease-in-out infinite; }
+@keyframes tour-pulse { 50% { outline-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { .tour-ring { animation: none; } }
+@media (max-width: 720px) {
+  .tour, .tour--left { top: auto; right: 12px; bottom: 12px; left: 12px; width: auto; }
+  .tour--top { top: 64px; right: 12px; bottom: auto; left: 12px; width: auto; }
+}

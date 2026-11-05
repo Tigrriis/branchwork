@@ -47,7 +47,7 @@
 
 {# The villain words in plain English. Hidden here and shown by app.js
    until someone dismisses it in this browser; the header's link reopens it. #}
-<section class="guide" id="guide" hidden aria-labelledby="guide-title"{% if request.args.get('guide') %} data-guide-force{% endif %}>
+<section class="guide" id="guide" hidden aria-labelledby="guide-title">
   <div class="guide__head">
     <h2 class="guide__title" id="guide-title">{{ t('guide.heading') }}</h2>
     <button type="button" class="btn btn--ghost btn--sm" data-guide-close>{{ t('guide.close') }}</button>
@@ -67,7 +67,7 @@
   {% include "_routine_bar.html" %}
 </section>
 
-<div id="tree" class="tree" data-project="{{ project.id }}">
+<div id="tree" class="tree" data-project="{{ project.id }}" data-gate="{{ project.gate_points }}">
   {% include "_tree.html" %}
 </div>
 <p class="hint muted hint--pointer">{{ t('tree.click_hint') }}</p>

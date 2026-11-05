@@ -111,7 +111,8 @@ def clean_icon(name: str | None) -> str:
 # with a matching word wins. Only used when nobody chose an icon, so a new
 # tile reads at a glance instead of every tile being the default.
 _SUGGEST = [
-    ("coin", "money fund funding budget pay paid payment invoice price pricing cost costs cash "
+    ("coin", "money fund funding budget pay paid payment invoice price pricing cost costs cash buy "
+             "purchase order "
              "sell sale sales revenue quote quotes tax taxes profit raise loan"),
     ("bank", "bank account accounts finance accounting bookkeeping"),
     ("rocket", "launch ship release publish deploy announce live"),

@@ -1,11 +1,11 @@
 from conftest import copy_in, login, make_project, make_user
 
 
-def test_register_and_land_on_the_example_plot(client):
+def test_register_and_land_on_today(client):
     r = client.post("/register", data={"email": "New@Example.com", "password": "longenough1"},
                     follow_redirects=True)
     assert r.status_code == 200
-    assert copy_in(r.data, "landing.demo_plot") and copy_in(r.data, "auth.welcome")
+    assert copy_in(r.data, "today.heading") and copy_in(r.data, "auth.welcome")
     # email normalised to lower case
     r = client.post("/login", data={"email": "new@example.com", "password": "longenough1"})
     assert r.status_code == 302

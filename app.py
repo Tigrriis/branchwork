@@ -25,7 +25,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 import config
 from auth import auth_bp
-from copytext import js_copy, t, tx
+from copytext import js_copy, t, tour_copy, tx
 from dashboard import dashboard_bp
 from demo import demo_bp
 from gitsync import gitsync_bp
@@ -120,6 +120,7 @@ def _register_template_helpers(app: Flask) -> None:
             "SITE_NAME": tx("brand.name"),
             "t": t,
             "js_copy": js_copy,
+            "tour_copy": tour_copy,
             "HUES": HUES,
             "STATUS_HUES": STATUS_HUES,
             "plot_switcher": plot_switcher,

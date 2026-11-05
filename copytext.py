@@ -96,3 +96,8 @@ def t(key: str, **values) -> Markup:
 def js_copy() -> dict[str, str]:
     """The ``[js]`` table, for pop-ups the browser raises without a reload."""
     return {k[3:]: v for k, v in catalogue().items() if k.startswith("js.")}
+
+
+def tour_copy() -> dict[str, str]:
+    """The ``[tour]`` table, for the walkthrough's pop-ups (tour.js)."""
+    return {k[5:]: v for k, v in catalogue().items() if k.startswith("tour.")}

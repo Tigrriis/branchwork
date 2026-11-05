@@ -83,5 +83,10 @@
   <script>window.COPY = {{ js_copy()|tojson }};</script>
   <script src="{{ url_for('static', filename='branchwork/app.js') }}"></script>
   {% block scripts %}{% endblock %}
+  {% if current_user.is_authenticated %}
+  {# The walkthrough: idle unless ?tour=1 started it in this browser. #}
+  <script>window.TOUR_COPY = {{ tour_copy()|tojson }};</script>
+  <script src="{{ url_for('static', filename='branchwork/tour.js') }}"></script>
+  {% endif %}
 </body>
 </html>
