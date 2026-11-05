@@ -1,0 +1,80 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#15181d;--card:#1b1f25;--fg:#eceae2;--muted:#8b909a;--line:#2a2f38;--empty:#3a404b;--accent:#3fcf63}
+*{box-sizing:border-box;margin:0}
+html,body{width:var(--w);height:var(--h);background:var(--bg);color:var(--fg);font-family:Manrope,system-ui,sans-serif;overflow:hidden}
+.ad{position:relative;width:100%;height:100%;display:flex;padding:var(--pad);gap:var(--gap)}
+.ad::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 85% 10%,rgba(155,124,240,.16),transparent 55%),radial-gradient(ellipse at 10% 95%,rgba(63,207,99,.10),transparent 50%);pointer-events:none}
+.copy{display:flex;flex-direction:column;justify-content:space-between;position:relative;z-index:1}
+.brand{display:flex;align-items:center;gap:.45em;font-weight:800;font-size:var(--brand);letter-spacing:-.01em}
+.brand img{width:1.5em;height:1.5em}
+h1{font-weight:800;font-size:var(--h1);line-height:1.02;letter-spacing:-.035em;text-wrap:balance}
+h1 em{font-style:normal;color:var(--accent)}
+p{font-weight:500;font-size:var(--p);color:var(--muted);line-height:1.35;margin-top:.7em;text-wrap:pretty;max-width:22em}
+.cta{display:flex;align-items:center;gap:.8em;font-size:var(--cta);font-weight:700}
+.btn{background:var(--accent);color:#101215;padding:.55em 1.05em;border-radius:999px;font-weight:800}
+.url{color:var(--muted);font-weight:600}
+/* tree */
+.tree{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,1fr);gap:var(--cg);align-self:stretch}
+.col{border-radius:calc(var(--u)*1.1);padding:calc(var(--u)*.9);display:flex;flex-direction:column;gap:calc(var(--u)*.6);border:2px solid var(--edge);background:var(--tbg)}
+.col h3{font-size:calc(var(--u)*1.05);font-weight:800;color:var(--tfg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tiers{flex:1;display:flex;flex-direction:column-reverse;gap:calc(var(--u)*.55)}
+.tier{flex:1;display:flex;gap:calc(var(--u)*.45)}
+.pip{flex:1;border-radius:calc(var(--u)*.4);background:var(--empty)}
+.pip.f{background:var(--hue)}
+.pip.p{background:linear-gradient(to top,var(--hue) 50%,var(--empty) 50%)}
+.ult{height:calc(var(--u)*2.2);border-radius:calc(var(--u)*.5);display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*.85);font-weight:800;color:var(--tfg);border:2px dashed var(--edge)}
+.ult.won{background:var(--hue);color:#101215;border-style:solid;border-color:var(--hue)}
+.g{--hue:#3fcf63;--tbg:#182a1f;--edge:#2f5a3c;--tfg:#7ee39a}
+.b{--hue:#5b8def;--tbg:#18243a;--edge:#2f4a7a;--tfg:#8fb8ff}
+.r{--hue:#f0684e;--tbg:#2e1d1a;--edge:#6b3a31;--tfg:#ff9a86}
+.locked .tiers,.locked .ult{opacity:.35}
+.lock{font-size:calc(var(--u)*.8);color:var(--tfg);font-weight:700}
+.ult,.lock{white-space:nowrap}.short{display:none}.land .long{display:none}.land .short{display:inline}
+/* layouts */
+.land .copy{flex:1.25}.land .tree{flex:1}
+.sq,.tall{flex-direction:column}
+.sq .tree,.tall .tree{flex:1}
+.sq .copy,.tall .copy{display:contents}
+.sq .brand,.tall .brand{order:1}.sq .copy>div:nth-child(2),.tall .copy>div:nth-child(2){order:2}
+.sq .tree,.tall .tree{order:3}.sq .cta,.tall .cta{order:4}
+</style></head>
+<body>
+<div class="ad" id="ad">
+  <div class="copy">
+    <div class="brand"><img src="logo.svg" alt="">Villainy</div>
+    <div><h1 id="h1"></h1><p id="p"></p></div>
+    <div class="cta"><span class="btn">Start your first plot</span><span class="url">villainy.win</span></div>
+  </div>
+  <div class="tree">
+    <div class="col g"><h3>Infiltration</h3><div class="ult won">★<span class="long">&nbsp;Council seat</span></div>
+      <div class="tiers"><div class="tier"><i class="pip f"></i><i class="pip f"></i><i class="pip f"></i></div><div class="tier"><i class="pip f"></i><i class="pip f"></i></div><div class="tier"><i class="pip f"></i><i class="pip f"></i></div><div class="tier"><i class="pip f"></i></div></div></div>
+    <div class="col b"><h3>Funding</h3><div class="ult">★</div>
+      <div class="tiers"><div class="tier"><i class="pip f"></i><i class="pip f"></i><i class="pip f"></i></div><div class="tier"><i class="pip f"></i><i class="pip p"></i></div><div class="tier"><i class="pip"></i><i class="pip"></i></div><div class="tier"><i class="pip"></i></div></div></div>
+    <div class="col r locked"><h3>The Device</h3><div class="lock">🔒<span class="long">&nbsp;after Funding</span><span class="short">&nbsp;Locked</span></div><div class="ult">★</div>
+      <div class="tiers"><div class="tier"><i class="pip"></i><i class="pip"></i></div><div class="tier"><i class="pip"></i><i class="pip"></i></div><div class="tier"><i class="pip"></i></div></div></div>
+  </div>
+</div>
+<script>
+const q=new URLSearchParams(location.search);
+const ADS={
+ 1:["Every evil plan needs a <em>plan.</em>","Split the plot into schemes, stack the machinations in tiers, and watch each one fill."],
+ 2:["World domination, <em>one tier at a time.</em>","A planner for grand, many-stranded schemes. The next tier opens once the last is full."],
+ 3:["Henchmen <em>not included.</em>","Everything else you need to finally finish the scheme you started three months ago."],
+ 4:["Monologue less. <em>Machinate more.</em>","Turn your sprawling master plan into a skill tree you can actually tick off."]
+};
+const [h,p]=ADS[q.get('ad')||1];
+document.getElementById('h1').innerHTML=h;document.getElementById('p').textContent=p;
+const fmt=q.get('fmt')||'sq';
+const S={
+ land:{w:1200,h:628,pad:56,gap:48,brand:30,h1:66,p:25,cta:22,u:19,cg:14},
+ sq:{w:1080,h:1080,pad:72,gap:44,brand:34,h1:92,p:30,cta:26,u:24,cg:18},
+ tall:{w:1080,h:1350,pad:80,gap:56,brand:36,h1:104,p:33,cta:28,u:27,cg:20}
+}[fmt];
+const r=document.documentElement.style;
+for(const k in S)r.setProperty('--'+k,S[k]+'px');
+document.getElementById('ad').classList.add(fmt);
+</script>
+</body></html>
