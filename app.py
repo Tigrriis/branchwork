@@ -9,6 +9,7 @@ Villainy: plan large, multi-stranded plots as a skill tree.
   /plots/<id>/notes      the plot's notebook, foldered by scheme and machination
   /plots/<id>/list       the same tasks as a table (no longer linked from the tabs)
   /login, /register, /account
+  /privacy, /terms       the privacy policy and terms of use
 
 Module-level ``app`` rather than a factory, matching the other Arete Flask
 services, so ``gunicorn app:app`` works unchanged. Tests build their own app
@@ -18,7 +19,7 @@ import hashlib
 import os
 import threading
 
-from flask import Flask, redirect, render_template, request
+from flask import Flask, redirect, render_template, request, session
 from flask_wtf.csrf import CSRFError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -30,6 +31,7 @@ from demo import demo_bp
 from gitsync import gitsync_bp
 from extensions import csrf, db, login_manager, migrate
 from icons import icon_names, icon_svg
+from legal import legal_bp
 from models import CADENCES, HUES, STATUS_HUES
 from notes import notes_bp
 from projects import projects_bp
@@ -67,6 +69,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     app.register_blueprint(threads_bp)
     app.register_blueprint(ultimates_bp)
     app.register_blueprint(vault_bp)
+    app.register_blueprint(legal_bp)
 
     _register_asset_versioning(app)
     _register_template_helpers(app)
@@ -109,6 +112,10 @@ def _register_template_helpers(app: Flask) -> None:
     @app.context_processor
     def _inject():
         return {
+            # Set by a view (sign-up) and sent to analytics by the next page.
+            # Checked first because popping a missing key still rewrites the cookie.
+            "analytics_event": (session.pop("analytics_event")
+                                if "analytics_event" in session else None),
             # The product name is copy like any other, so it lives in the catalogue.
             "SITE_NAME": tx("brand.name"),
             "t": t,

@@ -152,6 +152,27 @@ delete every note so Notes can start again. What the server can still see
 is a note's folder, size and when it changed. `vault.py` and
 `static/branchwork/vault.js` hold the details.
 
+## Privacy, analytics and abuse limits
+
+`/privacy` and `/terms` are open to everyone and linked under both sign-up
+forms and in the footer of signed-out pages. Their words sit under
+`[privacy]`, `[terms]` and `[legal]` in the copy file, including the contact
+address `legal.contact_email`. Keep the privacy policy true: if the app starts
+collecting something new or sending it somewhere new, say so there.
+
+**Analytics** is Plausible, which needs no cookies and so no consent banner.
+It is off until `PLAUSIBLE_SCRIPT` is set (in Render: Environment) to the
+script URL Plausible gives for the site. Older `script.js` snippets also need
+`PLAUSIBLE_DOMAIN`. A new account sends a `Signup` event from the page after
+sign-up; add `Signup` as a goal in Plausible and it shows signups by source,
+including the `utm_source` and `utm_campaign` on an ad's link.
+
+**Abuse limits** live in `ratelimit.py`: sign-in is capped per IP address and,
+whatever the address, per email after repeated wrong passwords; sign-up is
+capped per IP. Counts are kept in each worker's memory. Both sign-up forms
+also carry a hidden `hp_website` field that people never see; a post that
+fills it in makes no account. `RATELIMIT_ENABLED=0` switches the limits off.
+
 ## Run locally
 
 ```bash
@@ -295,5 +316,7 @@ set DATABASE_URL=postgresql://...render.com/branchwork
 ## Not yet
 
 * Password reset (no email sending is wired up).
+* Deleting an account from the app (for now, by email request, as the
+  privacy policy says).
 * Drag-and-drop reordering of tasks within a tier.
 * Sharing a project with other users.

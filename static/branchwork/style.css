@@ -1354,3 +1354,21 @@ body.is-dragging-note [data-drop-folder].is-drop { background: color-mix(in srgb
   .notes__sort { font-size: 16px; }
   .note-bar__dates { flex-basis: 100%; order: 3; }
 }
+
+/* Privacy and terms: a readable column of text. */
+.legal { line-height: 1.6; }
+.legal h1 { margin-bottom: 4px; }
+.legal h2 { font-size: 17px; margin: 28px 0 8px; }
+.legal p:not(.muted), .legal li { color: var(--fg2); text-wrap: pretty; }
+.legal ul { padding-left: 20px; }
+.legal li + li { margin-top: 6px; }
+
+/* Under the sign-up buttons, and the footer on signed-out pages. */
+.auth-consent { margin: 0; font-size: 12px; color: var(--muted); text-align: center; text-wrap: pretty; }
+.site-foot { display: flex; justify-content: center; gap: 20px; padding: 16px 16px 24px; font-size: 13px; }
+.site-foot a { color: var(--muted); }
+.site-foot a:hover { color: var(--fg); }
+
+/* The bot trap on sign-up forms: off screen rather than display:none,
+   which some bots know to skip. */
+.hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }

@@ -15,6 +15,17 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
   <link rel="stylesheet" href="{{ url_for('static', filename='branchwork/theme.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='branchwork/style.css') }}">
+  {# Plausible, when PLAUSIBLE_SCRIPT is set. The stub queues events until the
+     script arrives; init() is for the newer per-site script, which has no
+     data-domain. A sign-up sends its event from the page that follows it. #}
+  {% if config.PLAUSIBLE_SCRIPT %}
+  <script async src="{{ config.PLAUSIBLE_SCRIPT }}"{% if config.PLAUSIBLE_DOMAIN %} data-domain="{{ config.PLAUSIBLE_DOMAIN }}"{% endif %}></script>
+  <script>
+    window.plausible = window.plausible || function () { (plausible.q = plausible.q || []).push(arguments); };
+    {% if not config.PLAUSIBLE_DOMAIN %}plausible.init = plausible.init || function (o) { plausible.o = o || {}; }; plausible.init();{% endif %}
+    {% if analytics_event %}plausible({{ analytics_event|tojson }});{% endif %}
+  </script>
+  {% endif %}
 </head>
 <body class="{% block body_class %}{% endblock %}{% if current_user.is_authenticated %} has-rail{% endif %}">
   <header class="topbar">
@@ -60,6 +71,13 @@
       {% block content %}{% endblock %}
     </main>
   </div>
+
+  {% if not current_user.is_authenticated %}
+  <footer class="site-foot">
+    <a href="{{ url_for('legal.privacy') }}">{{ t('legal.privacy_link') }}</a>
+    <a href="{{ url_for('legal.terms') }}">{{ t('legal.terms_link') }}</a>
+  </footer>
+  {% endif %}
 
   {# Pop-ups raised in the browser read their words from the same catalogue. #}
   <script>window.COPY = {{ js_copy()|tojson }};</script>

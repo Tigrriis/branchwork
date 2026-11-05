@@ -22,7 +22,12 @@
       <label class="field__label" for="password">{{ t('common.password') }} <span class="muted">{{ t('register.password_hint') }}</span></label>
       <input class="input" type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
     </div>
+    {# A trap for bots: hidden from people and screen readers, see auth.HONEYPOT. #}
+    <div class="hp" aria-hidden="true"><input type="text" name="hp_website" tabindex="-1" autocomplete="off"></div>
     <button class="btn btn--primary btn--block" type="submit">{{ t('register.submit') }}</button>
+    {% set terms_link %}<a href="{{ url_for('legal.terms') }}">{{ t('legal.terms_link') }}</a>{% endset %}
+    {% set privacy_link %}<a href="{{ url_for('legal.privacy') }}">{{ t('legal.privacy_link') }}</a>{% endset %}
+    <p class="auth-consent">{{ t('legal.agree', terms=terms_link, privacy=privacy_link) }}</p>
   </form>
   {% set link %}<a href="{{ url_for('auth.login') }}">{{ t('register.have_one_link') }}</a>{% endset %}
   <p class="auth-alt">{{ t('register.have_one', link=link) }}</p>

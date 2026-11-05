@@ -48,3 +48,8 @@ services:
       # account page, so editing this never moves an existing user's cap.
       - key: WIP_BUILDING_LIMIT
         value: "3"
+      # Plausible analytics: paste the script URL from the site's Plausible
+      # settings. Left unset, no analytics load. sync: false means Render asks
+      # for the value in the dashboard instead of reading it from here.
+      - key: PLAUSIBLE_SCRIPT
+        sync: false

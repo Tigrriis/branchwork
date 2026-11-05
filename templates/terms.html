@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ t('terms.title') }} · {{ SITE_NAME }}{% endblock %}
+{% block main_class %}page page--narrow legal{% endblock %}
+
+{% block content %}
+<h1>{{ t('terms.heading') }}</h1>
+<p class="muted">{{ t('legal.updated') }}</p>
+<p>{{ t('terms.intro') }}</p>
+
+<h2>{{ t('terms.account_heading') }}</h2>
+<p>{{ t('terms.account') }}</p>
+
+<h2>{{ t('terms.content_heading') }}</h2>
+<p>{{ t('terms.content') }}</p>
+
+<h2>{{ t('terms.use_heading') }}</h2>
+<p>{{ t('terms.use') }}</p>
+
+<h2>{{ t('terms.master_heading') }}</h2>
+<p>{{ t('terms.master') }}</p>
+
+<h2>{{ t('terms.service_heading') }}</h2>
+<p>{{ t('terms.service') }}</p>
+
+<h2>{{ t('terms.liability_heading') }}</h2>
+<p>{{ t('terms.liability') }}</p>
+
+<h2>{{ t('terms.contact_heading') }}</h2>
+<p>{{ t('terms.contact', email=contact) }}</p>
+{% endblock %}

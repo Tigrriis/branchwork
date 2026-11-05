@@ -42,6 +42,16 @@ class Config:
     # a long cache lifetime is safe: a changed file is a different URL.
     SEND_FILE_MAX_AGE_DEFAULT = 31_536_000
 
+    # Analytics (Plausible: cookieless, so no consent banner). Off unless
+    # PLAUSIBLE_SCRIPT is set to the script URL from the site's Plausible
+    # settings. PLAUSIBLE_DOMAIN is only for the older script.js snippet,
+    # which reads the site from a data-domain attribute.
+    PLAUSIBLE_SCRIPT = os.environ.get("PLAUSIBLE_SCRIPT", "")
+    PLAUSIBLE_DOMAIN = os.environ.get("PLAUSIBLE_DOMAIN", "")
+
+    # Limits on sign-in and sign-up attempts (ratelimit.py).
+    RATELIMIT_ENABLED = os.environ.get("RATELIMIT_ENABLED", "1") == "1"
+
     # Default number of points a tier must hold before the next tier opens.
     # Each project can override it.
     DEFAULT_GATE_POINTS = 3
