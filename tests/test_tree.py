@@ -209,3 +209,30 @@ def test_tree_page_carries_each_tiers_fill(client, db):
     assert f'data-tier-key="{branch.id}:1" style="--fill: 0.333"' in html
     body = client.post(f"/machinations/{branch.tasks[0].id}/points", json={"delta": 2}).get_json()
     assert "tier--charged" in body["html"] and "--fill: 1.000" in body["html"]
+
+
+def test_quick_add_makes_a_one_point_machination_with_an_icon(client, db):
+    user = make_user()
+    login(client)
+    branch = make_branch(make_project(user))
+    r = client.post(f"/schemes/{branch.id}/machinations/quick",
+                    json={"title": "  Pay the editor  ", "tier": 2})
+    assert r.status_code == 200
+    body = r.get_json()
+    from models import Task
+    task = db.session.get(Task, body["task"])
+    assert (task.title, task.tier, task.points_max, task.points_done) == ("Pay the editor", 2, 1, 0)
+    assert task.icon == "coin"
+    assert f'data-task="{task.id}"' in body["html"] and body["points_max"] == 1
+
+
+def test_quick_add_needs_a_title_and_an_owner(client, db):
+    owner = make_user()
+    branch = make_branch(make_project(owner))
+    make_user("other@example.com")
+    login(client, "other@example.com")
+    assert client.post(f"/schemes/{branch.id}/machinations/quick", json={"title": "x"}).status_code == 404
+    client.post("/logout")
+    login(client)
+    assert client.post(f"/schemes/{branch.id}/machinations/quick", json={"title": "  "}).status_code == 400
+    assert branch.tasks == []

@@ -20,6 +20,8 @@
     <span class="phase hue--{{ project.phase_hue }}">{{ project.phase_label }}</span>
     <span class="{% if project.is_due %}is-due{% else %}muted{% endif %} small">{% if project.days_since_touch == 0 %}{{ t('common.touched_today') }}{% else %}{{ t('tree.since_touch', n=project.days_since_touch) }}{% endif %}</span>
     <a class="link-quiet" href="{{ url_for('projects.edit_project', project_id=project.id) }}">{{ t('common.edit') }}</a>
+    <button type="button" class="link-quiet link-btn" data-guide-open>{{ t('guide.open') }}</button>
+    {% if not project.routines %}<a class="link-quiet" href="{{ url_for('routines.new_routine', project_id=project.id) }}" title="{{ t('routines.add_title') }}">{{ t('tree.add_routine') }}</a>{% endif %}
   </div>
   <div class="tree-head__stats" id="tree-stats">
     <span class="legend"><span class="legend__swatch legend__swatch--full"></span>{{ t('state.full') }} <span class="legend__n" data-count="full">{{ project.count_state('full') }}</span></span>
@@ -43,7 +45,25 @@
   </form>
 </div>
 
-<section id="routines" class="abilities" data-routines="tree">
+{# The villain words in plain English. Hidden here and shown by app.js
+   until someone dismisses it in this browser; the header's link reopens it. #}
+<section class="guide" id="guide" hidden aria-labelledby="guide-title">
+  <div class="guide__head">
+    <h2 class="guide__title" id="guide-title">{{ t('guide.heading') }}</h2>
+    <button type="button" class="btn btn--ghost btn--sm" data-guide-close>{{ t('guide.close') }}</button>
+  </div>
+  <dl class="guide__list">
+    <div><dt>{{ t('guide.plot_term') }}</dt><dd>{{ t('guide.plot') }}</dd></div>
+    <div><dt>{{ t('guide.scheme_term') }}</dt><dd>{{ t('guide.scheme') }}</dd></div>
+    <div><dt>{{ t('guide.machination_term') }}</dt><dd><span class="hint--pointer">{{ t('guide.machination') }}</span><span class="hint--touch">{{ t('guide.machination_touch') }}</span></dd></div>
+    <div><dt>{{ t('guide.tier_term') }}</dt><dd>{{ t('guide.tier', gate=project.gate_points) }}</dd></div>
+    <div><dt>{{ t('guide.ultimate_term') }}</dt><dd>{{ t('guide.ultimate') }}</dd></div>
+    <div><dt>{{ t('guide.lock_term') }}</dt><dd>{{ t('guide.lock') }}</dd></div>
+  </dl>
+</section>
+
+{# Hidden until the plot has a routine; the header links to adding one. #}
+<section id="routines" class="abilities" data-routines="tree"{% if not project.routines %} hidden{% endif %}>
   {% include "_routine_bar.html" %}
 </section>
 

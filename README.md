@@ -12,6 +12,11 @@ the Render services all keep their original names (`Project`, `Branch`,
 `Task`, `branchwork`), because renaming them would break deployments for no
 one's benefit. The rest of this file uses the code's names.
 
+A new account starts with an **example plot**, the one the landing page
+draws, made real by `example.py`: same schemes, points and lock, with a
+title on every machination. Signing up lands on it. It is an ordinary plot,
+so it can be edited or deleted.
+
 Signed out, the home address is the **landing page**: one screen with the
 pitch, a sign-up box that posts to `/register`, and an example plot drawn
 as its tree. The example is built in `landing.py` rather than read from the
@@ -65,8 +70,13 @@ projects and forgets to move them along:
   ready routine from live projects, backburner included, because a
   routine's tempo is one you set on purpose.
 
-**Templates** decide the branches a new project starts with. Five are built
-in (Blank, Lifecycle, Engineering job, Software, Running business) and you
+**New plots** ask only for a name and a template; status, focus, objective,
+next action, tempo, gate points, code and description are on the plot's Edit
+page once it exists.
+
+**Templates** decide the branches a new project starts with. Six are built
+in (Simple, the default, then Blank, Lifecycle, Engineering job, Software,
+Running business) and you
 can copy any of them under Account → Project templates to get an editable
 version: rename branches, change colours, set which ones wait on the one
 before, and give each a few starting tasks (one per line, ` | 3` for the
@@ -81,6 +91,17 @@ Two rules give the tree its shape:
 
 Each tier fills with its branch's colour as its points add up, and is full
 at exactly the gate points that open the tier below.
+
+**Quick add**: a tier's "+" (shown on hover, always on touch) and the
+"+ New tier" link open a box in place; type a title and press Enter, and the
+machination is added with one point and the box stays open for the next.
+Escape closes it, and a modified click still opens the full form. A new
+machination nobody picks an icon for gets one from its title
+(`icons.suggest_icon`: "Pay the editor" is a coin), on the full form too.
+
+**How it works**: the top of every plot explains the words (plot, scheme,
+machination, tier, ultimate, lock) until it is closed once in that browser;
+the "How it works" link in the plot's header brings it back.
 
 **Tiles drag**: drop a machination between two tiles to reorder its tier, or
 on any other tier of its plot, in its own scheme or another, or on a
@@ -287,6 +308,10 @@ node design/gen_icons.mjs
 `design/logo1.af` is the Affinity source. Node is design-time tooling only;
 the Flask app never touches it.
 
+Most machination icons are drawn from the landing page's glyphs by
+`python design/gen_machination_icons.py`, inside the bomb's frame; re-run it
+after changing a glyph. `bomb.svg` is drawn by hand.
+
 Machination icons are SVG files in `static/branchwork/img/machination_icons/`,
 one per icon and named by the file (`bomb.svg` is `bomb`). Draw them in
 white on a small square canvas: white is swapped for the colour of wherever
@@ -296,8 +321,8 @@ restart. The Affinity sources live in `design/machinations_icons/`.
 
 ## Keeping git activity honest
 
-Set a project's repository folder on its edit page, then run this whenever
-you like (a scheduled task works well):
+The repository folder is no longer on the plot form. Plots that already had
+one keep it, and this still reads it (a scheduled task works well):
 
 ```bash
 .venv\Scripts\flask --app app sync-git
@@ -318,5 +343,4 @@ set DATABASE_URL=postgresql://...render.com/branchwork
 * Password reset (no email sending is wired up).
 * Deleting an account from the app (for now, by email request, as the
   privacy policy says).
-* Drag-and-drop reordering of tasks within a tier.
 * Sharing a project with other users.

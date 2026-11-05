@@ -107,6 +107,42 @@ def clean_icon(name: str | None) -> str:
     return name if has_icon(name) else (default_icon() or DEFAULT_ICON)
 
 
+# Words in a title that suggest an icon, checked in order; the first icon
+# with a matching word wins. Only used when nobody chose an icon, so a new
+# tile reads at a glance instead of every tile being the default.
+_SUGGEST = [
+    ("coin", "money fund funding budget pay paid payment invoice price pricing cost costs cash "
+             "sell sale sales revenue quote quotes tax taxes profit raise loan"),
+    ("bank", "bank account accounts finance accounting bookkeeping"),
+    ("rocket", "launch ship release publish deploy announce live"),
+    ("calendar", "schedule book booking deadline date event calendar week month"),
+    ("chat", "call email emails message reply talk ask chat contact pitch follow"),
+    ("crew", "team hire hiring recruit interview people staff client clients customer customers "
+             "partner partners user users meet meeting henchmen"),
+    ("ballot", "approve approval approvals sign signed vote decide decision confirm permit "
+               "consent agree contract"),
+    ("key", "access login password domain secure security licence license unlock"),
+    ("flask", "test tests testing experiment prototype research trial try explore investigate"),
+    ("hall", "build site office venue house install setup fit-out construct"),
+    ("doc_tick", "review check checklist audit proofread"),
+    ("doc", "write draft document documents report spec brief outline copy blog post article "
+            "notes script docs plan proposal"),
+    ("inbox", "collect gather inbox sort file organise organize"),
+    ("crown", "win goal finish complete award celebrate"),
+]
+_WORD = re.compile(r"[a-z][a-z-]*")
+
+
+def suggest_icon(title: str | None) -> str:
+    """An icon for a machination nobody picked one for, from its title."""
+    words = set(_WORD.findall((title or "").lower()))
+    available = _icons()
+    for name, keys in _SUGGEST:
+        if name in available and words & set(keys.split()):
+            return name
+    return default_icon() or DEFAULT_ICON
+
+
 def icon_svg(name: str | None, size: int = 32, cls: str = "") -> Markup:
     """Inline SVG for an icon name. An unknown name draws the default icon,
     so a task saved under a retired name still shows something."""

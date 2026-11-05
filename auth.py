@@ -14,6 +14,7 @@ from flask import (
 from flask_login import current_user, login_required, login_user, logout_user
 
 from copytext import tx
+from example import add_example_plot
 from extensions import db
 from models import User
 from ratelimit import (
@@ -66,12 +67,16 @@ def register():
             user = User(email=email, display_name=display_name or None)
             user.set_password(password)
             db.session.add(user)
+            # Something to click on the first visit, rather than an empty page.
+            add_example_plot(user)
             db.session.commit()
             login_user(user)
             # Picked up by the next page, which tells analytics (base.html).
             session["analytics_event"] = "Signup"
             flash(tx("auth.welcome"), "success")
-            return _after_login()
+            nxt = request.args.get("next")
+            return redirect(nxt if _safe_next(nxt)
+                            else url_for("projects.tree", project_id=user.projects[0].id))
     return render_template("register.html")
 
 

@@ -91,6 +91,25 @@ demo_ultimate = "A seat on the council"
 # Read out by screen readers in place of the example plot
 demo_caption = "An example plot drawn as a skill tree in three coloured columns: Infiltration nearly complete with its ultimate reached, Funding about half done, and The Device locked until Funding is complete."
 
+[example]
+_screen = "Example plot"
+_about = "The plot every new account starts with: the landing page's example made real. Its plot, scheme and ultimate names are the landing page's, above; these are the rest."
+objective = "An example to click around in. Delete it from Edit when you are ready to plan your own."
+next_action = "Click a tile in Funding to add a point"
+m_minutes = "Study the council minutes"
+m_town_hall = "Get a job at the town hall"
+m_aide = "Win over the mayor's aide"
+m_reference = "Forge a glowing reference"
+m_ballot = "Rig the staff ballot"
+m_account = "Open an offshore account"
+m_bake_sale = "Launder the bake-sale takings"
+m_key = "Copy the treasurer's key"
+m_grant = "Intercept the grant letter"
+m_volcano = "Survey the dormant volcano"
+m_henchmen = "Recruit henchmen"
+m_device = "Assemble the device"
+m_pond = "Test it on a small pond"
+
 [login]
 _screen = "Sign in"
 _about = "The first screen a signed-out visitor sees."
@@ -120,7 +139,8 @@ _about = "Pop-up messages from signing in, signing up and the account page."
 invalid_email = "Enter a valid email address."
 password_short = "Password must be at least {min} characters."
 email_taken = "That email is already registered. Sign in instead."
-welcome = "Welcome. Start by creating a plot."
+# Shown on the example plot a new account lands on
+welcome = "Welcome. This is an example plot: click a tile to add a point, or start your own with + New plot."
 bad_login = "Invalid email or password."
 wrong_password = "Current password is wrong."
 new_password_short = "New password must be at least {min} characters."
@@ -316,9 +336,33 @@ park = "Park"
 # One button per closed status, such as Done or Dropped
 close = "Mark {phase}"
 
+[guide]
+_screen = "How a plot works"
+_about = "The panel at the top of a plot that explains the words, until someone closes it. The header's link brings it back."
+open = "How it works"
+heading = "How a plot works"
+close = "Got it"
+plot_term = "Plot"
+plot = "A project: anything with more than one moving part."
+scheme_term = "Schemes"
+scheme = "The columns. Each is a strand of the plot that moves along on its own."
+machination_term = "Machinations"
+machination = "The tasks. Click one to add a point, shift-click or right-click to take one away. To add one, click + New tier, or the + that appears beside a tier's tiles."
+# The same, on a touch screen
+machination_touch = "The tasks. Tap one to add a point, press and hold to take one away. Tap a tier's + to add one."
+tier_term = "Tiers"
+# {gate} is this plot's points to open the next tier
+tier = "The rows inside a scheme. A tier opens once the one above it holds {gate} points, so you finish the groundwork first."
+ultimate_term = "Ultimate"
+ultimate = "A scheme's end goal, the disc at its foot. Claim it with a click once the last tier is full."
+lock_term = "Locks"
+lock = "A scheme can wait on another, and stays locked until that one is complete."
+
 [tree]
 _screen = "Plot · Tree"
 _about = "A plot's own page: its schemes as columns, machinations as tiles."
+# In the plot's header, beside Edit, while it has no routines
+add_routine = "+ Routine"
 tab_tree = "Tree"
 tab_notes = "Notes"
 new_machination = "+ New machination"
@@ -525,6 +569,9 @@ _screen = "Plot form"
 _about = "Creating or editing a plot, and its pop-up messages."
 title_new = "New plot"
 title_edit = "Edit plot"
+# On the new-plot form, under the name
+name_placeholder = "Launch my podcast"
+new_help = "Anything with more than one moving part. Its status, focus, objective and tempo are on its Edit page once it exists."
 code = "Code"
 code_placeholder = "2026-014"
 phase = "Status"
@@ -535,10 +582,6 @@ focus_help = "Separate from the status. Unticked puts it on the backburner on To
 start_from = "Start from"
 yours_tag = "yours"
 make_templates = "Make your own templates →"
-repo = "Repository folder"
-repo_placeholder = "C:\\Users\\you\\Documents\\Dev\\plot"
-# {command} is the sync command, shown as code
-repo_help = "With a folder set, {command} turns commits into activity so “last touched” stays honest."
 description = "Description"
 create = "Create plot"
 delete = "Delete plot"
@@ -597,6 +640,9 @@ points = "Points"
 points_hint = "(1 = a plain checkbox)"
 points_done = "Points done"
 icon = "Icon"
+# The first icon choice on a new machination: let the title pick one
+icon_auto = "Auto"
+icon_auto_title = "Pick an icon from the title"
 notes = "Notes"
 notes_add = "+ Add a note"
 notes_after_save = "Save the machination first, then add notes to it."
@@ -716,9 +762,13 @@ tasks_placeholder = "Starting machinations, one per line. Add “ | 3” to make
 tasks_aria = "Starting machinations"
 save = "Save template"
 
-[starter.blank]
+[starter.simple]
 _screen = "Built-in templates"
 _about = "The names and descriptions of the built-in templates on the new-plot form."
+label = "Simple"
+hint = "First steps, Main work and Finishing, side by side. Nothing locked; rename them to suit."
+
+[starter.blank]
 label = "Blank"
 hint = "No schemes. Add your own."
 
@@ -782,6 +832,8 @@ _screen = "Live messages"
 _about = "Pop-ups from dragging and clicking, which happen without a page reload."
 points_failed = "Could not update that machination."
 network = "Network error. Try again."
+# The box a tier's + opens on the tree
+quick_placeholder = "Name a machination, press Enter"
 idea_failed = "Could not add that idea."
 idea_added = "“{title}” added to {scheme}, tier {tier}."
 focus_failed = "Could not move that plot."

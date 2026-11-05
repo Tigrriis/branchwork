@@ -121,6 +121,7 @@ select.input { appearance: none; width: 100%; min-width: 0; text-overflow: ellip
   display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;
   border-radius: var(--radius-sm); border: 1px solid var(--line2); color: var(--fg2); cursor: pointer;
 }
+.icon-pick--auto .icon-pick__tile { width: auto; padding: 0 12px; font-size: 12px; font-weight: 700; }
 .icon-pick:has(input:checked) .icon-pick__tile { border-color: var(--accent); color: var(--accent); background: var(--card2); }
 
 /* ── Auth ─────────────────────────────────────────────────────────────── */
@@ -1372,3 +1373,21 @@ body.is-dragging-note [data-drop-folder].is-drop { background: color-mix(in srgb
 /* The bot trap on sign-up forms: off screen rather than display:none,
    which some bots know to skip. */
 .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+/* The box a tier's + opens: type a machination's title, press Enter. */
+.quick-add { padding: 4px 10px 10px; }
+.quick-add .input { width: 100%; }
+
+/* How a plot works: the words, in plain English, above the tree. */
+.guide { margin: 0 0 16px; padding: 14px 18px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+.guide__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.guide__title { margin: 0; font-size: 15px; }
+.guide__list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 24px; margin: 0; }
+.guide__list dt { font-weight: 700; font-size: 13px; }
+.guide__list dd { margin: 2px 0 0; font-size: 13px; color: var(--fg2); line-height: 1.5; text-wrap: pretty; }
+@media (max-width: 720px) {
+  .guide { padding: 12px 14px 14px; }
+  .guide__list { grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+  .guide__list dd { font-size: 12px; line-height: 1.4; }
+}
+.link-btn { background: none; border: 0; padding: 0; font-family: inherit; cursor: pointer; }

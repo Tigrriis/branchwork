@@ -41,9 +41,16 @@
     <div class="field">
       <span class="field__label">{{ t('machination.icon') }}</span>
       <div class="icon-picker">
+        {% if is_new %}
+        {# Picked from the title on save; see icons.suggest_icon. #}
+        <label class="icon-pick icon-pick--auto" title="{{ t('machination.icon_auto_title') }}">
+          <input type="radio" name="icon" value="auto" checked>
+          <span class="icon-pick__tile">{{ t('machination.icon_auto') }}</span>
+        </label>
+        {% endif %}
         {% for name in ICON_NAMES %}
         <label class="icon-pick" title="{{ name }}">
-          <input type="radio" name="icon" value="{{ name }}" {% if task.icon == name %}checked{% endif %}>
+          <input type="radio" name="icon" value="{{ name }}" {% if not is_new and task.icon == name %}checked{% endif %}>
           <span class="icon-pick__tile">{{ icon(name, 24) }}</span>
         </label>
         {% endfor %}

@@ -521,10 +521,9 @@ def _lane(html, name):
 def test_new_projects_start_in_focus(client, db):
     user = make_user()
     login(client)
-    # The form arrives with the box already ticked.
-    assert b'name="focused" value="1" checked' in client.get("/plots/new").data
-    client.post("/plots/new", data={"name": "Fresh", "starter": "blank", "cadence_days": "14",
-                                       "phase": "idea", "gate_points": "3", "focused": "1"})
+    # The new-plot form asks only for a name and a template; focus is on.
+    assert b'name="focused"' not in client.get("/plots/new").data
+    client.post("/plots/new", data={"name": "Fresh", "starter": "blank"})
     assert user.projects[0].focused is True
 
 
