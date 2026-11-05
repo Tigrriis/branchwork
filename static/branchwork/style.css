@@ -329,6 +329,11 @@ select.input { appearance: none; width: 100%; min-width: 0; text-overflow: ellip
 }
 .tile--part .tile__plate { background: var(--part); border-color: var(--part); color: var(--on-accent); }
 .tile--full .tile__plate { background: var(--full); border-color: var(--full); color: var(--on-accent); }
+/* A one-press machination shows no count. Its blank plate holds the space
+   only in a row that also has a counted one, so the labels stay level. */
+.tile__plate--blank { visibility: hidden; }
+.tile__plate--blank::before { content: "0"; }
+.tier__row:not(:has(.tile__plate:not(.tile__plate--blank))) .tile__plate--blank { display: none; }
 .tile__label {
   height: 28px; font-size: 11px; font-weight: 600; line-height: 1.2; text-align: center; color: var(--muted); text-decoration: none;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;

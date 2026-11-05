@@ -209,3 +209,16 @@ def test_tree_page_carries_each_tiers_fill(client, db):
     assert f'data-tier-key="{branch.id}:1" style="--fill: 0.333"' in html
     body = client.post(f"/machinations/{branch.tasks[0].id}/points", json={"delta": 2}).get_json()
     assert "tier--charged" in body["html"] and "--fill: 1.000" in body["html"]
+
+
+def test_only_a_multi_press_machination_shows_its_count(client, db):
+    user = make_user()
+    login(client)
+    p = make_project(user)
+    branch = make_branch(p)
+    make_task(branch, "Checkbox", tier=1, points_max=1, points_done=1)
+    make_task(branch, "Three presses", tier=1, points_max=3, points_done=1)
+    html = client.get(f"/plots/{p.id}").data.decode()
+    assert ">1/3<" in html and ">1/1<" not in html
+    # The one-press tile keeps a blank plate, so labels in the row stay level.
+    assert html.count("tile__plate--blank") == 1

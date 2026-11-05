@@ -54,7 +54,7 @@
           {% for tile in tier.tiles %}
           <span class="ltile ltile--{{ tile.state }}">
             <span class="ltile__icon">{{ glyph(tile.glyph) }}</span>
-            <span class="ltile__pts">{{ tile.done }}/{{ tile.max }}</span>
+            {% if tile.max > 1 %}<span class="ltile__pts">{{ tile.done }}/{{ tile.max }}</span>{% endif %}
           </span>
           {% endfor %}
         </div>
