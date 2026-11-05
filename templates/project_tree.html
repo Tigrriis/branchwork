@@ -47,7 +47,7 @@
 
 {# The villain words in plain English. Hidden here and shown by app.js
    until someone dismisses it in this browser; the header's link reopens it. #}
-<section class="guide" id="guide" hidden aria-labelledby="guide-title">
+<section class="guide" id="guide" hidden aria-labelledby="guide-title"{% if request.args.get('guide') %} data-guide-force{% endif %}>
   <div class="guide__head">
     <h2 class="guide__title" id="guide-title">{{ t('guide.heading') }}</h2>
     <button type="button" class="btn btn--ghost btn--sm" data-guide-close>{{ t('guide.close') }}</button>

@@ -914,6 +914,10 @@
   var guide = document.getElementById("guide");
   if (guide) {
     var seen = false;
+    // ?guide=1 (replaying the first visit) shows it again, as if never closed.
+    if (guide.hasAttribute("data-guide-force")) {
+      try { localStorage.removeItem("guide-seen"); } catch (e) { /* not kept */ }
+    }
     try { seen = localStorage.getItem("guide-seen") === "1"; } catch (e) { /* not kept */ }
     guide.hidden = seen;
     guide.addEventListener("click", function (e) {

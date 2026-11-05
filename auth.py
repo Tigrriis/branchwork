@@ -9,7 +9,7 @@ forms carry a hidden field that people never see and bots fill in.
 from urllib.parse import urlparse
 
 from flask import (
-    Blueprint, flash, redirect, render_template, request, session, url_for,
+    Blueprint, current_app, flash, redirect, render_template, request, session, url_for,
 )
 from flask_login import current_user, login_required, login_user, logout_user
 
@@ -133,3 +133,18 @@ def account():
         flash(tx("auth.account_updated"), "success")
         return redirect(url_for("auth.account"))
     return render_template("account.html")
+
+
+@auth_bp.route("/account/first-visit", methods=["POST"])
+@login_required
+def replay_first_visit():
+    """What a new account sees, for an account that is not new: the example
+    plot added alongside everything else, the guide shown again, and the
+    welcome. Nothing already in the account changes."""
+    if len(current_user.projects) >= current_app.config["MAX_PROJECTS_PER_USER"]:
+        flash(tx("plot.limit"), "error")
+        return redirect(url_for("auth.account"))
+    project = add_example_plot(current_user)
+    db.session.commit()
+    flash(tx("auth.welcome"), "success")
+    return redirect(url_for("projects.tree", project_id=project.id, guide=1))

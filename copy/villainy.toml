@@ -163,6 +163,10 @@ templates_manage = "Manage"
 statuses_heading = "Plot statuses"
 statuses_help = "The columns and shelves on the board, their order, and the cap on any of them."
 statuses_manage = "Manage"
+# Adds the example plot and shows the plot guide again, as a new account sees them
+first_visit_heading = "Replay the first visit"
+first_visit_help = "Adds the example plot a new account starts with, and shows the guide to the words again. Your own plots are left as they are."
+first_visit_submit = "Replay"
 sign_out = "Sign out"
 
 [error]
