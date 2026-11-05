@@ -1,17 +1,17 @@
-"""The portfolio layer: one home page, the inbox and the weekly review.
+"""The portfolio layer: one home page and the weekly review.
 
 The home page answers "what am I neglecting": plots in focus as tiles with
-their tree in miniature, the backburner beneath, parked plots whose date has
-come, and the inbox. Each tile carries its status, which is what the board
-used to be for, and the parked and closed plots sit on shelves underneath.
+their tree in miniature, the backburner beneath, and parked plots whose date
+has come. Each tile carries its status, which is what the board used to be
+for, and the parked and closed plots sit on shelves underneath.
 Review is a mode of the same page that flips every live tile to one decision:
 keep, advance, park or drop.
 """
 from collections import Counter
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 
 from flask import (
-    Blueprint, abort, current_app, flash, jsonify, redirect, render_template,
+    Blueprint, abort, flash, jsonify, redirect, render_template,
     request, url_for,
 )
 from flask_login import current_user, login_required
@@ -19,7 +19,7 @@ from flask_login import current_user, login_required
 from copytext import tx
 from extensions import db
 from landing import demo_plot, glyph
-from models import CADENCES, InboxItem, Project
+from models import Project
 from routines import next_routine, ready_routines
 
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -30,13 +30,6 @@ def _project(project_id: int) -> Project:
     if project is None or project.owner_id != current_user.id:
         abort(404)
     return project
-
-
-def _inbox_item(item_id: int) -> InboxItem:
-    item = db.session.get(InboxItem, item_id)
-    if item is None or item.user_id != current_user.id:
-        abort(404)
-    return item
 
 
 def _parse_date(value: str | None, default_days: int = 30) -> date:
@@ -81,10 +74,6 @@ def _today_context(reviewing: bool = False, done: str = ""):
     projects = list(current_user.projects)
     focus, backburner = _focus_split(projects)
     resurfaced = [p for p in projects if p.parked_expired]
-    # Only loose ideas belong here; ones attached to a project live under that
-    # project's tree instead.
-    inbox = [i for i in current_user.inbox_items if i.is_loose]
-    inbox.sort(key=lambda i: (not i.resurfaced, i.created_at or datetime.min.replace(tzinfo=timezone.utc)))
     return {
         "focus": focus,
         "backburner": backburner,
@@ -93,9 +82,6 @@ def _today_context(reviewing: bool = False, done: str = ""):
         # backburner project going quiet is the point of the backburner.
         "due": [p for p in focus if p.is_due],
         "no_action": [p for p in focus if not p.next_action],
-        "inbox": inbox,
-        "parked_items": [i for i in current_user.inbox_items
-                         if i.status == "parked" and i.project_id is None],
         "active_projects": [p for p in projects if p.is_active],
         "today": date.today(),
         # Every tile's status pill offers every status, with the caps.
@@ -205,75 +191,6 @@ def set_phase(project_id: int):
 def set_next_action(project_id: int):
     project = _project(project_id)
     project.next_action = (request.form.get("next_action") or "").strip()[:200] or None
-    db.session.commit()
-    return _back()
-
-
-# ── Inbox ───────────────────────────────────────────────────────────────────
-
-@dashboard_bp.route("/inbox", methods=["POST"])
-@login_required
-def inbox_add():
-    text = (request.form.get("text") or "").strip()
-    if not text:
-        flash(tx("inbox.text_required"), "error")
-    elif len([i for i in current_user.inbox_items if i.status != "done"]) >= current_app.config["MAX_INBOX_ITEMS"]:
-        flash(tx("inbox.full"), "error")
-    else:
-        db.session.add(InboxItem(user=current_user, text=text[:2000]))
-        db.session.commit()
-    return _back()
-
-
-@dashboard_bp.route("/inbox/<int:item_id>/file", methods=["POST"])
-@login_required
-def inbox_file(item_id: int):
-    """Move a loose idea into a project's idea list.
-
-    Deliberately not a task: filing decides *which project* an idea belongs
-    to, and dragging it onto a tier later decides *where in the tree*. Those
-    are two different judgements and guessing the second one -- the old
-    behaviour dropped it on the first branch at tier 1 -- put tasks in
-    places nobody chose.
-
-    No activity is recorded either. Tempo is meant to mean real progress,
-    and filing an idea is triage, not work on the project.
-    """
-    item = _inbox_item(item_id)
-    project_id = request.form.get("project_id") or ""
-    project = _project(int(project_id)) if project_id.isdigit() else None
-    if project is None:
-        flash(tx("inbox.pick_plot"), "error")
-        return _back()
-    item.project = project
-    db.session.commit()
-    flash(tx("inbox.filed", name=project.name), "success")
-    return _back()
-
-
-@dashboard_bp.route("/inbox/<int:item_id>/park", methods=["POST"])
-@login_required
-def inbox_park(item_id: int):
-    item = _inbox_item(item_id)
-    item.revisit_on = _parse_date(request.form.get("revisit_on"))
-    db.session.commit()
-    return _back()
-
-
-@dashboard_bp.route("/inbox/<int:item_id>/done", methods=["POST"])
-@login_required
-def inbox_done(item_id: int):
-    item = _inbox_item(item_id)
-    item.done_at = datetime.now(timezone.utc)
-    db.session.commit()
-    return _back()
-
-
-@dashboard_bp.route("/inbox/<int:item_id>/delete", methods=["POST"])
-@login_required
-def inbox_delete(item_id: int):
-    item = _inbox_item(item_id)
-    db.session.delete(item)
     db.session.commit()
     return _back()
 

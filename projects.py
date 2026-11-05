@@ -51,8 +51,7 @@ def _task(task_id: int) -> Task:
 
 
 def _idea(item_id: int) -> InboxItem:
-    """An inbox item this user owns. Ownership is on the item, not the project:
-    an idea can sit in the loose inbox with no project at all."""
+    """An idea this user owns. Ownership is checked on the item itself."""
     item = db.session.get(InboxItem, item_id)
     if item is None or item.user_id != current_user.id:
         abort(404)
@@ -556,7 +555,7 @@ def move_task(task_id: int):
 
 
 # ── Project ideas ───────────────────────────────────────────────────────────
-# A per-project inbox for thoughts that are not tasks yet: no tier, no points,
+# A per-project list of thoughts that are not tasks yet: no tier, no points,
 # no bearing on progress. Dragging one onto a tier is what turns it into a
 # task, which is the moment you decide where it actually belongs.
 
@@ -567,7 +566,8 @@ def add_idea(project_id: int):
     text = (request.form.get("text") or "").strip()
     if not text:
         flash(tx("ideas.text_required"), "error")
-    elif len([i for i in current_user.inbox_items if i.status != "done"]) >= current_app.config["MAX_INBOX_ITEMS"]:
+    elif len([i for i in current_user.inbox_items
+              if i.project_id is not None and i.status != "done"]) >= current_app.config["MAX_OPEN_IDEAS"]:
         flash(tx("ideas.full"), "error")
     else:
         db.session.add(InboxItem(user=current_user, project=project, text=text[:2000]))

@@ -6,7 +6,7 @@
 
 {% block content %}
 {# The one home page. Focus and backburner as tiles, each plot's status on its
-   tile, the shelves underneath, and the inbox beside. Review is a mode of the
+   tile, and the shelves underneath. Review is a mode of the
    same page (?review=1) that flips every live tile to one decision. #}
 {% if reviewing %}
 <div class="page-head">
@@ -39,7 +39,6 @@
       {% set n_noaction %}<span data-count-noaction>{{ no_action|length }}</span>{% endset %}
       <span class="chip {% if due %}chip--warn{% endif %}" data-chip-due>{{ t('today.chip_due', n=n_due) }}</span>
       <span class="chip {% if no_action %}chip--warn{% endif %}" data-chip-noaction>{{ t('today.chip_noaction', n=n_noaction) }}</span>
-      <span class="chip">{{ t('today.chip_inbox', n=inbox|length) }}</span>
     </div>
     {% if active_projects or resurfaced %}
     <a class="btn btn--ghost btn--sm" href="{{ url_for('dashboard.today', review=1) }}">{{ t('today.review_link') }}</a>
@@ -53,101 +52,48 @@
   {% include "_ready_bar.html" %}
 </section>
 
-<div class="today-grid">
-  <div class="today-main">
-
-    {% if resurfaced %}
-    <section class="section">
-      <h2 class="section__title">{{ t('today.shelf_heading') }}</h2>
-      {% if reviewing %}
-      <div class="rtiles">
-        {% for p in resurfaced %}{% include "_review_tile.html" %}{% endfor %}
-      </div>
-      {% else %}
-      {% for p in resurfaced %}
-      <div class="due-row">
-        <div class="due-row__main">
-          <a class="due-row__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
-          <span class="muted small">{{ t('today.shelf_note', date=p.parked_until.strftime('%d %b')) }}</span>
-        </div>
-        <div class="due-row__actions">
-          <form method="post" action="{{ url_for('dashboard.set_phase', project_id=p.id) }}" class="inline-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="{{ p.resume_phase }}">
-            <button class="btn btn--sm">{{ t('common.pick_up') }}</button>
-          </form>
-          <form method="post" action="{{ url_for('dashboard.set_phase', project_id=p.id) }}" class="inline-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="{{ p.phase }}">
-            <input type="hidden" name="parked_until" value="{{ (today.toordinal() + 30)|to_date }}">
-            <button class="btn btn--ghost btn--sm">{{ t('today.park_more') }}</button>
-          </form>
-        </div>
-      </div>
-      {% endfor %}
-      {% endif %}
-    </section>
-    {% endif %}
-
-    <div id="lanes" class="lanes">
-      {% include "_focus_lists.html" %}
-    </div>
-    {% if not reviewing %}<p class="hint muted">{{ t('today.drag_hint') }}</p>{% endif %}
-
-    {% if not active_projects and not resurfaced %}
-    <div class="empty">
-      <p>{{ t('today.empty') }}</p>
-      <a class="btn btn--primary" href="{{ url_for('projects.new_project') }}">{{ t('today.empty_cta') }}</a>
-    </div>
-    {% endif %}
-
-    {% include "_shelves.html" %}
+{% if resurfaced %}
+<section class="section">
+  <h2 class="section__title">{{ t('today.shelf_heading') }}</h2>
+  {% if reviewing %}
+  <div class="rtiles">
+    {% for p in resurfaced %}{% include "_review_tile.html" %}{% endfor %}
   </div>
-
-  <aside class="today-side">
-    <section class="section">
-      <h2 class="section__title">{{ t('today.inbox_heading') }}</h2>
-      <form method="post" action="{{ url_for('dashboard.inbox_add') }}" class="inbox-add">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <textarea class="input" name="text" rows="2" placeholder="{{ t('today.inbox_placeholder') }}" required></textarea>
-        <button class="btn btn--primary btn--sm" type="submit">{{ t('common.add') }}</button>
+  {% else %}
+  {% for p in resurfaced %}
+  <div class="due-row">
+    <div class="due-row__main">
+      <a class="due-row__name" href="{{ url_for('projects.tree', project_id=p.id) }}">{{ p.name }}</a>
+      <span class="muted small">{{ t('today.shelf_note', date=p.parked_until.strftime('%d %b')) }}</span>
+    </div>
+    <div class="due-row__actions">
+      <form method="post" action="{{ url_for('dashboard.set_phase', project_id=p.id) }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="{{ p.resume_phase }}">
+        <button class="btn btn--sm">{{ t('common.pick_up') }}</button>
       </form>
-      {% for item in inbox %}
-      <div class="inbox-item {% if item.resurfaced %}inbox-item--back{% endif %}">
-        <div class="inbox-item__text">{{ item.text }}</div>
-        {% if item.resurfaced %}<div class="muted small">{{ t('today.inbox_back_from', date=item.revisit_on.strftime('%d %b')) }}</div>{% endif %}
-        <div class="inbox-item__actions">
-          <form method="post" action="{{ url_for('dashboard.inbox_file', item_id=item.id) }}" class="inline-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <select class="input input--xs" name="project_id" required>
-              <option value="">{{ t('today.inbox_send_to') }}</option>
-              {% for p in active_projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
-            </select>
-            <button class="btn btn--ghost btn--sm" type="submit" title="{{ t('today.inbox_file_title') }}">{{ t('today.inbox_file') }}</button>
-          </form>
-          <form method="post" action="{{ url_for('dashboard.inbox_park', item_id=item.id) }}" class="inline-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input class="input input--xs" type="date" name="revisit_on" value="{{ (today.toordinal() + 30)|to_date }}">
-            <button class="btn btn--ghost btn--sm" type="submit">{{ t('today.inbox_park') }}</button>
-          </form>
-          <form method="post" action="{{ url_for('dashboard.inbox_done', item_id=item.id) }}" class="inline-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="icon-btn" type="submit" title="{{ t('common.done') }}">✓</button>
-          </form>
-          <form method="post" action="{{ url_for('dashboard.inbox_delete', item_id=item.id) }}" class="inline-form" data-confirm="{{ t('today.inbox_delete_confirm') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="icon-btn" type="submit" title="{{ t('common.delete') }}">×</button>
-          </form>
-        </div>
-      </div>
-      {% else %}
-      <p class="muted small">{{ t('today.inbox_empty') }}</p>
-      {% endfor %}
-      {% if parked_items %}
-      <details class="parked-list">
-        <summary class="muted small">{{ t('today.inbox_parked', n=parked_items|length) }}</summary>
-        {% for item in parked_items %}<div class="muted small">{{ item.revisit_on.strftime('%d %b') }} · {{ item.text|truncate(60) }}</div>{% endfor %}
-      </details>
-      {% endif %}
-    </section>
-  </aside>
+      <form method="post" action="{{ url_for('dashboard.set_phase', project_id=p.id) }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="phase" value="{{ p.phase }}">
+        <input type="hidden" name="parked_until" value="{{ (today.toordinal() + 30)|to_date }}">
+        <button class="btn btn--ghost btn--sm">{{ t('today.park_more') }}</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+</section>
+{% endif %}
+
+<div id="lanes" class="lanes">
+  {% include "_focus_lists.html" %}
 </div>
+{% if not reviewing %}<p class="hint muted">{{ t('today.drag_hint') }}</p>{% endif %}
+
+{% if not active_projects and not resurfaced %}
+<div class="empty">
+  <p>{{ t('today.empty') }}</p>
+  <a class="btn btn--primary" href="{{ url_for('projects.new_project') }}">{{ t('today.empty_cta') }}</a>
+</div>
+{% endif %}
+
+{% include "_shelves.html" %}
 {% endblock %}

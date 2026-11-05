@@ -5,7 +5,7 @@ def test_register_and_land_on_today(client):
     r = client.post("/register", data={"email": "New@Example.com", "password": "longenough1"},
                     follow_redirects=True)
     assert r.status_code == 200
-    assert copy_in(r.data, "today.heading") and copy_in(r.data, "today.inbox_heading")
+    assert copy_in(r.data, "today.heading")
     # email normalised to lower case
     r = client.post("/login", data={"email": "new@example.com", "password": "longenough1"})
     assert r.status_code == 302

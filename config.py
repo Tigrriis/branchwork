@@ -62,7 +62,7 @@ class Config:
     # who has already signed up. MAX_WIP_BUILDING_LIMIT bounds any cap.
     DEFAULT_WIP_BUILDING_LIMIT = int(os.environ.get("WIP_BUILDING_LIMIT", "3"))
     MAX_WIP_BUILDING_LIMIT = 20
-    MAX_INBOX_ITEMS = 200
+    MAX_OPEN_IDEAS = 200
 
     MAX_PROJECTS_PER_USER = 50
     MAX_BRANCHES_PER_PROJECT = 12

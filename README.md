@@ -48,10 +48,7 @@ projects and forgets to move them along:
   park or drop, with the objective and next action to edit. The whole scope
   stays on one page, and a decided tile stays put, marked. The old `/board`
   and `/review` addresses redirect here.
-* **Inbox** captures ideas that belong to no project yet. Filing one sends
-  it to that project's ideas, not into its tree; you can also park it until
-  a date or tick it off.
-* **Ideas** are the same thing scoped to one project, listed under its tree.
+* **Ideas** are loose thoughts for one project, listed under its tree.
   They carry no points and count towards nothing until you drag one onto a
   tier, which is the moment it becomes a task. Dragging is the quick path;
   every idea also has a picker for touch and keyboard.

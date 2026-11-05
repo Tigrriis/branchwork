@@ -42,7 +42,6 @@ cancel = "Cancel"
 add = "Add"
 edit = "Edit"
 delete = "Delete"
-done = "Done"
 optional = "(optional)"
 name = "Name"
 email = "Email"
@@ -210,30 +209,19 @@ contact = "Email {email}. If these terms change, the new version goes here with 
 
 [today]
 _screen = "Today"
-_about = "The home screen: plots in focus as tiles, the backburner, the shelves, and the inbox."
+_about = "The home screen: plots in focus as tiles, the backburner, and the shelves."
 title = "Today"
 heading = "Today"
 # Under the heading. {focus} and {back} are counts.
 subhead = "{date} · {focus} in focus, {back} on the backburner"
 chip_due = "{n} in focus need a touch"
 chip_noaction = "{n} without a next action"
-chip_inbox = "{n} in the inbox"
 shelf_heading = "Back from the shelf"
 shelf_note = "Parked until {date}. Time to decide."
 park_more = "Park 30 more days"
 drag_hint = "Drag a plot between the two lists, or use the arrows."
 empty = "No plots yet."
 empty_cta = "Create the first one"
-inbox_heading = "Inbox"
-inbox_placeholder = "Capture an idea, a thought, a thing to do…"
-inbox_back_from = "Back from {date}"
-inbox_send_to = "Send to…"
-inbox_file = "File"
-inbox_file_title = "Move it to that plot's ideas"
-inbox_park = "Park"
-inbox_delete_confirm = "Delete this note?"
-inbox_empty = "Empty. Capture things here as they occur to you, then file them to a plot's ideas, park them for later, or tick them off in your weekly review."
-inbox_parked = "{n} parked"
 review_link = "Start the weekly review →"
 
 [focus]
@@ -274,14 +262,6 @@ _about = "The bar at the top of Today: routines from every live plot that are re
 heading = "Ready"
 # When nothing is ready. {title} is the routine, {name} its plot, {n} days away.
 none_next = "Nothing ready. Next up: {title} on {name}, in {n}d."
-
-[inbox]
-_screen = "Inbox messages"
-_about = "Pop-up messages from the inbox on Today."
-text_required = "Write something first."
-full = "The inbox is full. Triage it before adding more."
-pick_plot = "Pick a plot to file it into."
-filed = "Filed into {name}. Drag it onto a tier when you know where it goes."
 
 [board]
 _screen = "Today · Statuses"
@@ -425,9 +405,9 @@ option_tier = "{scheme} › Tier {tier}"
 option_new_tier = "{scheme} › New tier {tier}"
 empty = "Nothing here. Capture half-formed thoughts for this plot, then drag one onto a tier when you know where it belongs."
 text_required = "Write the idea down first."
-full = "The inbox is full. Clear some out before adding more."
+full = "You have too many open ideas. Clear some out before adding more."
 scheme_gone = "That scheme is gone."
-not_open = "That idea is no longer in the inbox."
+not_open = "That idea is no longer open."
 scheme_full = "That scheme is full."
 
 [notes]

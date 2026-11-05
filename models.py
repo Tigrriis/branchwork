@@ -961,15 +961,14 @@ class ActivityEvent(db.Model):
 
 
 class InboxItem(db.Model):
-    """A captured idea that is not a task yet.
+    """A captured idea under a plot's tree that is not a task yet.
 
-    It sits in one of two inboxes, and ``project_id`` is what says which:
-    unset means the loose inbox on Today, set means that project's own idea
-    list under its tree. Moving one into the tree sets ``task_id``, and that
-    -- not ``project_id`` -- is what marks it filed.
+    The name and table are left over from a loose inbox on Today, since
+    removed; rows from it (``project_id`` unset) are kept but shown nowhere.
+    Moving an idea into the tree sets ``task_id``, and that is what marks it
+    filed.
 
     Lifecycle: open -> filed (became a task) | parked (revisit later) | done.
-    Parked items come back once ``revisit_on`` passes.
     """
     __tablename__ = "inbox_items"
 
@@ -994,14 +993,3 @@ class InboxItem(db.Model):
         if self.revisit_on is not None and self.revisit_on > _utcnow().date():
             return "parked"
         return "open"
-
-    @property
-    def resurfaced(self) -> bool:
-        """Was parked and the date has now passed."""
-        return (self.status == "open" and self.revisit_on is not None
-                and self.revisit_on <= _utcnow().date())
-
-    @property
-    def is_loose(self) -> bool:
-        """Open and attached to no project: belongs on Today, not under a tree."""
-        return self.status == "open" and self.project_id is None

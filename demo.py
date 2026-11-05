@@ -102,8 +102,7 @@ def build_demo(user: User) -> Project:
         db.session.add(extra)
         for days_ago in (age, age + 7, age + 20):
             extra.record("touch", note="Worked on it", at=now - timedelta(days=days_ago))
-    db.session.add(InboxItem(user=user, text="Try a hex-grid layout for the tree view"))
-    db.session.add(InboxItem(user=user, text="Ask the certifier about the fire report timing"))
+    db.session.add(InboxItem(user=user, project=project, text="Ask the certifier about the fire report timing"))
     db.session.commit()
     return project
 

@@ -393,7 +393,6 @@ select.input { appearance: none; width: 100%; min-width: 0; text-overflow: ellip
 .strip__cell--3 { background: var(--full); }
 
 /* ── Today ────────────────────────────────────────────────────────────── */
-.today-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
 .due-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 14px; margin-bottom: 8px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--line); }
 .due-row--quiet { background: transparent; }
 .due-row__main { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
@@ -404,14 +403,6 @@ select.input { appearance: none; width: 100%; min-width: 0; text-overflow: ellip
 .due-row--quiet .due-row__age { color: var(--muted); font-weight: 500; }
 .due-row__actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .due-row__actions .inline-form { margin: 0; }
-.inbox-add { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-.inbox-add textarea { height: auto; }
-.inbox-item { padding: 10px 12px; margin-bottom: 8px; border-radius: var(--radius-sm); background: var(--card); border: 1px solid var(--line); }
-.inbox-item--back { border-color: var(--part); }
-.inbox-item__text { white-space: pre-line; margin-bottom: 8px; color: var(--fg2); }
-.inbox-item__actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.inbox-item__actions .inline-form { margin: 0; gap: 4px; }
-.parked-list { margin-top: 10px; }
 
 /* ── Shelves: parked and closed plots under the lanes ──────────────── */
 .shelves { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
@@ -433,10 +424,6 @@ select.input { appearance: none; width: 100%; min-width: 0; text-overflow: ellip
 .next-action-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 10px 14px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--line); }
 .next-action-bar .action-form { flex: 1; }
 code { font-family: Consolas, monospace; font-size: 12px; color: var(--fg2); }
-
-@media (max-width: 900px) {
-  .today-grid { grid-template-columns: 1fr; }
-}
 
 /* ── Review mode ──────────────────────────────────────────────────────── */
 .review-banner {
