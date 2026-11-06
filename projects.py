@@ -95,7 +95,10 @@ def _read_project_form(project: Project) -> bool:
     project.cadence_days = cadence if cadence in CADENCES else 14
     project.focused = bool(request.form.get("focused"))
     project.objective = (request.form.get("objective") or "").strip()[:300] or None
-    project.next_action = (request.form.get("next_action") or "").strip()[:200] or None
+    # Off unless NEXT_ACTIONS is set, and then the form has no such field:
+    # leave the saved one alone rather than clear it.
+    if current_app.config.get("NEXT_ACTIONS"):
+        project.next_action = (request.form.get("next_action") or "").strip()[:200] or None
     # No longer on the form; a folder set before keeps feeding `flask sync-git`.
     if "repo_path" in request.form:
         project.repo_path = (request.form.get("repo_path") or "").strip()[:400] or None

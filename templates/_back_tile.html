@@ -5,7 +5,7 @@
     {% include "_status_pick.html" %}
     <span class="ptile__age">{% if p.days_since_touch == 0 %}{{ t('common.touched_today') }}{% else %}{{ t('common.days_ago', n=p.days_since_touch) }}{% endif %}</span>
   </div>
-  {% if p.next_action %}<div class="btile__next" title="{{ p.next_action }}">→ {{ p.next_action }}</div>{% endif %}
+  {% if config.NEXT_ACTIONS and p.next_action %}<div class="btile__next" title="{{ p.next_action }}">→ {{ p.next_action }}</div>{% endif %}
   <footer class="ptile__foot">
     {% with counts=p.activity_strip() %}{% include "_strip.html" %}{% endwith %}
     <form method="post" action="{{ url_for('dashboard.set_focus', project_id=p.id) }}" class="inline-form">

@@ -25,11 +25,13 @@
       <input class="input input--sm" type="text" id="objective-{{ p.id }}" name="objective" maxlength="300"
              value="{{ p.objective or '' }}" placeholder="{{ t('fields.objective_placeholder') }}">
     </div>
+    {% if config.NEXT_ACTIONS %}
     <div class="field">
       <label class="field__label" for="next-{{ p.id }}">{{ t('fields.next_label') }}</label>
       <input class="input input--sm" type="text" id="next-{{ p.id }}" name="next_action" maxlength="200"
              value="{{ p.next_action or '' }}" placeholder="{{ t('fields.next_placeholder') }}">
     </div>
+    {% endif %}
     {% set parking = current_user.parked_status %}
     {% if parking %}
     <div class="field">
