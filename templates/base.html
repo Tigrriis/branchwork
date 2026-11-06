@@ -47,6 +47,11 @@
     <nav class="topbar__right">
       {% block topactions %}{% endblock %}
       {% if current_user.is_authenticated %}
+        {% if current_user.is_moderator %}
+        <a class="avatar" href="{{ url_for('moderation.index') }}" title="{{ t('moderation.title') }}" aria-label="{{ t('moderation.title') }}">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+        </a>
+        {% endif %}
         <a class="avatar" href="{{ url_for('auth.account') }}" title="{{ current_user.email }}">
           <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.5" r="3" fill="none" stroke="currentColor" stroke-width="1.5"></circle><path d="M2.5 14a5.5 5.5 0 0 1 11 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>
         </a>
@@ -69,6 +74,9 @@
   </div>
 
   <div class="frame">
+    {% if current_user.is_authenticated and not current_user.is_verified %}
+      {% include "_verify_banner.html" %}
+    {% endif %}
     <main class="{% block main_class %}page{% endblock %}">
       {% block content %}{% endblock %}
     </main>

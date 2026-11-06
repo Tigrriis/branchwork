@@ -9,6 +9,8 @@ Villainy: plan large, multi-stranded plots as a skill tree.
   /plots/<id>/notes      the plot's notebook, foldered by scheme and machination
   /plots/<id>/list       the same tasks as a table (no longer linked from the tabs)
   /login, /register, /account
+  /verify/<token>        where the link in the email-confirmation email lands
+  /moderation            every account, for moderators only
   /privacy, /terms       the privacy policy and terms of use
 
 Module-level ``app`` rather than a factory, matching the other Arete Flask
@@ -32,6 +34,7 @@ from gitsync import gitsync_bp
 from extensions import csrf, db, login_manager, migrate
 from icons import icon_names, icon_svg
 from legal import legal_bp
+from moderation import moderation_bp
 from models import CADENCES, HUES, STATUS_HUES
 from notes import notes_bp
 from projects import projects_bp
@@ -70,6 +73,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     app.register_blueprint(ultimates_bp)
     app.register_blueprint(vault_bp)
     app.register_blueprint(legal_bp)
+    app.register_blueprint(moderation_bp)
 
     _register_asset_versioning(app)
     _register_template_helpers(app)

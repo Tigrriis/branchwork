@@ -182,6 +182,60 @@ delete every note so Notes can start again. What the server can still see
 is a note's folder, size and when it changed. `vault.py` and
 `static/branchwork/vault.js` hold the details.
 
+## Email confirmation
+
+A new account is emailed a link to confirm its address the moment it signs
+up, and can use the app straight away. Until it follows the link, every
+signed-in page carries a thin banner saying where the link went, with a
+"Send it again" button (limited to 5 an hour per account). Accounts from
+before confirmation existed see the same banner offering to send one, and
+the Account page shows either way beside the email address.
+
+The link is signed with `SECRET_KEY` (`verification.py`), works for three
+days, works signed in or out and on any device, and only confirms the
+address it was sent to. Nothing is stored for it. It carries a fingerprint
+of the address, never the address itself, so it shows in no log.
+
+Email goes out through **Resend** (`mailer.py`), posted straight to its API
+with the standard library, so there is no SDK to pin. It needs:
+
+* `RESEND_API_KEY`: the API key from Resend.
+* `MAIL_FROM`: who it comes from, on a domain verified in Resend. Default
+  `Villainy <noreply@villainy.win>`. Replies go to `legal.contact_email`.
+* `PUBLIC_URL` (recommended): the site's address, e.g.
+  `https://villainy.win`. Links in emails are built from it; unset, they use
+  whatever address the request came in on, which a forged header can change.
+
+With no `RESEND_API_KEY`, nothing is sent and the email, link included, is
+written to the log instead, which is what a local run wants. A refusal from
+Resend (an unverified domain, a bad key) is logged with Resend's reason, and
+sign-up carries on regardless: the banner then offers to send the link.
+
+## Moderation
+
+`/moderation` lists every account: name, email, when it was created, when
+it last signed in, and whether its email is confirmed (and when, or when the
+last link went). Filter by confirmed or not, search by name or email, and
+click a column heading to sort. Times show in the viewer's time zone. On a
+phone each account is a card.
+
+Only moderators can open it; to anyone else it is a 404, like any page that
+is not theirs. Moderators get a shield in the top bar and a card on the
+Account page. Being a moderator is the `users.is_moderator` column, which no
+form in the app can change. The migration that added it made the account
+named **Roobs** the one moderator (the oldest, if more than one carries the
+name; failing that, an account whose email starts `roobs@`) and says which
+in the deploy log. To change it:
+
+```bash
+.venv\Scripts\flask --app app set-moderator someone@example.com
+.venv\Scripts\flask --app app set-moderator someone@example.com --off
+```
+
+"Last sign-in" is recorded on signing in, on signing up, and when "Keep me
+signed in" signs someone back in on a new visit. Accounts that have not
+signed in since it started being recorded show "Not recorded".
+
 ## Privacy, analytics and abuse limits
 
 `/privacy` and `/terms` are open to everyone and linked under both sign-up
@@ -199,7 +253,8 @@ including the `utm_source` and `utm_campaign` on an ad's link.
 
 **Abuse limits** live in `ratelimit.py`: sign-in is capped per IP address and,
 whatever the address, per email after repeated wrong passwords; sign-up is
-capped per IP. Counts are kept in each worker's memory. Both sign-up forms
+capped per IP; and asking for another confirmation email is capped per
+account. Counts are kept in each worker's memory. Both sign-up forms
 also carry a hidden `hp_website` field that people never see; a post that
 fills it in makes no account. `RATELIMIT_ENABLED=0` switches the limits off.
 
@@ -248,9 +303,10 @@ days after creation, and a free web service sleeps after 15 minutes idle.
 Both are changed by switching plans in the dashboard; nothing in the code
 depends on either.
 
-The first account to register is just a normal account — there are no roles
-and every project is private to its owner, so registration should be treated
-as open to anyone who has the URL.
+The first account to register is just a normal account. Moderators (see
+Moderation) can see every account's email and dates, but no one can see
+another account's plots, so registration should be treated as open to
+anyone who has the URL.
 
 ## Design
 
@@ -356,7 +412,8 @@ set DATABASE_URL=postgresql://...render.com/branchwork
 
 ## Not yet
 
-* Password reset (no email sending is wired up).
+* Password reset. Email now goes out through Resend (see Email
+  confirmation), so this is the next thing it could carry.
 * Deleting an account from the app (for now, by email request, as the
   privacy policy says).
 * Sharing a project with other users.

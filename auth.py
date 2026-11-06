@@ -1,24 +1,32 @@
-"""Authentication: register, login, logout, account settings.
+"""Authentication: register, login, logout, account settings, and confirming
+an email address.
 
-Sessions are Flask-Login's; passwords are hashed by Werkzeug. There is no
-password-reset flow yet because the app sends no email; see README.
+Sessions are Flask-Login's; passwords are hashed by Werkzeug. A new account
+is emailed a link to confirm its address (``verification.py``), and can use
+the app straight away: until it follows the link, every page carries a
+banner asking it to. There is no password-reset flow yet; see README.
 
-Sign-in and sign-up are rate limited (``ratelimit.py``), and both sign-up
-forms carry a hidden field that people never see and bots fill in.
+Sign-in and sign-up are rate limited (``ratelimit.py``), as is asking for
+another confirmation email, and both sign-up forms carry a hidden field that
+people never see and bots fill in.
 """
 from urllib.parse import urlparse
 
 from flask import (
     Blueprint, current_app, flash, redirect, render_template, request, session, url_for,
 )
-from flask_login import current_user, login_required, login_user, logout_user
+from flask_login import (
+    current_user, login_required, login_user, logout_user, user_loaded_from_cookie,
+)
 
+import verification
 from copytext import tx
 from example import add_example_plot
 from extensions import db
 from models import User
 from ratelimit import (
-    LOGIN_FAILS_PER_EMAIL, LOGIN_PER_IP, REGISTER_PER_IP, client_ip, limiter,
+    LOGIN_FAILS_PER_EMAIL, LOGIN_PER_IP, REGISTER_PER_IP, VERIFY_SEND_PER_USER, client_ip,
+    limiter,
 )
 
 auth_bp = Blueprint("auth", __name__)
@@ -66,14 +74,23 @@ def register():
         else:
             user = User(email=email, display_name=display_name or None)
             user.set_password(password)
+            user.mark_signed_in()
             db.session.add(user)
             # Something to click on the first visit, rather than an empty page.
             add_example_plot(user)
             db.session.commit()
             login_user(user)
+            # Sent before analytics_event is set: rendering the email runs the
+            # context processor, which would take the event for itself. If
+            # sending fails the banner offers to send it, so say nothing here.
+            sent = verification.send_link(user)
+            if sent:
+                db.session.commit()
             # Picked up by the next page, which tells analytics (base.html).
             session["analytics_event"] = "Signup"
             flash(tx("auth.welcome"), "success")
+            if sent:
+                flash(tx("verify.sent", email=user.email), "info")
             nxt = request.args.get("next")
             return redirect(nxt if _safe_next(nxt)
                             else url_for("projects.tree", project_id=user.projects[0].id))
@@ -98,11 +115,58 @@ def login():
             if limits:
                 limits.clear(email_key)
             login_user(user, remember=bool(request.form.get("remember")))
+            user.mark_signed_in()
+            db.session.commit()
             return _after_login()
         if limits:
             limits.hit(email_key, LOGIN_FAILS_PER_EMAIL)
         flash(tx("auth.bad_login"), "error")
     return render_template("login.html")
+
+
+@user_loaded_from_cookie.connect
+def _signed_back_in(_sender, user):
+    """A new visit signed in by "Keep me signed in" counts as a sign-in."""
+    user.mark_signed_in()
+    db.session.commit()
+
+
+@auth_bp.route("/verify/<token>")
+def verify_email(token):
+    """Where the link in the confirmation email lands. Works signed in or
+    out, on any device: the signed link is the proof, not the session."""
+    user = verification.read_token(token)
+    home = url_for("dashboard.today") if current_user.is_authenticated else url_for("auth.login")
+    if user is None:
+        flash(tx("verify.bad_link"), "error")
+    elif verification.confirm(user):
+        db.session.commit()
+        flash(tx("verify.done"), "success")
+    else:
+        flash(tx("verify.already"), "info")
+    return redirect(home)
+
+
+@auth_bp.route("/verify/send", methods=["POST"])
+@login_required
+def send_verification():
+    """Send the signed-in account a fresh confirmation link: the button on
+    the banner every page carries until the email is confirmed."""
+    nxt = request.form.get("next")
+    back = redirect(nxt if _safe_next(nxt) else url_for("auth.account"))
+    if current_user.is_verified:
+        flash(tx("verify.already"), "info")
+        return back
+    limits = limiter()
+    if limits and limits.hit(("verify-send", current_user.id), VERIFY_SEND_PER_USER):
+        flash(tx("auth.slow_down"), "error")
+        return back
+    if verification.send_link(current_user):
+        db.session.commit()
+        flash(tx("verify.sent", email=current_user.email), "success")
+    else:
+        flash(tx("verify.send_failed"), "error")
+    return back
 
 
 @auth_bp.route("/logout", methods=["POST"])

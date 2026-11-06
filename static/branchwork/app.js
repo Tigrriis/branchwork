@@ -28,6 +28,21 @@
     setTimeout(function () { el.remove(); }, 4000);
   }
 
+  // Times the server writes in UTC (<time data-local-time>), shown in the
+  // viewer's own time zone. The UTC text stays on hover.
+  (function () {
+    var times = document.querySelectorAll("time[data-local-time]");
+    if (!times.length) return;
+    var stamp = window.Intl && Intl.DateTimeFormat
+      ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }) : null;
+    Array.prototype.forEach.call(times, function (el) {
+      var d = new Date(el.getAttribute("datetime"));
+      if (isNaN(d)) return;
+      el.title = el.textContent;
+      el.textContent = stamp ? stamp.format(d) : d.toLocaleString();
+    });
+  })();
+
   function updateStats(body) {
     var stats = document.getElementById("tree-stats");
     if (!stats || body.points_max === undefined) return;
