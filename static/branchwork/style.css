@@ -1192,18 +1192,30 @@ body.is-dragging-end .ultimate[data-ultimate].is-drop .ultimate__box { outline: 
    They sit over the overlay in HTML, since an SVG shape cannot be dragged,
    and take the pointer where the arrows themselves do not. */
 .thread-ends { position: absolute; top: 0; left: 0; z-index: 4; width: 0; height: 0; pointer-events: none; }
+/* Nothing shows until the pointer reaches the end of the line: the node is a
+   clear 24px hit area, and the dot inside it lights up on hover, glowing in
+   the thread's colour the way the arrow does. */
 .thread-end {
-  position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; padding: 0;
-  border-radius: 50%; border: 2px solid var(--card); background: var(--muted);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), var(--shadow-xs); cursor: grab; pointer-events: auto;
-  opacity: 0.85; transition: transform 0.12s var(--ease), opacity 0.12s, box-shadow 0.15s;
+  position: absolute; width: 24px; height: 24px; margin: -12px 0 0 -12px; padding: 0;
+  border: 0; border-radius: 50%; background: transparent; cursor: grab; pointer-events: auto;
+  --end: var(--muted);
 }
-.thread-end:hover, .thread-end:focus-visible { opacity: 1; transform: scale(1.35); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 0 10px rgba(255, 255, 255, 0.25); }
+.thread-end::before {
+  content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--end);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45),
+              0 0 8px color-mix(in srgb, var(--end) 85%, transparent),
+              0 0 18px color-mix(in srgb, var(--end) 45%, transparent);
+  opacity: 0; transform: scale(0.5);
+  transition: opacity 0.14s var(--ease), transform 0.14s var(--ease);
+}
+.thread-end:hover::before, .thread-end:focus-visible::before, .thread-end.is-dragging::before { opacity: 1; transform: scale(1); }
+.thread-end:focus-visible { box-shadow: none; }
 .thread-end:active { cursor: grabbing; }
-.thread-end--started { background: var(--part); }
-.thread-end--done { background: var(--full); }
-.thread-end.is-dragging { opacity: 0.3; }
+.thread-end--started { --end: var(--part); }
+.thread-end--done { --end: var(--full); }
+.thread-end.is-dragging::before { opacity: 0.45; }
 @media (hover: none) { .thread-end { display: none; } }
+@media (prefers-reduced-motion: reduce) { .thread-end::before { transition: none; } }
 
 /* The same threads as a list, on the machination form. */
 .thread-rows { display: flex; flex-direction: column; gap: 4px; }
