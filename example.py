@@ -1,6 +1,6 @@
 """The example plot every new account starts with.
 
-It is the plot drawn on the landing page, "Take over the city council", made
+It is the plot drawn on the landing page, "Take over the world", made
 real: the same schemes, tiles, points and lock, with a title on every
 machination, so the first thing a new account sees is a tree with something
 in it to click. It is an ordinary plot, so it can be edited or deleted like
@@ -16,13 +16,13 @@ from models import Branch, Project, Task, Ultimate, User
 # numbers match landing.demo_plot, so the example looks like the landing page.
 SCHEMES = [
     ("landing.demo_scheme_1", "green", "crown", [
-        [("example.m_minutes", "doc", 3, 3), ("example.m_town_hall", "hall", 2, 2),
-         ("example.m_aide", "crown", 2, 4)],
-        [("example.m_reference", "doc_tick", 1, 1), ("example.m_ballot", "ballot", 2, 2)],
+        [("example.m_plans", "doc", 3, 3), ("example.m_observatory", "hall", 2, 2),
+         ("example.m_throne", "crown", 2, 4)],
+        [("example.m_lease", "doc_tick", 1, 1), ("example.m_inspection", "ballot", 2, 2)],
     ]),
     ("landing.demo_scheme_2", "blue", None, [
-        [("example.m_account", "bank", 1, 1), ("example.m_bake_sale", "coin", 2, 3)],
-        [("example.m_key", "key", 1, 2), ("example.m_grant", "inbox", 0, 1)],
+        [("example.m_account", "bank", 1, 1), ("example.m_heist", "coin", 2, 3)],
+        [("example.m_key", "key", 1, 2), ("example.m_payroll", "inbox", 0, 1)],
     ]),
     ("landing.demo_scheme_3", "red", None, [
         [("example.m_volcano", "volcano", 0, 3), ("example.m_henchmen", "crew", 0, 2),
