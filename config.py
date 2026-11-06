@@ -52,6 +52,21 @@ class Config:
     # Limits on sign-in and sign-up attempts (ratelimit.py).
     RATELIMIT_ENABLED = os.environ.get("RATELIMIT_ENABLED", "1") == "1"
 
+    # Email goes out through Resend (mailer.py). With no RESEND_API_KEY
+    # nothing is sent: the message, link included, goes to the log instead,
+    # which is what a local run wants. MAIL_FROM must be on a domain verified
+    # in Resend. Replies go to the contact address in the copy file.
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+    MAIL_FROM = os.environ.get("MAIL_FROM", "Villainy <noreply@villainy.win>")
+
+    # Where links in emails point, e.g. https://villainy.win. Unset, they use
+    # the address the request came in on. Setting it means a forged Host
+    # header can never put someone else's site into a confirmation email.
+    PUBLIC_URL = os.environ.get("PUBLIC_URL", "").rstrip("/")
+
+    # How long an email confirmation link works, in seconds.
+    VERIFY_LINK_MAX_AGE = 3 * 24 * 60 * 60
+
     # Default number of points a tier must hold before the next tier opens.
     # Each project can override it.
     DEFAULT_GATE_POINTS = 3

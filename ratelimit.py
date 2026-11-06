@@ -1,4 +1,5 @@
-"""How often one visitor may try to sign in or sign up.
+"""How often one visitor may try to sign in, sign up, or ask for a
+confirmation email.
 
 A sliding window per key, held in memory. Each gunicorn worker keeps its own
 counts, so with two workers a visitor can get up to twice the stated limit
@@ -6,7 +7,7 @@ before every worker has refused them. That is fine for slowing bots and
 password guessing, and it needs no Redis. If the app ever runs on more
 instances, move this to Render Key Value.
 
-Two kinds of key:
+Three kinds of key:
 
 * An IP address, which bounds how hard one machine can hammer a form. Behind
   Render's proxies, the address is read from the headers the edge sets. A
@@ -14,6 +15,8 @@ Two kinds of key:
   per-IP limits are generous.
 * An email address, which counts failed sign-ins whatever IP they come from.
   This is the part that stops password guessing, and it cannot be dodged.
+* An account, which counts the confirmation emails it asks for, so nobody
+  can use the "send it again" button to flood an inbox.
 """
 from __future__ import annotations
 
@@ -27,6 +30,8 @@ from flask import current_app, request
 LOGIN_PER_IP = (30, 15 * 60)
 LOGIN_FAILS_PER_EMAIL = (10, 15 * 60)
 REGISTER_PER_IP = (10, 60 * 60)
+# Asking for another email confirmation link, per account.
+VERIFY_SEND_PER_USER = (5, 60 * 60)
 
 _SWEEP_EVERY = 60.0
 
@@ -48,7 +53,8 @@ class Limiter:
         if now - self._swept < _SWEEP_EVERY:
             return
         self._swept = now
-        longest = max(w for _, w in (LOGIN_PER_IP, LOGIN_FAILS_PER_EMAIL, REGISTER_PER_IP))
+        longest = max(w for _, w in (LOGIN_PER_IP, LOGIN_FAILS_PER_EMAIL, REGISTER_PER_IP,
+                                     VERIFY_SEND_PER_USER))
         for key in [k for k, hits in self._hits.items() if not hits or hits[-1] <= now - longest]:
             del self._hits[key]
 

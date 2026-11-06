@@ -53,3 +53,15 @@ services:
       # for the value in the dashboard instead of reading it from here.
       - key: PLAUSIBLE_SCRIPT
         sync: false
+      # Email (mailer.py), for the link that confirms a new account's
+      # address. RESEND_API_KEY is the key from Resend. MAIL_FROM must be on a
+      # domain verified in Resend; left unset it is
+      # "Villainy <noreply@villainy.win>". PUBLIC_URL is the site's address
+      # (e.g. https://villainy.win), which links in emails are built from.
+      # With no RESEND_API_KEY, no email is sent and sign-up still works.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: PUBLIC_URL
+        sync: false

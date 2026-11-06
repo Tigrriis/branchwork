@@ -1,0 +1,20 @@
+{# Across the top of every signed-in page until the account confirms its
+   email. An account sent a link at sign-up is told where it went; an older
+   account that has never been sent one is offered one. #}
+<div class="verify-bar" role="status">
+  <span class="verify-bar__dot" aria-hidden="true"></span>
+  <p class="verify-bar__text">
+    {% if current_user.verification_sent_at %}
+      {{ t('verify.banner_sent', email=current_user.email) }}
+    {% else %}
+      {{ t('verify.banner_unsent') }}
+    {% endif %}
+  </p>
+  <form method="post" action="{{ url_for('auth.send_verification') }}" class="verify-bar__form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ request.full_path.rstrip('?') }}">
+    <button class="btn btn--ghost btn--sm" type="submit">
+      {% if current_user.verification_sent_at %}{{ t('verify.send_again') }}{% else %}{{ t('verify.send_first') }}{% endif %}
+    </button>
+  </form>
+</div>

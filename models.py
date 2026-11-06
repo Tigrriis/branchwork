@@ -135,6 +135,20 @@ class User(UserMixin, db.Model):
     # is deleted, so switching it back on brings every note back.
     notes_beta = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
 
+    # Email confirmation (verification.py). A new account is sent a link at
+    # sign-up; following it sets email_verified_at. verification_sent_at is
+    # the last time a link went out, unset for accounts from before
+    # confirmation existed that have never asked for one.
+    email_verified_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    verification_sent_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    # Signing in, signing up, or being signed back in by "Keep me signed in".
+    last_login_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    # Moderators can open /moderation (moderation.py). Set from the command
+    # line with `flask set-moderator`, never from the app.
+    is_moderator = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+
     projects = db.relationship(
         "Project", backref="owner", order_by="Project.created_at",
         cascade="all, delete-orphan")
@@ -172,6 +186,30 @@ class User(UserMixin, db.Model):
     @property
     def public_name(self) -> str:
         return self.display_name or self.email.split("@", 1)[0]
+
+    @property
+    def is_verified(self) -> bool:
+        return self.email_verified_at is not None
+
+    def mark_signed_in(self) -> None:
+        self.last_login_at = _utcnow()
+
+    # UTC ISO strings for pages that show these in the viewer's own time zone.
+    @property
+    def created_iso(self) -> str | None:
+        return _iso(self.created_at) if self.created_at else None
+
+    @property
+    def last_login_iso(self) -> str | None:
+        return _iso(self.last_login_at) if self.last_login_at else None
+
+    @property
+    def verified_iso(self) -> str | None:
+        return _iso(self.email_verified_at) if self.email_verified_at else None
+
+    @property
+    def verification_sent_iso(self) -> str | None:
+        return _iso(self.verification_sent_at) if self.verification_sent_at else None
 
     @property
     def has_vault(self) -> bool:

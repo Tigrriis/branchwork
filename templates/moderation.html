@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ t('moderation.title') }} · {{ SITE_NAME }}{% endblock %}
+{% block main_class %}page{% endblock %}
+
+{# A time in UTC, as text for anyone without scripts; app.js rewrites it in
+   the viewer's own time zone. #}
+{% macro when(iso) -%}
+<time datetime="{{ iso }}" data-local-time>{{ iso[:10] }} {{ iso[11:16] }} UTC</time>
+{%- endmacro %}
+
+{# A column heading that sorts the table, and turns round on a second click. #}
+{% macro sort_th(key, label) -%}
+{% set active = sort == key %}
+{% set flip = 'asc' if direction == 'desc' else 'desc' %}
+<th{% if active %} aria-sort="{{ 'ascending' if direction == 'asc' else 'descending' }}"{% endif %}>
+  <a class="sort-link{% if active %} is-active{% endif %}"
+     href="{{ url_for('moderation.index', sort=key, dir=(flip if active else none), status=(status if status != 'all' else none), q=(q or none)) }}">
+    {{ label }}{% if active %}<span class="sort-link__arrow" aria-hidden="true">{{ '↑' if direction == 'asc' else '↓' }}</span>{% endif %}
+  </a>
+</th>
+{%- endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ t('moderation.heading') }}</h1>
+    <p class="muted">{{ t('moderation.about') }}</p>
+  </div>
+</div>
+
+<div class="mod-tools">
+  <nav class="segmented" aria-label="{{ t('moderation.filter_label') }}">
+    {% for key, label, count in [('all', t('moderation.filter_all'), totals.all),
+                                ('verified', t('moderation.filter_verified'), totals.verified),
+                                ('unverified', t('moderation.filter_unverified'), totals.unverified)] %}
+    <a class="segmented__item{% if status == key %} is-active{% endif %}"
+       href="{{ url_for('moderation.index', status=(key if key != 'all' else none), sort=(sort if sort != 'created' else none), dir=(direction if request.args.get('dir') else none), q=(q or none)) }}"
+       {% if status == key %}aria-current="page"{% endif %}>
+      {{ label }} <span class="segmented__count">{{ count }}</span>
+    </a>
+    {% endfor %}
+  </nav>
+  <form class="mod-search" method="get" action="{{ url_for('moderation.index') }}" role="search">
+    {% if status != 'all' %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+    {% if sort != 'created' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+    {% if request.args.get('dir') %}<input type="hidden" name="dir" value="{{ direction }}">{% endif %}
+    <label class="visually-hidden" for="mod-q">{{ t('moderation.search_label') }}</label>
+    <input class="input input--sm" type="search" id="mod-q" name="q" value="{{ q }}"
+           placeholder="{{ t('moderation.search_placeholder') }}" autocomplete="off">
+    <button class="btn btn--sm" type="submit">{{ t('moderation.search_submit') }}</button>
+    {% if q %}<a class="link-quiet" href="{{ url_for('moderation.index', status=(status if status != 'all' else none), sort=(sort if sort != 'created' else none), dir=(direction if request.args.get('dir') else none)) }}">{{ t('moderation.search_clear') }}</a>{% endif %}
+  </form>
+</div>
+
+<div class="table-wrap">
+<table class="table mod-table">
+  <thead>
+    <tr>
+      {{ sort_th('email', t('moderation.col_account')) }}
+      {{ sort_th('created', t('moderation.col_created')) }}
+      {{ sort_th('login', t('moderation.col_login')) }}
+      <th>{{ t('moderation.col_status') }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for user in page.items %}
+    <tr>
+      <td class="mod-cell-account">
+        <div class="mod-account">
+          <span class="mod-account__name">{% if user.display_name %}{{ user.display_name }}{% else %}<span class="muted">{{ t('moderation.no_name') }}</span>{% endif %}{% if user.is_moderator %}<span class="pill mod-pill">{{ t('moderation.moderator_tag') }}</span>{% endif %}</span>
+          <span class="muted small mod-account__email">{{ user.email }}</span>
+        </div>
+      </td>
+      <td class="mod-time" data-label="{{ t('moderation.col_created') }}">{% if user.created_iso %}{{ when(user.created_iso) }}{% else %}<span class="muted">{{ t('moderation.not_recorded') }}</span>{% endif %}</td>
+      <td class="mod-time" data-label="{{ t('moderation.col_login') }}">{% if user.last_login_iso %}{{ when(user.last_login_iso) }}{% else %}<span class="muted">{{ t('moderation.not_recorded') }}</span>{% endif %}</td>
+      <td class="mod-status" data-label="{{ t('moderation.col_status') }}">
+        {% if user.is_verified %}
+          <span class="status-pill status-pill--ok">{{ t('moderation.status_verified') }}</span>
+          <span class="muted small mod-status__note">{{ when(user.verified_iso) }}</span>
+        {% elif user.verification_sent_iso %}
+          <span class="status-pill status-pill--wait">{{ t('moderation.status_pending') }}</span>
+          <span class="muted small mod-status__note">{{ t('moderation.link_sent', when=when(user.verification_sent_iso)) }}</span>
+        {% else %}
+          <span class="status-pill">{{ t('moderation.status_unsent') }}</span>
+          <span class="muted small mod-status__note">{{ t('moderation.no_link_sent') }}</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="muted">{{ t('moderation.none') }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if page.pages > 1 %}
+<nav class="pager" aria-label="{{ t('moderation.pages_label') }}">
+  {% set keep = {'status': (status if status != 'all' else none), 'sort': (sort if sort != 'created' else none), 'dir': (direction if request.args.get('dir') else none), 'q': (q or none)} %}
+  {% if page.has_prev %}<a class="btn btn--ghost btn--sm" href="{{ url_for('moderation.index', page=page.prev_num, **keep) }}">{{ t('moderation.prev') }}</a>{% endif %}
+  <span class="muted small">{{ t('moderation.page_of', n=page.page, total=page.pages) }}</span>
+  {% if page.has_next %}<a class="btn btn--ghost btn--sm" href="{{ url_for('moderation.index', page=page.next_num, **keep) }}">{{ t('moderation.next') }}</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

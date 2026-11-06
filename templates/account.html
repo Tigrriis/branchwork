@@ -4,7 +4,17 @@
 
 {% block content %}
 <div class="card">
-  <div class="card__head"><h1>{{ t('account.heading') }}</h1><span class="muted">{{ current_user.email }}</span></div>
+  <div class="card__head">
+    <h1>{{ t('account.heading') }}</h1>
+    <span class="account-email">
+      <span class="muted">{{ current_user.email }}</span>
+      {% if current_user.is_verified %}
+      <span class="status-pill status-pill--ok">{{ t('account.email_verified') }}</span>
+      {% else %}
+      <span class="status-pill status-pill--wait">{{ t('account.email_unverified') }}</span>
+      {% endif %}
+    </span>
+  </div>
   <form method="post" class="form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="field">
@@ -88,6 +98,15 @@
   {% else %}
   <p class="muted">{{ t('vault.account_none') }}</p>
   {% endif %}
+</div>
+{% endif %}
+{% if current_user.is_moderator %}
+<div class="card settings-link">
+  <div>
+    <strong>{{ t('account.moderation_heading') }}</strong>
+    <div class="muted small">{{ t('account.moderation_help') }}</div>
+  </div>
+  <a class="btn btn--ghost btn--sm" href="{{ url_for('moderation.index') }}">{{ t('account.moderation_open') }}</a>
 </div>
 {% endif %}
 <div class="card settings-link">
