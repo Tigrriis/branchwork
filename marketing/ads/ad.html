@@ -45,11 +45,11 @@ p{font-weight:500;font-size:var(--p);color:var(--muted);line-height:1.35;margin-
 <div class="ad" id="ad">
   <div class="copy">
     <div class="brand"><img src="logo.svg" alt="">Villainy</div>
-    <div><h1 id="h1"></h1><p id="p"></p></div>
+    <div><h1 id="h1"></h1></div>
     <div class="cta"><span class="btn">Start your first plot</span><span class="url">villainy.win</span></div>
   </div>
   <div class="tree">
-    <div class="col g"><h3>Infiltration</h3><div class="ult won">★<span class="long">&nbsp;Council seat</span></div>
+    <div class="col g"><h3>Infiltration</h3><div class="ult won">★</div>
       <div class="tiers"><div class="tier"><i class="pip f"></i><i class="pip f"></i><i class="pip f"></i></div><div class="tier"><i class="pip f"></i><i class="pip f"></i></div><div class="tier"><i class="pip f"></i><i class="pip f"></i></div><div class="tier"><i class="pip f"></i></div></div></div>
     <div class="col b"><h3>Funding</h3><div class="ult">★</div>
       <div class="tiers"><div class="tier"><i class="pip f"></i><i class="pip f"></i><i class="pip f"></i></div><div class="tier"><i class="pip f"></i><i class="pip p"></i></div><div class="tier"><i class="pip"></i><i class="pip"></i></div><div class="tier"><i class="pip"></i></div></div></div>
@@ -66,7 +66,7 @@ const ADS={
  4:["Monologue less. <em>Machinate more.</em>","Turn your sprawling master plan into a skill tree you can actually tick off."]
 };
 const [h,p]=ADS[q.get('ad')||1];
-document.getElementById('h1').innerHTML=h;document.getElementById('p').textContent=p;
+document.getElementById('h1').innerHTML=h;
 const fmt=q.get('fmt')||'sq';
 const S={
  land:{w:1200,h:628,pad:56,gap:48,brand:30,h1:66,p:25,cta:22,u:19,cg:14},

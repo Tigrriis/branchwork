@@ -32,7 +32,7 @@ Reddit: **Sign Up**.
 ## Editing or re-rendering
 
 `ad.html` is the template (`?ad=1..4&fmt=land|sq|tall`); the headline and
-subline for each ad are in its `ADS` object. To re-render all twelve PNGs:
+subline for each ad are in its `ADS` object (the subline is no longer drawn). To re-render all twelve PNGs:
 
 ```bash
 cd marketing/ads && node render.js
