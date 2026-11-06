@@ -221,8 +221,9 @@
 
   // ── Dragging ──────────────────────────────────────────────────────────
   // One set of listeners: an idea onto a tier of the tree, a project between
-  // the focus and backburner lanes, a thread from tile to tile, a tile to
-  // another tier or scheme, and a note onto a folder of the notes explorer.
+  // the focus and backburner lanes, a thread from tile to tile, the end of a
+  // thread onto another tile, a tile to another tier or scheme, and a note
+  // onto a folder of the notes explorer.
   var drag = null;   // {kind, id, from}
 
   // The first kind whose handle the drag starts in wins, so a tile's thread
@@ -231,6 +232,7 @@
     idea: { handle: ".idea", zone: ".tier__row, .tier-add" },
     project: { handle: ".ptile, .btile", zone: "[data-focus-zone]" },
     thread: { handle: ".tile__thread", zone: ".tile[data-task], .ultimate[data-ultimate]" },
+    end: { handle: ".thread-end", zone: ".tile[data-task], .ultimate[data-ultimate]" },
     task: { handle: ".tile[data-task]", zone: ".tier__row, .tier-add[data-branch]" },
     scheme: { handle: ".col__foot", zone: ".col[data-branch], .col--add" },
     note: { handle: ".nx-note", zone: "[data-drop-folder]" }
@@ -244,7 +246,11 @@
 
   function zoneFor(node) {
     if (!drag || !node || !node.closest) return null;
-    return node.closest(KINDS[drag.kind].zone);
+    var zone = node.closest(KINDS[drag.kind].zone);
+    // Nothing leads on from an ultimate, so the near end of a thread cannot
+    // land on one.
+    if (zone && drag.kind === "end" && drag.end === "from" && zone.dataset.ultimate) return null;
+    return zone;
   }
 
   function clearZones() {
@@ -391,7 +397,9 @@
     drag = {
       kind: kind,
       id: kind === "task" ? handle.dataset.task : kind === "scheme" ? moving.dataset.branch :
-        handle.dataset.idea || handle.dataset.project || handle.dataset.threadFrom || handle.dataset.note,
+        handle.dataset.idea || handle.dataset.project || handle.dataset.threadFrom ||
+        handle.dataset.threadEnd || handle.dataset.note,
+      end: handle.dataset.end,
       from: handle.closest("[data-focus-zone], .tier__row")
     };
     e.dataTransfer.effectAllowed = "move";
@@ -419,7 +427,13 @@
   // Chrome, without saying where the pointer went.
   document.addEventListener("dragover", function (e) {
     var zone = zoneFor(e.target);
-    if (!zone) { if (drag) clearZones(); return; }
+    if (!zone) {
+      if (drag) clearZones();
+      // The end of a thread can be dropped anywhere: off the tree unthreads
+      // it. Escape still cancels, since a cancelled drag never drops.
+      if (drag && drag.kind === "end") { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }
+      return;
+    }
     e.preventDefault();                       // without this, drop never fires
     e.dataTransfer.dropEffect = "move";
     if (!zone.classList.contains("is-drop")) { clearZones(); zone.classList.add("is-drop"); }
@@ -434,6 +448,14 @@
 
   document.addEventListener("drop", function (e) {
     var zone = zoneFor(e.target);
+    if (!zone && drag && drag.kind === "end") {
+      e.preventDefault();
+      // Over a column but not a tile is a miss, not a removal: only a drop
+      // clear of every scheme unthreads.
+      if (!(e.target.closest && e.target.closest(".col"))) unthread(drag.id);
+      clearZones();
+      return;
+    }
     if (!zone) return;
     e.preventDefault();                       // and stop .tier-add navigating
     var moving = drag;
@@ -442,6 +464,8 @@
       promoteIdea(moving.id, zone.dataset.branch, zone.dataset.tier);
     } else if (moving.kind === "thread") {
       threadTasks(moving.id, zone.dataset.task, zone.dataset.ultimate);
+    } else if (moving.kind === "end") {
+      moveThreadEnd(moving.id, moving.end, zone.dataset.task, zone.dataset.ultimate);
     } else if (moving.kind === "task") {
       var spot = insertSpot(zone, e.clientX, e.clientY);
       var before = spot && !spot.after ? spot.tile.dataset.task : null;
@@ -694,6 +718,10 @@
     // Three passes: work out every route, then spread the ones that would
     // share a band or meet at the same point on a tile, then draw.
     var routes = [];
+    var threadId = function (path) { return path.parentNode.dataset.thread; };
+    var endNodes = function (id) {
+      return tree.querySelectorAll('.thread-end[data-thread-end="' + id + '"]');
+    };
     Array.prototype.forEach.call(svg.querySelectorAll(".thread__line"), function (path) {
       var arrow = path.parentNode.querySelector(".thread__arrow");
       // A thread ends at another tile or at a scheme's ultimate, which sits
@@ -705,6 +733,7 @@
       if (!fromTile || !toTile) {
         path.removeAttribute("d");
         arrow.setAttribute("hidden", "hidden");
+        Array.prototype.forEach.call(endNodes(threadId(path)), function (n) { n.hidden = true; });
         return;
       }
       arrow.removeAttribute("hidden");
@@ -817,7 +846,40 @@
       var angle = Math.atan2(after.y - before.y, after.x - before.x) * 180 / Math.PI;
       route.arrow.setAttribute("transform",
         "translate(" + middle.x + " " + middle.y + ") rotate(" + angle + ")");
+      // The nodes sit on the line's two ends, where it meets each tile.
+      var ends = { from: route.path.getPointAtLength(0), to: route.path.getPointAtLength(length) };
+      Array.prototype.forEach.call(endNodes(threadId(route.path)), function (node) {
+        var at = ends[node.dataset.end];
+        node.style.left = at.x + "px";
+        node.style.top = at.y + "px";
+        node.hidden = false;
+      });
     });
+  }
+
+  // One end of a thread dropped on another tile, or on a scheme's ultimate
+  // for the far end, moves that end. Back where it was is a no-op.
+  function moveThreadEnd(threadId, end, toId, toUltimateId) {
+    if (!threadId || (!toId && !toUltimateId)) return;
+    var payload = toUltimateId ? { end: end, to_ultimate: Number(toUltimateId) } : { end: end, to: Number(toId) };
+    post("/threads/" + threadId + "/move", payload)
+      .then(function (res) {
+        if (!res.ok) { flash(res.body.message || say("thread_failed"), "error"); return; }
+        if (res.body.moved) swapTree(res.body.html);
+      })
+      .catch(function () { flash(say("network"), "error"); });
+  }
+
+  // An end dropped clear of the tree takes the thread with it.
+  function unthread(threadId) {
+    if (!threadId) return;
+    post("/threads/" + threadId + "/delete", {})
+      .then(function (res) {
+        if (!res.ok) { flash(res.body.message || say("thread_failed"), "error"); return; }
+        swapTree(res.body.html);
+        flash(say("thread_removed"), "info");
+      })
+      .catch(function () { flash(say("network"), "error"); });
   }
 
   function threadTasks(fromId, toId, toUltimateId) {

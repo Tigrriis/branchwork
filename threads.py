@@ -7,8 +7,10 @@ because tier gates and scheme locks already do that job and a hidden third
 rule would be one too many.
 
 Threads are made by dragging a tile's handle onto another tile or onto a
-scheme's ultimate, or from the pickers on the machination and ultimate
-forms, and removed from those forms. An ultimate only ever ends a thread.
+scheme's ultimate, or from the "comes after" picker on the ultimate form.
+Once drawn, either end of an arrow is a node: drag it onto another tile to
+move that end, or off the tree to remove the thread. An ultimate only ever
+ends a thread.
 """
 from flask import (
     Blueprint, abort, current_app, flash, jsonify, redirect, render_template,
@@ -41,15 +43,17 @@ def _thread(thread_id: int) -> Thread:
 
 # ── The rule ────────────────────────────────────────────────────────────────
 
-def _loops(project: Project, source: Task, target: Task | Ultimate) -> bool:
+def _loops(project: Project, source: Task, target: Task | Ultimate,
+           ignore: Thread | None = None) -> bool:
     """Would threading source → target close a loop? True if target already
     leads back to source, following the threads that exist. Nothing leads
-    on from an ultimate, so a thread into one never loops."""
+    on from an ultimate, so a thread into one never loops. ``ignore`` is a
+    thread about to be re-pointed, whose old line no longer counts."""
     if isinstance(target, Ultimate):
         return False
     onward: dict[int, list[int]] = {}
     for thread in project.threads:
-        if thread.to_task_id is not None:
+        if thread is not ignore and thread.to_task_id is not None:
             onward.setdefault(thread.from_task_id, []).append(thread.to_task_id)
     seen, stack = set(), [target.id]
     while stack:
@@ -76,6 +80,19 @@ def find_target(project: Project, task_id=None, ultimate_id=None) -> Task | Ulti
     return None
 
 
+def _refusal(project: Project, source: Task, target: Task | Ultimate,
+             ignore: Thread | None = None) -> str | None:
+    """Why source → target cannot be a thread, as a copy key, or None."""
+    if source is target:
+        return "thread.same"
+    if any(t is not ignore and t.from_task_id == source.id and t.target is target
+           for t in project.threads):
+        return "thread.exists"
+    if _loops(project, source, target, ignore):
+        return "thread.loop"
+    return None
+
+
 def thread_tasks(project: Project, source_id, target: Task | Ultimate) -> str | None:
     """Thread source → target, adding it to the session. Returns a copy key
     naming the refusal, or None once it is made."""
@@ -83,15 +100,34 @@ def thread_tasks(project: Project, source_id, target: Task | Ultimate) -> str | 
     source = db.session.get(Task, int(source_id)) if source_id.isdigit() else None
     if source is None or source.branch.project_id != project.id:
         return "thread.not_in_plot"
-    if source is target:
-        return "thread.same"
     if len(project.threads) >= current_app.config["MAX_THREADS_PER_PROJECT"]:
         return "thread.limit"
-    if any(t.from_task_id == source.id and t.target is target for t in project.threads):
-        return "thread.exists"
-    if _loops(project, source, target):
-        return "thread.loop"
+    error = _refusal(project, source, target)
+    if error:
+        return error
     db.session.add(Thread(project=project, source=source, target=target))
+    return None
+
+
+def rethread(thread: Thread, end: str, node: Task | Ultimate) -> str | None:
+    """Move one end of ``thread`` onto ``node``: its source if ``end`` is
+    "from", its target if "to". The same rules as making one, with the
+    thread's own old line not counted. Returns a copy key naming the refusal,
+    or None once it is moved."""
+    if end == "from":
+        if isinstance(node, Ultimate):
+            return "thread.not_in_plot"        # nothing leads on from an ultimate
+        source, target = node, thread.target
+    else:
+        source, target = thread.source, node
+    error = _refusal(thread.project, source, target, ignore=thread)
+    if error:
+        return error
+    # A fresh row rather than a re-pointed one: each end's backref cascades
+    # delete-orphan, so clearing the old target to set a different kind
+    # would have the flush delete the thread out from under the change.
+    db.session.delete(thread)
+    db.session.add(Thread(project=thread.project, source=source, target=target))
     return None
 
 
@@ -131,6 +167,31 @@ def add_thread(task_id: int):
         flash(tx("thread.added", **{"from": source.title, "to": target.title}), "success")
         return redirect(url_for("projects.tree", project_id=project.id))
     return _tree(project)
+
+
+@threads_bp.route("/threads/<int:thread_id>/move", methods=["POST"])
+@login_required
+def move_thread(thread_id: int):
+    """Re-point one end of a thread: ``{"end": "from"|"to", "to": id}`` for
+    a machination, or ``{"end": "to", "to_ultimate": id}`` for an ultimate.
+    Dropping an end back where it was changes nothing. The page script
+    posts JSON and gets the re-rendered tree back, the way points do; the
+    moved thread in it is a new row with a new id."""
+    thread = _thread(thread_id)
+    project = thread.project
+    payload = request.get_json(silent=True) or {}
+    end = "from" if payload.get("end") == "from" else "to"
+    node = find_target(project, task_id=payload.get("to"), ultimate_id=payload.get("to_ultimate"))
+    if node is None:
+        return jsonify({"error": "not_in_plot", "message": tx("thread.not_in_plot")}), 409
+    if node is (thread.source if end == "from" else thread.target):
+        return jsonify({"moved": False, "html": render_template("_tree.html", project=project)})
+    error = rethread(thread, end, node)
+    if error:
+        db.session.rollback()
+        return jsonify({"error": "refused", "message": tx(error)}), 409
+    db.session.commit()
+    return jsonify({"moved": True, "html": render_template("_tree.html", project=project)})
 
 
 @threads_bp.route("/threads/<int:thread_id>/delete", methods=["POST"])

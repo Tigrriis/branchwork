@@ -1177,14 +1177,33 @@ html[data-rail="pinned"] .rail { box-shadow: none; }
 }
 .tile:hover .tile__note, .tile__note:focus-visible { opacity: 1; }
 .tile__note:hover { color: var(--fg); border-color: var(--muted); }
-body.is-dragging-thread .tile__note { opacity: 0; }
+body.is-dragging-thread .tile__note, body.is-dragging-end .tile__note { opacity: 0; }
 .tile__thread:active { cursor: grabbing; }
-body.is-dragging-thread .tile[data-task] {
+body.is-dragging-thread .tile[data-task], body.is-dragging-end .tile[data-task] {
   outline: 1px dashed var(--line2); outline-offset: 3px; border-radius: var(--radius-sm);
 }
-body.is-dragging-thread .tile[data-task].is-drop { outline: 2px dashed var(--accent); }
+body.is-dragging-thread .tile[data-task].is-drop, body.is-dragging-end .tile[data-task].is-drop { outline: 2px dashed var(--accent); }
 body.is-dragging-thread .tile__thread { opacity: 1; }
-body.is-dragging-thread .ultimate[data-ultimate].is-drop .ultimate__box { outline: 2px dashed var(--accent); outline-offset: 4px; }
+body.is-dragging-thread .ultimate[data-ultimate].is-drop .ultimate__box,
+body.is-dragging-end .ultimate[data-ultimate].is-drop .ultimate__box { outline: 2px dashed var(--accent); outline-offset: 4px; }
+
+/* The two ends of a thread, as nodes on the arrow where it meets each tile.
+   Drag one onto another tile to move that end, or off the tree to unthread.
+   They sit over the overlay in HTML, since an SVG shape cannot be dragged,
+   and take the pointer where the arrows themselves do not. */
+.thread-ends { position: absolute; top: 0; left: 0; z-index: 4; width: 0; height: 0; pointer-events: none; }
+.thread-end {
+  position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; padding: 0;
+  border-radius: 50%; border: 2px solid var(--card); background: var(--muted);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), var(--shadow-xs); cursor: grab; pointer-events: auto;
+  opacity: 0.85; transition: transform 0.12s var(--ease), opacity 0.12s, box-shadow 0.15s;
+}
+.thread-end:hover, .thread-end:focus-visible { opacity: 1; transform: scale(1.35); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 0 10px rgba(255, 255, 255, 0.25); }
+.thread-end:active { cursor: grabbing; }
+.thread-end--started { background: var(--part); }
+.thread-end--done { background: var(--full); }
+.thread-end.is-dragging { opacity: 0.3; }
+@media (hover: none) { .thread-end { display: none; } }
 
 /* The same threads as a list, on the machination form. */
 .thread-rows { display: flex; flex-direction: column; gap: 4px; }

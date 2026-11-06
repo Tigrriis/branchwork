@@ -102,43 +102,89 @@ def test_a_thread_is_removed_by_its_own_endpoint(client, db):
     assert Thread.query.count() == 0
 
 
-def test_the_machination_form_threads_and_unthreads(client, db):
+def test_either_end_of_a_thread_moves_to_another_tile(client, db):
     user = make_user()
     login(client)
     project = make_project(user)
     design, build = make_branch(project, "Design"), make_branch(project, "Build", "red")
-    brief = make_task(design, "Brief")
+    brief, survey = make_task(design, "Brief"), make_task(design, "Survey")
     dig = make_task(build, "Dig")
-
-    # "Comes after" on the form is the route without a mouse.
-    form = client.get(f"/machinations/{dig.id}/edit").data.decode()
-    assert copy_in(form, "thread.follows") and f'value="{brief.id}"' in form
-    client.post(f"/machinations/{dig.id}/edit", data={"title": "Dig", "icon": "bomb", "tier": "1",
-                                               "points_max": "1", "points_done": "0",
-                                               "follows": str(brief.id)})
+    keys = make_ultimate(build, "Keys handed over")
+    _thread(client, brief, dig)
     thread = Thread.query.one()
-    assert (thread.from_task_id, thread.to_task_id) == (brief.id, dig.id)
 
-    # Both ends list it, and the form posts the removal.
-    for task_id in (brief.id, dig.id):
-        assert f'id="unthread-{thread.id}"' in client.get(f"/machinations/{task_id}/edit").data.decode()
-    client.post(f"/threads/{thread.id}/delete", data={"next": f"/machinations/{dig.id}/edit"},
-                follow_redirects=True)
-    assert Thread.query.count() == 0
+    # A moved thread is a fresh row, so it is looked up again after each move.
+    def move(**payload):
+        return client.post(f"/threads/{Thread.query.one().id}/move", json=payload)
+
+    # The far end onto another tile, and the tree comes back redrawn.
+    res = move(end="to", to=survey.id)
+    assert res.status_code == 200 and res.get_json()["moved"]
+    assert f'data-from="{brief.id}" data-to="{survey.id}"' in res.get_json()["html"]
+    # The near end too.
+    assert move(end="from", to=dig.id).status_code == 200
+    thread = Thread.query.one()
+    assert (thread.from_task_id, thread.to_task_id) == (dig.id, survey.id)
+    # The far end can land on an ultimate; the near end cannot.
+    assert move(end="to", to_ultimate=keys.id).status_code == 200
+    assert Thread.query.one().target is keys
+    assert move(end="from", to_ultimate=keys.id).status_code == 409
+    assert Thread.query.one().from_task_id == dig.id
+    # Back where it was is a no-op, not a refusal.
+    res = move(end="to", to_ultimate=keys.id)
+    assert res.status_code == 200 and not res.get_json()["moved"]
+    assert Thread.query.count() == 1
 
 
-def test_a_refused_thread_from_the_form_says_so(client, db):
+def test_moving_an_end_keeps_the_rules(client, db):
     user = make_user()
     login(client)
     project = make_project(user)
     branch = make_branch(project)
-    only = make_task(branch, "Only")
-    r = client.post(f"/machinations/{only.id}/edit", data={"title": "Only", "icon": "bomb", "tier": "1",
-                                                   "points_max": "1", "points_done": "0",
-                                                   "follows": str(only.id)},
-                    follow_redirects=True)
-    assert copy_in(r.data, "thread.same")
-    assert Thread.query.count() == 0
+    a, b, c = (make_task(branch, name) for name in ("A", "B", "C"))
+    elsewhere = make_task(make_branch(make_project(user)), "Far away")
+    _thread(client, a, b)
+    _thread(client, b, c)
+
+    # The thread leading from a task, found afresh: a move makes a new row.
+    def move(source, **payload):
+        thread = Thread.query.filter_by(from_task_id=source.id).one()
+        return client.post(f"/threads/{thread.id}/move", json=payload)
+
+    assert copy_in(move(a, end="to", to=a.id).get_json()["message"], "thread.same")
+    assert copy_in(move(a, end="to", to=elsewhere.id).get_json()["message"], "thread.not_in_plot")
+    # b → c swung onto a would loop back through a → b.
+    assert copy_in(move(b, end="to", to=a.id).get_json()["message"], "thread.loop")
+    # a → b moved to a → c duplicates nothing, and then b → c's near end
+    # onto a would be a second a → c.
+    assert move(a, end="to", to=c.id).status_code == 200
+    assert copy_in(move(b, end="from", to=a.id).get_json()["message"], "thread.exists")
+    # Its own old line never counts against it: a → c can swing straight
+    # back to a → b.
+    assert move(a, end="to", to=b.id).status_code == 200
+    assert Thread.query.count() == 2
+
+    # Someone else's thread is not found.
+    make_user("intruder@example.com")
+    client.post("/logout")
+    login(client, email="intruder@example.com")
+    assert move(a, end="to", to=c.id).status_code == 404
+
+
+def test_the_machination_form_no_longer_edits_threads(client, db):
+    user = make_user()
+    login(client)
+    project = make_project(user)
+    design, build = make_branch(project, "Design"), make_branch(project, "Build", "red")
+    brief, dig = make_task(design, "Brief"), make_task(build, "Dig")
+    _thread(client, brief, dig)
+    form = client.get(f"/machinations/{dig.id}/edit").data.decode()
+    assert not copy_in(form, "thread.follows") and "unthread-" not in form
+    # A stray "follows" field in a post is ignored.
+    client.post(f"/machinations/{dig.id}/edit", data={"title": "Dig", "icon": "bomb", "tier": "1",
+                                               "points_max": "1", "points_done": "0",
+                                               "follows": str(brief.id)})
+    assert Thread.query.count() == 1
 
 
 def _thread_into(client, source, ultimate):
@@ -185,7 +231,7 @@ def test_a_machination_threads_into_an_ultimate(client, db):
     assert Thread.query.count() == 1 and Thread.query.one().to_task_id == brief.id
 
 
-def test_the_forms_thread_into_an_ultimate_both_ways(client, db):
+def test_the_ultimate_form_threads_into_it(client, db):
     user = make_user()
     login(client)
     project = make_project(user)
@@ -193,16 +239,8 @@ def test_the_forms_thread_into_an_ultimate_both_ways(client, db):
     brief = make_task(design, "Brief")
     dig = make_task(build, "Dig")
     keys = make_ultimate(build, "Keys handed over")
-
-    # "Leads to" on the machination form.
-    form = client.get(f"/machinations/{brief.id}/edit").data.decode()
-    assert copy_in(form, "thread.leads_to") and f'value="{keys.id}"' in form
-    client.post(f"/machinations/{brief.id}/edit", data={"title": "Brief", "icon": "bomb", "tier": "1",
-                                                 "points_max": "1", "points_done": "0",
-                                                 "leads_to": str(keys.id)})
+    _thread_into(client, brief, keys)
     thread = Thread.query.one()
-    assert (thread.from_task_id, thread.to_ultimate_id) == (brief.id, keys.id)
-    assert f'id="unthread-{thread.id}"' in client.get(f"/machinations/{brief.id}/edit").data.decode()
 
     # "Comes after" on the ultimate form, which also lists and removes.
     form = client.get(f"/schemes/{build.id}/ultimate").data.decode()
