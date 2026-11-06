@@ -21,7 +21,7 @@ def test_signed_out_visitors_get_the_landing_page(client):
 def test_signing_up_from_the_landing_page_lands_on_the_example(client):
     r = client.post("/register", data={"email": "new@example.com", "password": "longenough1"},
                     follow_redirects=True)
-    assert copy_in(r.data, "example.m_minutes")
+    assert copy_in(r.data, "example.m_plans")
     assert not copy_in(r.data, "landing.heading")
 
 
