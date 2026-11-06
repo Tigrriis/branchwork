@@ -6,8 +6,8 @@ Two sources, offered side by side on the new-project form:
 * ``Template`` rows, which belong to one user and are edited in settings.
 
 A built-in can be duplicated into an editable copy, which is the usual way
-someone ends up with their own: start from Engineering job, rename a couple
-of branches, keep it.
+someone ends up with their own: start from Lifecycle, rename a couple of
+branches, keep it.
 """
 from flask import (
     Blueprint, abort, flash, redirect, render_template, request, url_for,
@@ -30,40 +30,11 @@ STARTERS: dict[str, dict] = {
         "chain": False,
     },
     "blank": {"branches": [], "chain": False},
+    # Each scheme waits on the one before it.
     "lifecycle": {
         "branches": [("Idea", "violet"), ("Prototype", "blue"), ("Build", "green"),
                      ("Launch", "amber"), ("Maintain", "teal")],
         "chain": True,
-    },
-    "engineering": {
-        "branches": [("Design", "green"), ("Approvals", "blue"), ("Construction", "red")],
-        "chain": "last",
-    },
-    "software": {
-        "branches": [("Spec", "violet"), ("Build", "green"), ("Ship", "amber"), ("Maintain", "teal")],
-        "chain": "last",
-    },
-    # For a business that already runs and needs systemising rather than
-    # building. Nothing is chained on purpose: an operating business cannot
-    # put Finance on hold until Sales is "finished", and a locked column would
-    # grey out work that is actually happening. The sequence lives in the
-    # tiers instead, one ladder per area, so each area keeps its own tempo and
-    # the board shows at a glance which one you have stopped touching.
-    "business": {
-        "branches": [("Sales & marketing", "amber"), ("Delivery", "green"),
-                     ("Finance & admin", "blue"), ("People", "violet"),
-                     ("Systems & tools", "teal")],
-        "chain": False,
-        # Worth 3 points each, which is the default gate: finish the map and
-        # tier 2 opens by itself. Deliberately one task per area, not a
-        # pre-filled backlog of guesses about someone else's business.
-        "tasks": {
-            "Sales & marketing": [("Map how work is won today", DEFAULT_ICON, 3)],
-            "Delivery": [("Map how a job runs start to finish", DEFAULT_ICON, 3)],
-            "Finance & admin": [("Map the money in and out", DEFAULT_ICON, 3)],
-            "People": [("Map who does what, and what only you can do", DEFAULT_ICON, 3)],
-            "Systems & tools": [("List every tool in use and what it is for", DEFAULT_ICON, 3)],
-        },
     },
 }
 DEFAULT_STARTER = "simple"
@@ -89,22 +60,20 @@ def _make(project: Project, name: str, hue: str, position: int,
 
 
 def apply_starter(project: Project, key: str) -> list[Branch]:
-    """Create the chosen starter's branches, and any seeded tasks, on ``project``.
+    """Create the chosen starter's branches on ``project``.
 
     Nothing is added to the session here; the caller adds the returned
-    branches and the ``save-update`` cascade carries the tasks with them.
+    branches and the ``save-update`` cascade carries any tasks (a custom
+    template's starting machinations) with them.
     """
     if key.startswith("custom:"):
         return _apply_custom(project, key.split(":", 1)[1])
 
     spec = STARTERS.get(key) or STARTERS["blank"]
-    seeded = spec.get("tasks") or {}
     made: list[Branch] = []
-    last = len(spec["branches"]) - 1
     for pos, (name, hue) in enumerate(spec["branches"]):
-        waits = spec["chain"] is True or (spec["chain"] == "last" and pos == last)
-        made.append(_make(project, name, hue, pos, made[-1] if made else None, waits,
-                          seeded.get(name, [])))
+        made.append(_make(project, name, hue, pos, made[-1] if made else None,
+                          spec["chain"], []))
     return made
 
 
@@ -178,14 +147,9 @@ def new_template():
     if spec is not None:
         template = Template(user=current_user, name=_unique_name(tx(f"starter.{source}.label")),
                             hint=tx(f"starter.{source}.hint"))
-        seeded = spec.get("tasks") or {}
-        last = len(spec["branches"]) - 1
         for pos, (name, hue) in enumerate(spec["branches"]):
-            lines = "\n".join(f"{title} | {points}" for title, _icon, points in seeded.get(name, []))
             db.session.add(TemplateBranch(
-                template=template, name=name, hue=hue, position=pos,
-                waits=spec["chain"] is True or (spec["chain"] == "last" and pos == last),
-                tasks_text=lines or None))
+                template=template, name=name, hue=hue, position=pos, waits=spec["chain"]))
     else:
         template = Template(user=current_user, name=_unique_name(tx("templates.default_name")))
         db.session.add(TemplateBranch(template=template, name=tx("templates.first_scheme"), hue="green", position=0))

@@ -351,34 +351,35 @@ def test_copying_a_builtin_gives_an_editable_template(client, db):
     from models import Template
     user = make_user()
     login(client)
-    client.post("/settings/templates/new", data={"copy": "engineering"})
+    client.post("/settings/templates/new", data={"copy": "lifecycle"})
     t = Template.query.one()
-    assert t.name == tx("starter.engineering.label") and t.user_id == user.id
+    assert t.name == tx("starter.lifecycle.label") and t.user_id == user.id
     assert [(b.name, b.hue, b.waits) for b in t.branches] == [
-        ("Design", "green", False), ("Approvals", "blue", False), ("Construction", "red", True)]
+        ("Idea", "violet", True), ("Prototype", "blue", True), ("Build", "green", True),
+        ("Launch", "amber", True), ("Maintain", "teal", True)]
     # It shows on the new-project form, marked as the user's own.
     html = client.get("/plots/new").data.decode()
     assert f'value="custom:{t.id}"' in html and copy_in(html, "plot.yours_tag")
 
 
-def test_copying_carries_seeded_tasks_with_their_points(client, db):
+def test_copying_an_unchained_builtin_leaves_nothing_waiting(client, db):
     from models import Template
     make_user()
     login(client)
-    client.post("/settings/templates/new", data={"copy": "business"})
+    client.post("/settings/templates/new", data={"copy": "simple"})
     t = Template.query.one()
-    sales = t.branches[0]
-    assert sales.name == "Sales & marketing"
-    assert sales.tasks() == [("Map how work is won today", 3)]
+    assert [(b.name, b.waits) for b in t.branches] == [
+        ("First steps", False), ("Main work", False), ("Finishing", False)]
+    assert all(b.tasks() == [] for b in t.branches)
 
 
 def test_a_copy_gets_a_distinct_name(client, db):
     from models import Template
     make_user()
     login(client)
-    client.post("/settings/templates/new", data={"copy": "software"})
-    client.post("/settings/templates/new", data={"copy": "software"})
-    label = tx("starter.software.label")
+    client.post("/settings/templates/new", data={"copy": "simple"})
+    client.post("/settings/templates/new", data={"copy": "simple"})
+    label = tx("starter.simple.label")
     assert sorted(t.name for t in Template.query.all()) == sorted([label, label + " 2"])
 
 
@@ -386,11 +387,11 @@ def test_editing_a_template_renames_reorders_and_deletes(client, db):
     from models import Template, TemplateBranch
     make_user()
     login(client)
-    client.post("/settings/templates/new", data={"copy": "engineering"})
+    client.post("/settings/templates/new", data={"copy": "simple"})
     t = Template.query.one()
 
-    # Three rows posted: rename the first, blank the second (delete), keep the
-    # third, and add a fourth. Only row 3 is ticked as waiting.
+    # Four rows posted: rename the first, blank the second (delete), rename
+    # the third, and add a fourth. Only row 3 is ticked as waiting.
     client.post(f"/settings/templates/{t.id}", data={
         "name": "Arete job", "hint": "How we actually run one",
         "branch_name": ["Concept", "", "Construction", "Handover"],
@@ -436,7 +437,7 @@ def test_templates_are_private(client, db):
     from models import Template
     owner = make_user("owner@example.com")
     login(client, email="owner@example.com")
-    client.post("/settings/templates/new", data={"copy": "software"})
+    client.post("/settings/templates/new", data={"copy": "simple"})
     t = Template.query.one()
     client.post("/logout")
 
@@ -455,7 +456,7 @@ def test_deleting_a_template_leaves_its_projects_alone(client, db):
     from models import Template
     user = make_user()
     login(client)
-    client.post("/settings/templates/new", data={"copy": "engineering"})
+    client.post("/settings/templates/new", data={"copy": "simple"})
     t = Template.query.one()
     client.post("/plots/new", data={"name": "Built from it", "starter": f"custom:{t.id}",
                                        "cadence_days": "14", "phase": "idea", "gate_points": "3"})

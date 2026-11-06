@@ -767,18 +767,6 @@ hint = "No schemes. Add your own."
 label = "Lifecycle"
 hint = "Idea → Prototype → Build → Launch → Maintain, each waiting on the last."
 
-[starter.engineering]
-label = "Engineering job"
-hint = "Design → Approvals → Construction, construction waiting on approvals."
-
-[starter.software]
-label = "Software"
-hint = "Spec, Build and Ship side by side, plus a Maintain scheme that opens after Ship."
-
-[starter.business]
-label = "Running business"
-hint = "Five areas of a business that already operates, each improving at its own pace. Tier 1 map it · 2 fix the worst of it · 3 write the checklist · 4 put a number on it. Starts with one mapping machination per area."
-
 [phase]
 _screen = "Default statuses"
 _about = "The statuses a new account starts with. After that each person renames, reorders and adds their own under Account."
