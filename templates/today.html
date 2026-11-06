@@ -38,9 +38,14 @@
     <div class="chips">
       {% set n_due %}<span data-count-due>{{ due|length }}</span>{% endset %}
       {% set n_noaction %}<span data-count-noaction>{{ no_action|length }}</span>{% endset %}
-      {# Only what needs attention; a dragged tile can bring a chip back. #}
+      {# Only what needs attention; a dragged tile can bring a chip back.
+         Both chips are switched off for now (TOUCH_CHIP, NEXT_ACTIONS). #}
+      {% if config.TOUCH_CHIP %}
       <span class="chip chip--warn" data-chip-due{% if not due %} hidden{% endif %}>{{ t('today.chip_due', n=n_due) }}</span>
+      {% endif %}
+      {% if config.NEXT_ACTIONS %}
       <span class="chip chip--warn" data-chip-noaction{% if not no_action %} hidden{% endif %}>{{ t('today.chip_noaction', n=n_noaction) }}</span>
+      {% endif %}
     </div>
     {% if review_enabled and (active_projects or resurfaced) %}
     <a class="btn btn--ghost btn--sm" href="{{ url_for('dashboard.today', review=1) }}">{{ t('today.review_link') }}</a>

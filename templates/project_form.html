@@ -49,10 +49,12 @@
       <label class="field__label" for="objective">{{ t('fields.objective_label') }}</label>
       <input class="input" type="text" id="objective" name="objective" maxlength="300" value="{{ project.objective or '' }}" placeholder="{{ t('fields.objective_placeholder') }}">
     </div>
+    {% if config.NEXT_ACTIONS %}
     <div class="field">
       <label class="field__label" for="next_action">{{ t('fields.next_label') }}</label>
       <input class="input" type="text" id="next_action" name="next_action" maxlength="200" value="{{ project.next_action or '' }}" placeholder="{{ t('fields.next_placeholder') }}">
     </div>
+    {% endif %}
     {% endif %}
     {% if is_new %}
     <div class="field">

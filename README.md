@@ -36,6 +36,14 @@ projects and forgets to move them along:
   tiles are small, recede, and stop counting towards the "needs a touch"
   nagging. Focus is independent of phase: a project can be well into
   Building and still not be what you are touching this weekend.
+  **Two parts of Today are switched off for now**, the same way as Review:
+  the "N in focus need a touch" chip (`TOUCH_CHIP=1` brings it back) and
+  **next actions** (`NEXT_ACTIONS=1`). While next actions are off, no page
+  shows or edits one (Today's tiles, the tree, the plot's Edit page, the
+  review), the "N without a next action" chip is hidden, and posts to
+  `/plots/<id>/next-action` 404. Nothing writes a next action while it is
+  off, so every plot keeps the one it had for when it comes back. A due
+  plot still shows it on its tile and with a dot in the sidebar.
 * **Statuses** sit on every tile as a pill that opens onto all of them, with
   each active status's count and cap, and parked and closed projects sit on
   shelves under the lanes. Each account edits its own statuses under
@@ -72,8 +80,8 @@ projects and forgets to move them along:
   routine's tempo is one you set on purpose.
 
 **New plots** ask only for a name and a template; status, focus, objective,
-next action, tempo, gate points, code and description are on the plot's Edit
-page once it exists.
+next action (while switched on), tempo, gate points, code and description are
+on the plot's Edit page once it exists.
 
 **Templates** decide the branches a new project starts with. Three are
 built in (Simple, the default, then Blank and Lifecycle) and you

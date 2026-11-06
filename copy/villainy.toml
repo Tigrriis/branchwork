@@ -58,7 +58,7 @@ pick_up = "Pick it up"
 
 [fields]
 _screen = "Shared fields"
-_about = "The objective and next-action fields, which appear on Today, the tree, the review and the plot form."
+_about = "The objective and next-action fields, which appear on Today, the tree, the review and the plot form. Next actions are switched off for now (NEXT_ACTIONS), so those lines are not shown."
 objective_label = "Objective — what's the point"
 objective_placeholder = "How this fits your overall goal"
 next_label = "Next action"
@@ -314,7 +314,9 @@ title = "Today"
 heading = "Today"
 # Under the heading. {focus} and {back} are counts.
 subhead = "{date} · {focus} in focus, {back} on the backburner"
+# Switched off for now (TOUCH_CHIP): not shown
 chip_due = "{n} in focus need a touch"
+# Switched off for now with next actions (NEXT_ACTIONS): not shown
 chip_noaction = "{n} without a next action"
 shelf_heading = "Back from the shelf"
 shelf_note = "Parked until {date}. Time to decide."
@@ -330,6 +332,7 @@ _about = "The top lane on Today: plots you're giving time to now."
 heading = "Focus"
 about = "What you are giving time to now."
 age_cadence = "{age} · {cadence}"
+# Switched off for now with next actions (NEXT_ACTIONS): not shown
 next_placeholder = "No next action — this is how a plot stalls"
 demote_title = "Move to the backburner"
 # {link} becomes a link whose words are empty_link

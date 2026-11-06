@@ -61,6 +61,18 @@ def review_on(app):
 
 
 @pytest.fixture
+def touch_chip_on(app):
+    """Today's "N in focus need a touch" chip is off by default."""
+    app.config["TOUCH_CHIP"] = True
+
+
+@pytest.fixture
+def next_actions_on(app):
+    """Next actions are off by default; tests of them switch them on."""
+    app.config["NEXT_ACTIONS"] = True
+
+
+@pytest.fixture
 def client(app):
     return app.test_client()
 

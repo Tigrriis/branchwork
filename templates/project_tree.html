@@ -36,6 +36,7 @@
   </div>
 </div>
 
+{% if config.NEXT_ACTIONS %}
 <div class="next-action-bar">
   <form method="post" action="{{ url_for('dashboard.set_next_action', project_id=project.id) }}" class="action-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -44,6 +45,7 @@
     <button class="btn btn--ghost btn--sm" type="submit">{{ t('common.save') }}</button>
   </form>
 </div>
+{% endif %}
 
 {# The villain words in plain English. Hidden here and shown by app.js
    until someone dismisses it in this browser; the header's link reopens it. #}

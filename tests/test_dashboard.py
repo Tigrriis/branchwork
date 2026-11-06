@@ -67,7 +67,7 @@ def test_activity_strip_buckets_by_week(db):
     assert strip[-1] == 1 and sum(strip) == 3
 
 
-def test_today_lists_due_and_missing_action(client, db):
+def test_today_lists_due_and_missing_action(client, db, touch_chip_on, next_actions_on):
     user = make_user()
     login(client)
     due = make_project(user); due.name, due.phase, due.cadence_days, due.next_action = "Stale one", "building", 7, "Ship it"
@@ -273,7 +273,7 @@ def test_today_splits_focus_from_backburner(client, db):
     assert "Not now" in _lane(html, "back")
 
 
-def test_backburner_projects_do_not_nag(client, db):
+def test_backburner_projects_do_not_nag(client, db, touch_chip_on, next_actions_on):
     """Going quiet is the whole point of the backburner, so it is not counted."""
     user = make_user()
     login(client)
@@ -464,3 +464,75 @@ def test_deleting_a_template_leaves_its_projects_alone(client, db):
     db.session.expire_all()
     assert Template.query.count() == 0
     assert len([b.name for b in user.projects[0].branches]) == 3
+
+
+# --- switched off for now: the touch chip and next actions ------------------
+
+def test_the_touch_chip_and_next_actions_are_off_by_default(client, db):
+    user = make_user()
+    login(client)
+    stale = make_project(user)
+    stale.name, stale.phase, stale.cadence_days = "Stale one", "building", 7
+    stale.next_action = "Ship it"
+    _age(stale, 20)
+    back = make_project(user)
+    back.name, back.phase, back.focused, back.next_action = "Quiet", "building", False, "Later"
+    db.session.commit()
+
+    html = client.get("/").data.decode()
+    assert "data-chip-due" not in html and "data-chip-noaction" not in html
+    # The chip's words after its number: " in focus need a touch".
+    assert tx("today.chip_due", n="").strip() not in html
+    # Neither tile shows or edits a next action.
+    assert 'name="next_action"' not in html
+    assert "Ship it" not in html and "Later" not in html
+    # Nor does the tree, or the plot's Edit page.
+    tree = client.get(f"/plots/{stale.id}").data.decode()
+    assert "next-action-bar" not in tree and "Ship it" not in tree
+    form = client.get(f"/plots/{stale.id}/edit").data.decode()
+    assert 'name="next_action"' not in form
+    # Posting one directly finds nothing.
+    assert client.post(f"/plots/{stale.id}/next-action",
+                       data={"next_action": "Changed"}).status_code == 404
+
+
+def test_saving_a_plot_keeps_its_next_action_while_they_are_off(client, db):
+    """The Edit form has no next-action field, so saving it must not clear
+    the one already saved; switching next actions back on brings it back."""
+    user = make_user()
+    login(client)
+    p = make_project(user)
+    p.next_action = "Ship it"
+    db.session.commit()
+    r = client.post(f"/plots/{p.id}/edit", data={
+        "name": "Renamed", "phase": p.phase, "objective": "Why",
+        "cadence_days": "14", "gate_points": "3"}, follow_redirects=True)
+    assert r.status_code == 200
+    db.session.refresh(p)
+    assert p.name == "Renamed" and p.objective == "Why" and p.next_action == "Ship it"
+
+
+def test_a_review_decision_keeps_the_next_action_while_they_are_off(client, db, review_on):
+    user = make_user()
+    login(client)
+    p = make_project(user)
+    p.phase, p.next_action = "building", "Ship it"
+    db.session.commit()
+    html = client.get("/?review=1").data.decode()
+    assert '<article class="rtile' in html and 'name="next_action"' not in html
+    client.post(f"/review/{p.id}", data={"decision": "keep", "objective": "Why"})
+    db.session.refresh(p)
+    assert p.objective == "Why" and p.next_action == "Ship it"
+
+
+def test_next_actions_come_back_when_switched_on(client, db, next_actions_on):
+    user = make_user()
+    login(client)
+    p = make_project(user)
+    p.phase, p.next_action = "building", "Ship it"
+    db.session.commit()
+    assert 'value="Ship it"' in client.get("/").data.decode()
+    assert "next-action-bar" in client.get(f"/plots/{p.id}").data.decode()
+    client.post(f"/plots/{p.id}/next-action", data={"next_action": "Ship it today"})
+    db.session.refresh(p)
+    assert p.next_action == "Ship it today"

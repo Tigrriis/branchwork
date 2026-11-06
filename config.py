@@ -83,6 +83,15 @@ class Config:
     # WEEKLY_REVIEW=1 to bring it back; the code and copy are kept for that.
     WEEKLY_REVIEW = os.environ.get("WEEKLY_REVIEW", "0") == "1"
 
+    # Also switched off for now, the same way: set either to 1 to bring it
+    # back. TOUCH_CHIP is the "N in focus need a touch" chip at the top of
+    # Today. NEXT_ACTIONS is each plot's next action wherever it shows or is
+    # edited (Today's tiles, the tree, the plot form, the review) and the
+    # "N without a next action" chip. Saved next actions are kept untouched
+    # while it is off, so they all come back with it.
+    TOUCH_CHIP = os.environ.get("TOUCH_CHIP", "0") == "1"
+    NEXT_ACTIONS = os.environ.get("NEXT_ACTIONS", "0") == "1"
+
     MAX_PROJECTS_PER_USER = 50
     MAX_BRANCHES_PER_PROJECT = 12
     MAX_TASKS_PER_BRANCH = 200

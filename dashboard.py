@@ -6,6 +6,10 @@ has come. Each tile carries its status, which is what the board used to be
 for, and the parked and closed plots sit on shelves underneath.
 Review is a mode of the same page that flips every live tile to one decision:
 keep, advance, park or drop. It is off unless ``WEEKLY_REVIEW`` is set.
+
+Next actions are switched off too unless ``NEXT_ACTIONS`` is set: no page
+shows or edits them, and nothing here writes one, so each plot keeps the
+next action it had for when they come back.
 """
 from collections import Counter
 from datetime import date, timedelta
@@ -34,6 +38,10 @@ def _project(project_id: int) -> Project:
 
 def _review_enabled() -> bool:
     return bool(current_app.config.get("WEEKLY_REVIEW"))
+
+
+def _next_actions_enabled() -> bool:
+    return bool(current_app.config.get("NEXT_ACTIONS"))
 
 
 def _parse_date(value: str | None, default_days: int = 30) -> date:
@@ -85,7 +93,7 @@ def _today_context(reviewing: bool = False, done: str = ""):
         # The nagging counts are about what you said you are working on. A
         # backburner project going quiet is the point of the backburner.
         "due": [p for p in focus if p.is_due],
-        "no_action": [p for p in focus if not p.next_action],
+        "no_action": [p for p in focus if not p.next_action] if _next_actions_enabled() else [],
         "active_projects": [p for p in projects if p.is_active],
         "today": date.today(),
         # Every tile's status pill offers every status, with the caps.
@@ -195,6 +203,8 @@ def set_phase(project_id: int):
 @dashboard_bp.route("/plots/<int:project_id>/next-action", methods=["POST"])
 @login_required
 def set_next_action(project_id: int):
+    if not _next_actions_enabled():
+        abort(404)
     project = _project(project_id)
     project.next_action = (request.form.get("next_action") or "").strip()[:200] or None
     db.session.commit()
@@ -220,7 +230,8 @@ def review_decide(project_id: int):
     project = _project(project_id)
     decision = request.form.get("decision") or "keep"
     project.objective = (request.form.get("objective") or "").strip()[:300] or None
-    project.next_action = (request.form.get("next_action") or "").strip()[:200] or None
+    if _next_actions_enabled():
+        project.next_action = (request.form.get("next_action") or "").strip()[:200] or None
     ok = True
     parking = current_user.parked_status
     if decision == "advance" and project.next_status is not None:
