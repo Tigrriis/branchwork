@@ -107,39 +107,6 @@
       <p class="muted small tnotes__plain">{{ task.notes }}</p>
     </div>
     {% endif %}
-    {% if not is_new and (project.tasks|length > 1 or project.ultimates) %}
-    <fieldset class="fieldset">
-      <legend>{{ t('thread.form_legend') }}</legend>
-      <p class="muted small">{{ t('thread.form_help') }}</p>
-      {% if project.tasks|length > 1 %}
-      <div class="field">
-        <label class="field__label" for="follows">{{ t('thread.follows') }}</label>
-        <select class="input" id="follows" name="follows">
-          <option value="">{{ t('thread.pick') }}</option>
-          {% for other in project.tasks if other.id != task.id %}
-          <option value="{{ other.id }}">{{ other.branch.name }} · {{ other.title }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      {% endif %}
-      {% if project.ultimates %}
-      <div class="field">
-        <label class="field__label" for="leads_to">{{ t('thread.leads_to') }}</label>
-        <select class="input" id="leads_to" name="leads_to">
-          <option value="">{{ t('thread.pick') }}</option>
-          {% for ult in project.ultimates %}
-          <option value="{{ ult.id }}">{{ ult.branch.name }} · {{ ult.title }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      {% endif %}
-      {% if task.threads_in or task.threads_out %}
-      <div class="thread-rows">
-        {% for thread in task.threads_in + task.threads_out %}{% include "_thread_row.html" %}{% endfor %}
-      </div>
-      {% endif %}
-    </fieldset>
-    {% endif %}
     <div class="form__actions">
       <button class="btn btn--primary" type="submit">{% if is_new %}{{ t('machination.add') }}{% else %}{{ t('common.save') }}{% endif %}</button>
       <a class="btn btn--ghost" href="{{ url_for('projects.tree', project_id=project.id) }}">{{ t('common.cancel') }}</a>
@@ -147,13 +114,6 @@
   </form>
 </div>
 {% if not is_new %}
-{# Outside the machination's form, so its remove buttons can point at them. #}
-{% for thread in task.threads_in + task.threads_out %}
-<form id="unthread-{{ thread.id }}" method="post" action="{{ url_for('threads.delete_thread', thread_id=thread.id) }}" hidden>
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <input type="hidden" name="next" value="{{ url_for('projects.edit_task', task_id=task.id) }}">
-</form>
-{% endfor %}
 <form method="post" action="{{ url_for('projects.delete_task', task_id=task.id) }}" class="inline-form" data-confirm="{{ t('machination.delete_confirm') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <button class="btn btn--danger" type="submit">{{ t('machination.delete') }}</button>

@@ -18,6 +18,19 @@
   </g>
   {% endfor %}
 </svg>
+{# Each end of a thread is a node the page script sets on the arrow's end:
+   drag it onto another tile to move that end, or off the tree to unthread.
+   HTML rather than part of the overlay, since an SVG shape cannot be dragged. #}
+<div class="thread-ends">
+  {% for thread in project.threads %}
+  {% for end in ("from", "to") %}
+  <button type="button" class="thread-end thread-end--{{ end }}{% if thread.started %} thread-end--started{% endif %}{% if thread.done %} thread-end--done{% endif %}"
+          draggable="true" data-thread-end="{{ thread.id }}" data-end="{{ end }}" hidden
+          title="{{ t('thread.end_title') }}"
+          aria-label="{{ t('thread.arrow_title', from=thread.source.title, to=thread.target.title) }}: {{ t('thread.end_title') }}"></button>
+  {% endfor %}
+  {% endfor %}
+</div>
 
 {% for branch in project.branches %}
 <section class="col col--{{ branch.hue }} {% if branch.is_locked %}col--locked{% endif %}{% if branch.is_sealed %} col--sealed{% endif %}" data-branch="{{ branch.id }}">

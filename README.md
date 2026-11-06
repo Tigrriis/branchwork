@@ -129,9 +129,10 @@ a bold arrow across the tree: grey until the task it leads from is done, then
 glowing orange while the sequence is under way, and green once both of its
 tasks are finished. They say what follows what and lock nothing, since
 the gates and locks above already decide what can be worked on. Drag the
-handle at a tile's corner onto another tile to thread them, or use "comes
-after" on the task form, which is also where one is removed. The arrows are
-drawn over the tree and take no clicks, so the tiles under them still do.
+handle at a tile's corner onto another tile to thread them. Each end of an
+arrow is then a node: drag it onto another tile to move that end, or off the
+tree to remove the thread. The arrows themselves take no clicks, so the tiles
+under them still do.
 
 A branch can end in an **ultimate**: its end goal, drawn as a round disc
 below every tier, so a new tier always slides in above it. It opens by the
