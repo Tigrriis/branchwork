@@ -7,10 +7,16 @@
 {% endblock %}
 
 {% block content %}
+{# Three pieces the stylesheet lays out: the pitch, the example tree and
+   the sign-up box. Side by side on a desktop, the pitch and box stacked on
+   the left; on a phone the tree comes between the pitch and the box, so
+   what the product is shows before anyone is asked to sign up. #}
 <div class="landing__pitch">
   <h1 class="landing__title">{{ t('landing.heading') }}</h1>
   <p class="landing__lede">{{ t('landing.lede') }}</p>
+</div>
 
+<div class="landing__signup">
   <form class="landing__form form" method="post" action="{{ url_for('auth.register') }}" aria-labelledby="landing-form-title">
     <h2 id="landing-form-title">{{ t('landing.form_heading') }}</h2>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -35,7 +41,8 @@
 </div>
 
 {# The example plot: a picture of the tree, so it is hidden from screen
-   readers and summed up in the caption instead. #}
+   readers and summed up in the caption instead. Marked up after the sign-up
+   box, so a screen reader meets the pitch, the box, then the summary. #}
 <figure class="ltree">
   <figcaption class="visually-hidden">{{ t('landing.demo_caption') }}</figcaption>
   <div class="ltree__head" aria-hidden="true">
