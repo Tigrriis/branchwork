@@ -221,14 +221,18 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cur
 .auth-alt { margin: 0; color: var(--muted); font-size: 13px; }
 
 /* ── Landing: / when signed out ───────────────────────────────────────────
-   One screen on a desktop, no scroll: the pitch and sign-up box on the left,
-   an example plot's tree on the right with its columns running down to the
-   bottom edge. On a phone it stacks and scrolls like any page. */
+   Three pieces on a grid: the pitch, the example tree and the sign-up box.
+   Narrow screens first: one column, with the tree between the pitch and the
+   box, so what the product is shows before anyone is asked to sign up. From
+   1100px it is one screen with no scroll: pitch and box on the left, centred
+   as a pair, and the tree on the right with its columns running down to the
+   bottom edge. */
 .landing {
-  display: flex; flex-wrap: wrap; align-items: stretch; gap: 32px 56px;
-  max-width: 1320px; min-height: calc(100vh - 56px); margin: 0 auto; padding: 28px 32px 0;
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "pitch" "tree" "signup";
+  gap: 24px; max-width: 1320px; margin: 0 auto; padding: 20px 16px 0;
 }
-.landing__pitch { flex: 0 1 480px; min-width: 0; align-self: center; padding-bottom: 32px; }
+.landing__pitch { grid-area: pitch; min-width: 0; }
+.landing__signup { grid-area: signup; min-width: 0; }
 .landing__title {
   font-size: clamp(38px, 3.9vw, 58px); line-height: 1.02; letter-spacing: -0.04em; font-weight: 800;
   text-wrap: balance;
@@ -241,12 +245,13 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cur
   background: linear-gradient(180deg, var(--card2), var(--card) 70%); border: 1px solid var(--line2);
   box-shadow: var(--shadow-lg);
 }
+.landing__signup .landing__form { margin-top: 0; }
 .landing__form h2 { font-size: 20px; }
 .landing__form .auth-alt { text-align: center; }
 .landing__foot { margin: 16px 0 0; font-size: 13px; color: var(--muted); text-wrap: pretty; }
 
 /* Tiles shrink a little on a laptop so three still sit in a row. */
-.ltree { --lt: clamp(50px, 4.2vw, 60px); position: relative; flex: 1 1 560px; min-width: 0; min-height: 600px; margin: 0; display: flex; flex-direction: column; }
+.ltree { --lt: 60px; grid-area: tree; position: relative; min-width: 0; margin: 0; display: flex; flex-direction: column; }
 /* A soft pool of light behind the example, so it sits on the page rather than
    floating beside the pitch. */
 .ltree::before {
@@ -266,15 +271,14 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cur
 .ltree__cols { flex: 1 1 auto; display: flex; flex-wrap: wrap; gap: 14px; }
 
 .lcol {
-  position: relative; overflow: hidden; flex: 1 1 200px; min-width: 0; min-height: 540px;
+  position: relative; overflow: hidden; flex: 1 1 200px; min-width: 0;
   display: flex; flex-direction: column;
   background: linear-gradient(180deg, color-mix(in srgb, var(--tint-bg) 88%, #fff 0%) 0%, var(--tint-bg) 30%);
-  border: 1px solid var(--tint-edge); border-bottom: 0;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border: 1px solid var(--tint-edge); border-radius: var(--radius-lg);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--tint-fg) 14%, transparent), 0 24px 50px -30px rgba(0, 0, 0, 0.8);
 }
-/* The column's watermark, as on the real tree. */
-.lcol__mark { position: absolute; right: -14px; bottom: 96px; color: var(--tint-wm); opacity: 0.16; }
+/* The column's watermark, as on the real tree; only where a column is tall. */
+.lcol__mark { display: none; position: absolute; right: -14px; bottom: 96px; color: var(--tint-wm); opacity: 0.16; }
 .lcol__mark svg { display: block; }
 .ltier { position: relative; padding: 16px 12px; }
 .ltier + .ltier, .lult { border-top: 1px dashed var(--tint-edge); }
@@ -322,15 +326,35 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cur
 .lcol__name strong { font-size: 18px; font-weight: 800; }
 .lcol__bar { height: 6px; margin-top: 10px; background: rgba(0, 0, 0, 0.25); }
 .lcol__bar > span { background: linear-gradient(90deg, color-mix(in srgb, var(--tint-wm) 80%, #000), var(--tint-wm)); box-shadow: 0 0 10px color-mix(in srgb, var(--tint-wm) 50%, transparent); }
-@media (max-width: 900px) {
-  .landing { min-height: 0; padding: 20px 16px 0; gap: 28px; }
-  .landing__pitch { flex-basis: 100%; padding-bottom: 0; }
+/* A phone: the three schemes side by side in a sideways scroller, the first
+   in full and the next peeking in, as on a plot's own page. The tree then
+   stands one column tall and the sign-up box is a short scroll away. */
+@media (max-width: 720px) {
   .landing__form { padding: 22px 18px 20px; }
-  .ltree, .lcol { min-height: 0; }
-  .ltree { --lt: 60px; }
-  .lcol { border-bottom: 1px solid var(--tint-edge); border-radius: var(--radius-lg); }
-  .lcol__mark { display: none; }
-  .ltree { padding-bottom: 24px; }
+  .ltree__cols {
+    flex-wrap: nowrap; gap: 12px; margin: 0 -16px; padding: 0 16px 8px;
+    overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none;
+  }
+  .ltree__cols::-webkit-scrollbar { display: none; }
+  .lcol { flex: 0 0 calc(100vw - 72px); max-width: 360px; scroll-snap-align: start; }
+}
+
+/* A desktop: one screen, no scroll. The left column and the scheme columns
+   are sized so three schemes still sit in a row on a small laptop. */
+@media (min-width: 1140px) {
+  .landing {
+    grid-template-columns: minmax(0, 440px) minmax(0, 1fr); grid-template-rows: 1fr auto auto 1fr;
+    grid-template-areas: ". tree" "pitch tree" "signup tree" ". tree";
+    column-gap: 48px; row-gap: 0; min-height: calc(100vh - 56px); padding: 28px 32px 0;
+  }
+  .landing__signup { padding-bottom: 32px; }
+  .landing__signup .landing__form { margin-top: 30px; }
+  .ltree { --lt: clamp(50px, 4.2vw, 60px); min-height: 600px; }
+  .lcol { flex-basis: 180px; min-height: 540px; border-bottom: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .lcol__mark { display: block; }
+}
+@media (min-width: 1320px) {
+  .landing { grid-template-columns: minmax(0, 480px) minmax(0, 1fr); column-gap: 56px; }
 }
 
 /* ── Projects list ────────────────────────────────────────────────────── */
