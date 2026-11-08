@@ -1629,6 +1629,33 @@ body.is-dragging-note [data-drop-folder].is-drop { background: color-mix(in srgb
    which some bots know to skip. */
 .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 
+/* ── Pop-up forms ─────────────────────────────────────────────────────── */
+/* A form over the page, in a <dialog>: the same card the page would show,
+   on a blurred backdrop, with a × in its corner. */
+.modal {
+  width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 48px); margin: auto; padding: 0;
+  border: 1px solid var(--line2); border-radius: var(--radius-xl); color: var(--fg);
+  background: var(--card); box-shadow: var(--shadow-lg); overflow: hidden;
+}
+.modal[open] { animation: pop-in 0.18s var(--ease); }
+.modal::backdrop { background: rgba(6, 8, 12, 0.62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.modal__content { max-height: calc(100vh - 48px); overflow-y: auto; overscroll-behavior: contain; }
+.modal__close { position: absolute; top: 14px; right: 14px; z-index: 2; width: 32px; height: 32px; font-size: 20px; }
+.modal .card { border: 0; border-radius: 0; box-shadow: none; background: transparent; padding-right: 56px; }
+.modal .card .form, .modal .card > p, .modal .card .scheme-move { margin-right: -28px; }
+.modal [data-modal-body] > .inline-form { margin: 0; padding: 0 28px 24px; }
+.modal__flashes { display: flex; flex-direction: column; gap: 8px; padding: 20px 28px 0; }
+.modal__flashes .flash { max-width: none; animation: none; }
+.modal.is-busy .modal__content { opacity: 0.6; pointer-events: none; }
+@media (max-width: 720px) {
+  .modal { width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
+  .modal .card { padding-right: 48px; }
+  .modal .card .form, .modal .card > p, .modal .card .scheme-move { margin-right: -32px; }
+  .modal [data-modal-body] > .inline-form { padding: 0 16px 18px; }
+  .modal__flashes { padding: 16px 16px 0; }
+}
+@media (prefers-reduced-motion: reduce) { .modal[open] { animation: none; } }
+
 /* The box a tier's + opens: type a machination's title, press Enter. */
 .quick-add { padding: 4px 10px 10px; animation: pop-in 0.15s var(--ease); }
 .quick-add .input { width: 100%; }

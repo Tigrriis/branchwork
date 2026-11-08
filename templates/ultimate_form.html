@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "modal.html" if modal else "base.html" %}
 {% block title %}{% if is_new %}{{ t('ultimate.title_new') }}{% else %}{{ t('ultimate.title_edit') }}{% endif %} · {{ SITE_NAME }}{% endblock %}
 {% block main_class %}page page--narrow{% endblock %}
 

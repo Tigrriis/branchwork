@@ -21,7 +21,7 @@ import hashlib
 import os
 import threading
 
-from flask import Flask, redirect, render_template, request, session
+from flask import Flask, get_flashed_messages, jsonify, redirect, render_template, request, session
 from flask_wtf.csrf import CSRFError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -130,7 +130,21 @@ def _register_template_helpers(app: Flask) -> None:
             "CADENCES": CADENCES,
             "ICON_NAMES": icon_names(),
             "icon": icon_svg,
+            # A form fetched for the pop-up renders bare (templates/modal.html).
+            "modal": request.headers.get("X-Requested-With") == "modal",
         }
+
+    # A form posted from the pop-up answers a redirect with where it was going
+    # and what it had to say, so the page can stay put and refresh in place.
+    # The flashes are read here, before the session is saved, so they do not
+    # show up again on the next page.
+    @app.after_request
+    def _modal_redirects(response):
+        if (request.headers.get("X-Requested-With") == "modal"
+                and 300 <= response.status_code < 400 and response.location):
+            return jsonify({"redirect": response.location,
+                            "flashes": [[c, m] for c, m in get_flashed_messages(with_categories=True)]})
+        return response
 
 
 # URL segments from before the rename, to the ones the routes use now.

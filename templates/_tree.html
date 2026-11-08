@@ -77,7 +77,7 @@
              plate keeps labels level in a row that mixes the two (style.css). #}
           {% if task.points_max > 1 %}<span class="tile__plate">{{ task.points_done }}/{{ task.points_max }}</span>
           {% else %}<span class="tile__plate tile__plate--blank" aria-hidden="true"></span>{% endif %}
-          <a class="tile__label" href="{{ url_for('projects.edit_task', task_id=task.id) }}">{{ task.title }}</a>
+          <a class="tile__label" href="{{ url_for('projects.edit_task', task_id=task.id) }}" data-modal>{{ task.title }}</a>
           {% if current_user.notes_beta %}
           {% set note_count = task.note_count %}
           {% if note_count %}
@@ -132,10 +132,10 @@
         <span class="ultimate__icon">{{ icon(ult.icon, 40) }}</span>
         <span class="ultimate__tick" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
       </button>
-      <a class="ultimate__label" href="{{ url_for('ultimates.edit_ultimate', branch_id=branch.id) }}">{{ ult.title }}</a>
+      <a class="ultimate__label" href="{{ url_for('ultimates.edit_ultimate', branch_id=branch.id) }}" data-modal>{{ ult.title }}</a>
     </div>
     {% elif branch.tasks %}
-    <a class="tier-add tier-add--ultimate" href="{{ url_for('ultimates.edit_ultimate', branch_id=branch.id) }}">{{ t('tree.set_ultimate') }}</a>
+    <a class="tier-add tier-add--ultimate" href="{{ url_for('ultimates.edit_ultimate', branch_id=branch.id) }}" data-modal>{{ t('tree.set_ultimate') }}</a>
     {% endif %}
   </div>
   <div class="col__foot" draggable="true" title="{{ t('tree.drag_scheme_title') }}">
@@ -147,7 +147,7 @@
         <button class="icon-btn" name="direction" value="left" title="{{ t('tree.move_left') }}" {% if loop.first %}disabled{% endif %}>‹</button>
         <button class="icon-btn" name="direction" value="right" title="{{ t('tree.move_right') }}" {% if loop.last %}disabled{% endif %}>›</button>
       </form>
-      <a class="icon-btn" href="{{ url_for('projects.edit_branch', branch_id=branch.id) }}" title="{{ t('tree.edit_scheme_title') }}">
+      <a class="icon-btn" href="{{ url_for('projects.edit_branch', branch_id=branch.id) }}" title="{{ t('tree.edit_scheme_title') }}" data-modal>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l4-1L19 8l-3-3L5 16z"></path></svg>
       </a>
     </span>

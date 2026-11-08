@@ -100,6 +100,11 @@ Two rules give the tree its shape:
 Each tier fills with its branch's colour as its points add up, and is full
 at exactly the gate points that open the tier below.
 
+**Editing in place**: the title under a tile, a routine's name, an
+ultimate's name and a scheme's pencil open their forms in a pop-up over the
+tree rather than on a page of their own, and the tree redraws when the form
+saves. A link opened with a modifier key still gets the page.
+
 **Tier names** are optional. Hover near the line above a tier and a field
 appears on it; type a name ("Groundwork", "Approvals in") and press Enter,
 and it sits on the line like a legend. A blank name shows nothing. Names go

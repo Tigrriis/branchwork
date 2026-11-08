@@ -8,7 +8,7 @@
 {% endblock %}
 {% block topactions %}
   {% if project.branches %}
-  <a class="btn btn--primary btn--sm" href="{{ url_for('projects.new_task', branch_id=project.branches[0].id) }}">{{ t('tree.new_machination') }}</a>
+  <a class="btn btn--primary btn--sm" href="{{ url_for('projects.new_task', branch_id=project.branches[0].id) }}" data-modal>{{ t('tree.new_machination') }}</a>
   {% endif %}
 {% endblock %}
 
@@ -21,7 +21,7 @@
     <span class="{% if project.is_due %}is-due{% else %}muted{% endif %} small">{% if project.days_since_touch == 0 %}{{ t('common.touched_today') }}{% else %}{{ t('tree.since_touch', n=project.days_since_touch) }}{% endif %}</span>
     <a class="link-quiet" href="{{ url_for('projects.edit_project', project_id=project.id) }}">{{ t('common.edit') }}</a>
     <button type="button" class="link-quiet link-btn" data-guide-open>{{ t('guide.open') }}</button>
-    {% if not project.routines %}<a class="link-quiet" href="{{ url_for('routines.new_routine', project_id=project.id) }}" title="{{ t('routines.add_title') }}">{{ t('tree.add_routine') }}</a>{% endif %}
+    {% if not project.routines %}<a class="link-quiet" href="{{ url_for('routines.new_routine', project_id=project.id) }}" title="{{ t('routines.add_title') }}" data-modal data-add-routine>{{ t('tree.add_routine') }}</a>{% endif %}
   </div>
   <div class="tree-head__stats" id="tree-stats">
     <span class="legend"><span class="legend__swatch legend__swatch--full"></span>{{ t('state.full') }} <span class="legend__n" data-count="full">{{ project.count_state('full') }}</span></span>

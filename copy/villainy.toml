@@ -898,6 +898,8 @@ routine_failed = "Could not mark that routine done."
 thread_failed = "Could not thread those two."
 thread_removed = "Thread removed."
 tier_name_failed = "Could not name that tier."
+# The × on a pop-up form
+close = "Close"
 move_failed = "Could not move that machination."
 scheme_move_failed = "Could not move that scheme."
 ultimate_failed = "Could not claim that ultimate."

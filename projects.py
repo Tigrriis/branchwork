@@ -149,6 +149,23 @@ def tree_fragment(project_id: int):
     return render_template("_tree.html", project=project)
 
 
+@projects_bp.route("/plots/<int:project_id>/refresh")
+@login_required
+def tree_refresh(project_id: int):
+    """What the plot page redraws after a pop-up form saves: the tree, the
+    routine bar and the totals in the header, as JSON."""
+    project = _project(project_id)
+    return jsonify({
+        "html": render_template("_tree.html", project=project),
+        "routines": render_template("_routine_bar.html", project=project),
+        "has_routines": bool(project.routines),
+        "points_done": project.points_done,
+        "points_max": project.points_max,
+        "percent": project.percent,
+        "counts": {s: project.count_state(s) for s in ("full", "part", "empty")},
+    })
+
+
 @projects_bp.route("/plots/<int:project_id>/list")
 @login_required
 def task_list(project_id: int):

@@ -932,6 +932,142 @@
     if (window.ResizeObserver) new ResizeObserver(laterDraw).observe(tree);
   }
 
+  // ── Pop-up forms ──────────────────────────────────────────────────────
+  // A machination, routine, ultimate or scheme is edited in a dialog over
+  // the page rather than on a page of its own. The form is fetched bare
+  // (X-Requested-With: modal, see templates/modal.html), posted the same
+  // way, and the redirect a save would make comes back as JSON instead: the
+  // dialog closes, its messages show, and the plot page redraws its tree,
+  // routine bar and totals in place. A link held with a modifier key, or a
+  // fetch that fails, still opens the page.
+  var modal = null;
+  var MODAL_HEADERS = { "X-Requested-With": "modal" };
+
+  function closeModal() {
+    if (modal && modal.open) modal.close();
+    modal = null;
+  }
+
+  // The fetched markup into the dialog. Scripts arrive inert, so each is made
+  // again in place to run: the sealed notes data first, then the scripts
+  // that read it.
+  function fillModal(content, html) {
+    var doc = new DOMParser().parseFromString(html, "text/html");
+    var body = doc.querySelector("[data-modal-body]");
+    content.innerHTML = "";
+    if (!body) { content.innerHTML = html; return; }
+    content.appendChild(body);
+    if (modal && body.dataset.title) modal.setAttribute("aria-label", body.dataset.title);
+    Array.prototype.forEach.call(doc.querySelectorAll("script"), function (old) {
+      var script = document.createElement("script");
+      Array.prototype.forEach.call(old.attributes, function (a) { script.setAttribute(a.name, a.value); });
+      script.textContent = old.textContent;
+      content.appendChild(script);
+    });
+    var first = content.querySelector("[autofocus], input:not([type=hidden]), select, textarea");
+    if (first) first.focus();
+  }
+
+  function openModal(url) {
+    fetch(url, { headers: MODAL_HEADERS, credentials: "same-origin" })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (html) {
+        closeModal();
+        var dialog = document.createElement("dialog");
+        dialog.className = "modal";
+        dialog.dataset.url = url;
+        var close = document.createElement("button");
+        close.type = "button";
+        close.className = "icon-btn modal__close";
+        close.setAttribute("aria-label", say("close"));
+        close.textContent = "×";
+        var content = document.createElement("div");
+        content.className = "modal__content";
+        dialog.appendChild(close);
+        dialog.appendChild(content);
+        document.body.appendChild(dialog);
+        modal = dialog;
+        fillModal(content, html);
+        close.addEventListener("click", closeModal);
+        // A click on the backdrop, which is the dialog itself, closes it.
+        dialog.addEventListener("click", function (e) { if (e.target === dialog) closeModal(); });
+        dialog.addEventListener("close", function () { dialog.remove(); if (modal === dialog) modal = null; });
+        dialog.showModal();
+      })
+      .catch(function () { window.location.href = url; });
+  }
+
+  // After a save: the messages, then the page brought up to date. The plot
+  // page redraws in place; anywhere else, or a redirect somewhere new,
+  // follows the redirect.
+  function afterModalSave(body) {
+    (body.flashes || []).forEach(function (pair) { flash(pair[1], pair[0]); });
+    var to = new URL(body.redirect, window.location.href);
+    var here = to.pathname === window.location.pathname;
+    if (here && tree && window.BRANCHWORK_PROJECT) {
+      fetch("/plots/" + window.BRANCHWORK_PROJECT + "/refresh", { credentials: "same-origin" })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          swapTree(res.html);
+          updateStats(res);
+          var bar = document.getElementById("routines");
+          if (bar) { bar.innerHTML = res.routines; bar.hidden = !res.has_routines; }
+          var addRoutine = document.querySelector("[data-add-routine]");
+          if (addRoutine) addRoutine.hidden = res.has_routines;
+        })
+        .catch(function () { window.location.reload(); });
+    } else if (here) {
+      window.location.reload();
+    } else {
+      window.location.href = to.href;
+    }
+  }
+
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest) return;
+    var link = e.target.closest("a[href]");
+    if (!link || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (modal && modal.contains(link)) {
+      // Cancel, which points back at this page, just closes the dialog.
+      if (new URL(link.href, window.location.href).pathname === window.location.pathname) {
+        e.preventDefault();
+        closeModal();
+      }
+      return;
+    }
+    if (!link.hasAttribute("data-modal")) return;
+    e.preventDefault();
+    openModal(link.href);
+  });
+
+  document.addEventListener("submit", function (e) {
+    var form = e.target;
+    if (e.defaultPrevented || !modal || !modal.contains(form)) return;
+    e.preventDefault();
+    if (modal.classList.contains("is-busy")) return;
+    var data = new FormData(form);
+    if (e.submitter && e.submitter.name) data.append(e.submitter.name, e.submitter.value);
+    // A form with no action of its own posts back to where it came from.
+    var url = form.getAttribute("action") ? form.action : modal.dataset.url;
+    var dialog = modal;
+    dialog.classList.add("is-busy");
+    fetch(url, { method: "POST", body: data, headers: MODAL_HEADERS, credentials: "same-origin" })
+      .then(function (r) {
+        var kind = r.headers.get("content-type") || "";
+        return kind.indexOf("json") >= 0
+          ? r.json().then(function (j) { return { ok: r.ok, json: j }; })
+          : r.text().then(function (t) { return { ok: r.ok, html: t }; });
+      })
+      .then(function (res) {
+        if (res.json && res.json.redirect) { closeModal(); afterModalSave(res.json); return; }
+        if (res.json) { flash(res.json.message || say("network"), "error"); return; }
+        // The form again, with what was wrong flashed at its top.
+        fillModal(dialog.querySelector(".modal__content"), res.html);
+      })
+      .catch(function () { flash(say("network"), "error"); })
+      .finally(function () { dialog.classList.remove("is-busy"); });
+  });
+
   // ── Panning ───────────────────────────────────────────────────────────
   // The tree scrolls sideways under a held mouse: press on any empty part of
   // the canvas (a column's ground, the gap between columns, the space around
