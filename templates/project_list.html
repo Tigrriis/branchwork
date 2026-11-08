@@ -24,7 +24,7 @@
     <tbody>
       {% for row in branch.tiers() %}{% for task in row.tasks %}
       <tr class="{% if not row.open %}is-dim{% endif %}">
-        <td class="muted">{{ row.tier }}</td>
+        <td class="muted">{{ row.tier }}{% if row.name %} <span class="small">· {{ row.name }}</span>{% endif %}</td>
         <td><span class="table__icon">{{ icon(task.icon, 18) }}</span>{{ task.title }}{% if current_user.notes_beta and task.note_count %} <a class="muted small" href="{{ url_for('notes.index', project_id=project.id, machination=task.id) }}">{{ t('tree.notes_count', n=task.note_count) }}</a>{% endif %}</td>
         <td>{{ task.points_done }} / {{ task.points_max }}</td>
         <td><span class="state state--{{ task.state }}">{{ t('state.' ~ task.state) }}</span></td>

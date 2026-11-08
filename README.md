@@ -100,6 +100,11 @@ Two rules give the tree its shape:
 Each tier fills with its branch's colour as its points add up, and is full
 at exactly the gate points that open the tier below.
 
+**Tier names** are optional. Hover near the line above a tier and a field
+appears on it; type a name ("Groundwork", "Approvals in") and press Enter,
+and it sits on the line like a legend. A blank name shows nothing. Names go
+by tier number, so a tier that empties and fills again keeps its name.
+
 **Quick add**: a tier's "+" (shown on hover, always on touch) and the
 "+ New tier" link open a box in place; type a title and press Enter, and the
 machination is added with one point and the box stays open for the next.

@@ -540,6 +540,27 @@ class Branch(db.Model):
     def tier_numbers(self) -> list[int]:
         return sorted({t.tier for t in self.tasks})
 
+    def tier_name(self, n: int) -> str | None:
+        """The name given to tier ``n``, if any. Names are by number, so a
+        tier that empties and is filled again keeps its name."""
+        for row in self.tier_names:
+            if row.tier == n:
+                return row.name
+        return None
+
+    def set_tier_name(self, n: int, name: str | None) -> None:
+        """Name tier ``n``, or clear its name with None or blank."""
+        name = (name or "").strip()[:60] or None
+        for row in list(self.tier_names):
+            if row.tier == n:
+                if name is None:
+                    self.tier_names.remove(row)
+                else:
+                    row.name = name
+                return
+        if name is not None:
+            self.tier_names.append(TierName(tier=n, name=name))
+
     @property
     def next_tier(self) -> int:
         nums = self.tier_numbers
@@ -576,7 +597,7 @@ class Branch(db.Model):
             fill = min(1.0, points / gate) if open_ and gate > 0 else 0.0
             row = {"tier": n, "tasks": tasks, "open": open_, "have": have,
                    "need": gate, "reason": reason, "points": points,
-                   "fill": fill, "charged": fill >= 1.0}
+                   "fill": fill, "charged": fill >= 1.0, "name": self.tier_name(n)}
             rows.append(row)
             prev = row
         return rows
@@ -614,6 +635,27 @@ class Branch(db.Model):
         if last["points"] < last["need"]:
             return False, tx("gate.needs_points", gate=last["need"], have=last["points"])
         return True, None
+
+
+class TierName(db.Model):
+    """A name for one tier of a scheme: "Groundwork", "Approvals in".
+
+    Tiers are otherwise only numbers on machinations, so a name hangs off the
+    scheme by tier number rather than off a tier row that does not exist.
+    Blank names are not stored: clearing one deletes the row.
+    """
+    __tablename__ = "tier_names"
+    __table_args__ = (db.UniqueConstraint("branch_id", "tier", name="uq_tier_names_branch_tier"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    branch_id = db.Column(db.Integer, db.ForeignKey("branches.id", ondelete="CASCADE"),
+                          nullable=False, index=True)
+    tier = db.Column(db.Integer, nullable=False)
+    name = db.Column(db.String(60), nullable=False)
+
+    branch = db.relationship(
+        "Branch", backref=db.backref("tier_names", order_by="TierName.tier",
+                                     cascade="all, delete-orphan"))
 
 
 class Task(db.Model):

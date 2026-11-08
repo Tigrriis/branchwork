@@ -52,6 +52,14 @@
     {# --fill (0-1) pours the scheme's colour down the tier; full means
        it holds enough points to open the tier below. #}
     <div class="tier {% if not row.open %}tier--closed{% endif %}{% if row.charged %} tier--charged{% endif %}" data-tier-key="{{ branch.id }}:{{ row.tier }}" style="--fill: {{ '%.3f'|format(row.fill) }}">
+      {# The tier's name, on the line above it like a legend. Blank, there is
+         nothing to see until the pointer nears the line; then the field
+         shows, and a name typed into it is saved on Enter or on leaving. #}
+      <form class="tier-name{% if row.name %} tier-name--set{% endif %}" data-tier-name data-branch="{{ branch.id }}" data-tier="{{ row.tier }}">
+        <input class="tier-name__input" type="text" name="name" maxlength="60" autocomplete="off"
+               value="{{ row.name or '' }}" placeholder="{{ t('tree.tier_name_placeholder') }}"
+               aria-label="{{ t('tree.tier_name_aria', tier=row.tier) }}">
+      </form>
       {% if not row.open and not branch.is_locked %}
       <div class="tier-note">
         <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"></rect><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg>

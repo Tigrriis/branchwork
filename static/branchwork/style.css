@@ -438,6 +438,50 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cur
 
 .tier { position: relative; isolation: isolate; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; }
 .tier + .tier { border-top: 1px solid var(--tint-edge, var(--line)); }
+/* Room above the first tier for its name to sit on the column's top edge. */
+.col__body > .tier:first-child { padding-top: 20px; }
+.col__body > .tier-note + .tier { padding-top: 22px; }
+
+/* A tier's name sits on the line above it, the way a legend sits on a
+   fieldset. The form is a thin strip straddling that line, which is what
+   the pointer finds; the field inside is invisible while the name is blank
+   and shows when the strip is hovered or the field has focus. */
+.tier-name {
+  position: absolute; z-index: 2; left: 0; right: 0; top: -12px; height: 24px; margin: 0;
+  display: flex; align-items: center; padding: 0 12px; pointer-events: auto;
+}
+.col__body > .tier:first-child > .tier-name { top: -2px; }
+.col__body > .tier-note + .tier > .tier-name { top: 0; }
+.tier-name__input {
+  height: 22px; min-width: 0; max-width: 100%; padding: 0 9px; border-radius: 999px;
+  border: 1px solid var(--tint-edge, var(--line2)); background: var(--tint-bg, var(--card));
+  color: var(--tint-fg, var(--fg)); font: inherit; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase; line-height: 20px;
+  opacity: 0; transform: translateY(2px); cursor: text;
+  transition: opacity 0.14s var(--ease), transform 0.14s var(--ease), border-color 0.15s, box-shadow 0.15s;
+}
+.tier-name__input::placeholder { color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 600; }
+.tier-name:hover .tier-name__input, .tier-name__input:focus, .tier-name--set .tier-name__input {
+  opacity: 1; transform: none;
+}
+.tier-name__input:hover { border-color: var(--tint-fg, var(--muted)); }
+.tier-name__input:focus, .tier-name__input:focus-visible {
+  outline: none; border-color: var(--tint-fg, var(--accent));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint-wm, var(--accent)) 28%, transparent);
+}
+.tier-name__input:disabled { opacity: 0.6; }
+.tier--closed .tier-name__input { border-style: dashed; }
+.tier--closed .tier-name--set .tier-name__input { color: var(--muted); }
+/* Measures the words so the field is only as wide as they are. */
+.tier-name__mirror {
+  position: absolute; top: -9999px; left: -9999px; white-space: pre; visibility: hidden;
+  font: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+}
+@media (hover: none) {
+  /* No pointer to hover with: a blank name shows as a faint field instead. */
+  .tier-name__input { opacity: 0.55; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .tier-name__input { transition: none; } }
 .tier.tier--closed { border-top: 1px dashed var(--line2); }
 .tier--closed .tier__row { opacity: 0.45; }
 .tier-note { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--muted); }

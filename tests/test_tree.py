@@ -249,3 +249,57 @@ def test_quick_add_needs_a_title_and_an_owner(client, db):
     login(client)
     assert client.post(f"/schemes/{branch.id}/machinations/quick", json={"title": "  "}).status_code == 400
     assert branch.tasks == []
+
+
+# ── Tier names ──────────────────────────────────────────────────────────────
+
+def test_a_tier_can_be_named_cleared_and_shown(client, db):
+    from models import TierName
+    user = make_user()
+    login(client)
+    project = make_project(user)
+    branch = make_branch(project)
+    make_task(branch, "Brief", tier=1)
+    make_task(branch, "Build", tier=2)
+
+    # The field is on every tier, blank to begin with.
+    html = client.get(f"/plots/{project.id}").data.decode()
+    assert html.count('class="tier-name"') == 2 and "tier-name--set" not in html
+
+    res = client.post(f"/schemes/{branch.id}/tiers/2/name", json={"name": "  Main work  "})
+    assert res.status_code == 200 and res.get_json()["name"] == "Main work"
+    assert 'class="tier-name tier-name--set"' in res.get_json()["html"]
+    assert 'value="Main work"' in res.get_json()["html"]
+    assert branch.tier_name(2) == "Main work" and branch.tier_name(1) is None
+    assert branch.tiers()[1]["name"] == "Main work"
+    # The list view says it beside the number.
+    assert "Main work" in client.get(f"/plots/{project.id}/list").data.decode()
+
+    # Renaming keeps one row; blank clears it.
+    client.post(f"/schemes/{branch.id}/tiers/2/name", json={"name": "Build"})
+    assert TierName.query.count() == 1 and branch.tier_name(2) == "Build"
+    res = client.post(f"/schemes/{branch.id}/tiers/2/name", json={"name": "   "})
+    assert res.status_code == 200 and res.get_json()["name"] is None
+    assert TierName.query.count() == 0
+
+
+def test_tier_names_are_owner_only_and_go_with_the_scheme(client, db):
+    from models import TierName
+    owner = make_user("owner@example.com")
+    project = make_project(owner)
+    branch = make_branch(project)
+    make_task(branch, "Brief", tier=1)
+    login(client, email="owner@example.com")
+    client.post(f"/schemes/{branch.id}/tiers/1/name", json={"name": "Groundwork"})
+    assert TierName.query.count() == 1
+    client.post("/logout")
+
+    make_user("intruder@example.com")
+    login(client, email="intruder@example.com")
+    assert client.post(f"/schemes/{branch.id}/tiers/1/name", json={"name": "Mine"}).status_code == 404
+    assert branch.tier_name(1) == "Groundwork"
+    client.post("/logout")
+
+    login(client, email="owner@example.com")
+    client.post(f"/schemes/{branch.id}/delete")
+    assert TierName.query.count() == 0

@@ -69,6 +69,7 @@
     });
     tree.innerHTML = html;
     drawThreads();
+    tree.dispatchEvent(new CustomEvent("tree-swapped"));
     var moved = [];
     Array.prototype.forEach.call(tree.querySelectorAll("[data-tier-key]"), function (el) {
       var old = before[el.dataset.tierKey];
@@ -902,6 +903,66 @@
     };
     window.addEventListener("resize", laterDraw);
     if (window.ResizeObserver) new ResizeObserver(laterDraw).observe(tree);
+  }
+
+  // ── Tier names ────────────────────────────────────────────────────────
+  // The field on the line above each tier. It is sized to its words, saves
+  // on Enter or on leaving once the name has changed, and Escape puts the
+  // old name back. The tree comes back re-rendered, as it does for points.
+  if (tree) {
+    var sizeTierName = function (input) {
+      var mirror = document.getElementById("tier-name-mirror");
+      if (!mirror) {
+        mirror = document.createElement("span");
+        mirror.id = "tier-name-mirror";
+        mirror.className = "tier-name__mirror";
+        mirror.setAttribute("aria-hidden", "true");
+        document.body.appendChild(mirror);
+      }
+      mirror.textContent = input.value || input.placeholder;
+      input.style.width = (mirror.offsetWidth + 22) + "px";
+    };
+    var sizeTierNames = function () {
+      Array.prototype.forEach.call(tree.querySelectorAll(".tier-name__input"), sizeTierName);
+    };
+    sizeTierNames();
+    tree.addEventListener("tree-swapped", sizeTierNames);
+
+    var saveTierName = function (form) {
+      var input = form.querySelector(".tier-name__input");
+      var name = input.value.trim();
+      if (name === (input.defaultValue || "").trim()) { input.value = input.defaultValue; sizeTierName(input); return; }
+      input.disabled = true;
+      post("/schemes/" + form.dataset.branch + "/tiers/" + form.dataset.tier + "/name", { name: name })
+        .then(function (res) {
+          if (!res.ok) { flash(res.body.message || say("tier_name_failed"), "error"); input.disabled = false; return; }
+          swapTree(res.body.html);
+        })
+        .catch(function () { flash(say("network"), "error"); input.disabled = false; });
+    };
+
+    tree.addEventListener("input", function (e) {
+      if (e.target.classList.contains("tier-name__input")) sizeTierName(e.target);
+    });
+    tree.addEventListener("keydown", function (e) {
+      if (!e.target.classList.contains("tier-name__input")) return;
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.target.value = e.target.defaultValue;
+        sizeTierName(e.target);
+        e.target.blur();
+      }
+    });
+    tree.addEventListener("submit", function (e) {
+      var form = e.target.closest("[data-tier-name]");
+      if (!form) return;
+      e.preventDefault();
+      form.querySelector(".tier-name__input").blur();   // blur saves, once
+    });
+    tree.addEventListener("focusout", function (e) {
+      var form = e.target.closest && e.target.closest("[data-tier-name]");
+      if (form && e.target.classList.contains("tier-name__input") && !e.target.disabled) saveTierName(form);
+    });
   }
 
   // ── Quick add ─────────────────────────────────────────────────────────

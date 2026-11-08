@@ -467,6 +467,22 @@ def quick_task(branch_id: int):
     })
 
 
+@projects_bp.route("/schemes/<int:branch_id>/tiers/<int:tier>/name", methods=["POST"])
+@login_required
+def name_tier(branch_id: int, tier: int):
+    """Name a tier, from the field on the line above it in the tree. Body:
+    JSON ``{"name": str}``; blank clears it. Answers with the re-rendered
+    tree, the way points do."""
+    branch = _branch(branch_id)
+    if tier < 1 or tier > 50:
+        abort(404)
+    payload = request.get_json(silent=True) or {}
+    branch.set_tier_name(tier, str(payload.get("name") or ""))
+    db.session.commit()
+    return jsonify({"name": branch.tier_name(tier),
+                    "html": render_template("_tree.html", project=branch.project)})
+
+
 @projects_bp.route("/machinations/<int:task_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_task(task_id: int):
