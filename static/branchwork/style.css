@@ -1178,6 +1178,11 @@ html[data-rail="pinned"] .rail { box-shadow: none; }
   font-size: 9px; font-weight: 800; line-height: 15px; text-align: center; box-shadow: 0 0 0 2px var(--bg-2);
 }
 .rail__none { padding: 6px 4px; white-space: nowrap; }
+/* While a scheme is being dragged the rail opens, so the plots it can be
+   dropped on are there by name, and the one under the pointer lights up. */
+body.is-dragging-scheme .rail { --rail-text: 1; width: var(--rail-open-w); box-shadow: 14px 0 40px rgba(0, 0, 0, 0.45); transition-delay: 0s; }
+body.is-dragging-scheme .rail__item[data-project]:not(.is-current) { outline: 1px dashed var(--line2); outline-offset: -1px; }
+body.is-dragging-scheme .rail__item.is-drop { outline: 2px dashed var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--fg); }
 .rail-toggle { display: none; }
 
 /* Narrow screens: no rail, a drawer opened from the top bar instead. */

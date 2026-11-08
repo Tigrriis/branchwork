@@ -348,22 +348,51 @@ def _move_to_plot(branch: Branch, target: Project) -> int:
 @projects_bp.route("/schemes/<int:branch_id>/move-to", methods=["POST"])
 @login_required
 def move_branch_to_plot(branch_id: int):
+    """Move a scheme to another plot: from the box on its edit page (a form
+    post, which lands on the other plot), or by dragging its column onto a
+    plot in the sidebar (JSON ``{"project_id": n, "confirm": bool}``, which
+    gets this plot's tree back without the scheme). Links that would cross
+    plots are cut; the edit page asks first in the browser, and the drag is
+    told how many and asked to post again with ``confirm`` set."""
     branch = _branch(branch_id)
     source = branch.project
-    raw = request.form.get("project_id") or ""
+    payload = request.get_json(silent=True)
+    raw = str((payload or {}).get("project_id") or request.form.get("project_id") or "")
     target = db.session.get(Project, int(raw)) if raw.isdigit() else None
     if target is None or target.owner_id != current_user.id or target.id == source.id:
-        flash(tx("scheme.move_pick"), "error")
-        return redirect(url_for("projects.edit_branch", branch_id=branch.id))
-    if len(target.branches) >= current_app.config["MAX_BRANCHES_PER_PROJECT"]:
-        flash(tx("scheme.move_full", plot=target.name), "error")
-        return redirect(url_for("projects.edit_branch", branch_id=branch.id))
+        error = "scheme.move_pick"
+    elif len(target.branches) >= current_app.config["MAX_BRANCHES_PER_PROJECT"]:
+        error = "scheme.move_full"
+    else:
+        error = None
+    if error:
+        message = tx(error, plot=target.name if target else "")
+        if payload is None:
+            flash(message, "error")
+            return redirect(url_for("projects.edit_branch", branch_id=branch.id))
+        return jsonify({"error": error, "message": message}), 409
+    if payload is not None and not payload.get("confirm"):
+        crossing, locks = _crossing_links(branch)
+        cuts = len(crossing) + len(locks)
+        if cuts:
+            return jsonify({"needs_confirm": True, "cuts": cuts,
+                            "message": tx("scheme.move_confirm", n=cuts)}), 409
     cut = _move_to_plot(branch, target)
     db.session.commit()
-    flash(tx("scheme.moved", name=branch.name, plot=target.name), "success")
-    if cut:
-        flash(tx("scheme.moved_cut", n=cut), "info")
-    return redirect(url_for("projects.tree", project_id=target.id))
+    moved = tx("scheme.moved", name=branch.name, plot=target.name)
+    cut_message = tx("scheme.moved_cut", n=cut) if cut else None
+    if payload is None:
+        flash(moved, "success")
+        if cut_message:
+            flash(cut_message, "info")
+        return redirect(url_for("projects.tree", project_id=target.id))
+    return jsonify({
+        "moved": True, "message": moved, "cut_message": cut_message,
+        "html": render_template("_tree.html", project=source),
+        "points_done": source.points_done, "points_max": source.points_max,
+        "percent": source.percent,
+        "counts": {s: source.count_state(s) for s in ("full", "part", "empty")},
+    })
 
 
 @projects_bp.route("/schemes/<int:branch_id>/delete", methods=["POST"])

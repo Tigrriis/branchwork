@@ -235,7 +235,8 @@
     thread: { handle: ".tile__thread", zone: ".tile[data-task], .ultimate[data-ultimate]" },
     end: { handle: ".thread-end", zone: ".tile[data-task], .ultimate[data-ultimate]" },
     task: { handle: ".tile[data-task]", zone: ".tier__row, .tier-add[data-branch]" },
-    scheme: { handle: ".col__foot", zone: ".col[data-branch], .col--add" },
+    // A scheme also lands on another plot in the sidebar, which moves it there.
+    scheme: { handle: ".col__foot", zone: ".col[data-branch], .col--add, .rail__item[data-project]" },
     note: { handle: ".nx-note", zone: "[data-drop-folder]" }
   };
 
@@ -251,6 +252,9 @@
     // Nothing leads on from an ultimate, so the near end of a thread cannot
     // land on one.
     if (zone && drag.kind === "end" && drag.end === "from" && zone.dataset.ultimate) return null;
+    // A scheme dropped on the plot it is already in goes nowhere.
+    if (zone && drag.kind === "scheme" && zone.dataset.project &&
+        String(zone.dataset.project) === String(window.BRANCHWORK_PROJECT)) return null;
     return zone;
   }
 
@@ -290,6 +294,27 @@
     marker.style.left = Math.max(0, left - 1.5) + "px";
     marker.style.top = col.offsetTop + "px";
     marker.style.height = col.offsetHeight + "px";
+  }
+
+  // A scheme dropped on a plot in the sidebar moves there, machinations and
+  // all. Links to the rest of this plot cannot follow it, so when there are
+  // any the server says how many and the move is confirmed before it posts
+  // again.
+  function moveSchemeToPlot(branchId, projectId, confirmed) {
+    if (!branchId || !projectId) return;
+    post("/schemes/" + branchId + "/move-to", { project_id: Number(projectId), confirm: !!confirmed })
+      .then(function (res) {
+        if (res.body && res.body.needs_confirm) {
+          if (window.confirm(res.body.message)) moveSchemeToPlot(branchId, projectId, true);
+          return;
+        }
+        if (!res.ok) { flash(res.body.message || say("scheme_move_failed"), "error"); return; }
+        swapTree(res.body.html);
+        updateStats(res.body);
+        flash(res.body.message, "success");
+        if (res.body.cut_message) flash(res.body.cut_message, "info");
+      })
+      .catch(function () { flash(say("network"), "error"); });
   }
 
   function reorderScheme(branchId, beforeId) {
@@ -439,7 +464,7 @@
     e.dataTransfer.dropEffect = "move";
     if (!zone.classList.contains("is-drop")) { clearZones(); zone.classList.add("is-drop"); }
     if (drag.kind === "task") markInsert(zone, e.clientX, e.clientY);
-    if (drag.kind === "scheme") markColumn(zone, e.clientX);
+    if (drag.kind === "scheme" && !zone.dataset.project) markColumn(zone, e.clientX);
   });
 
   document.addEventListener("dragleave", function (e) {
@@ -471,6 +496,8 @@
       var spot = insertSpot(zone, e.clientX, e.clientY);
       var before = spot && !spot.after ? spot.tile.dataset.task : null;
       moveTask(moving.id, zone.dataset.branch, zone.dataset.tier, before);
+    } else if (moving.kind === "scheme" && zone.dataset.project) {
+      moveSchemeToPlot(moving.id, zone.dataset.project);
     } else if (moving.kind === "scheme") {
       reorderScheme(moving.id, columnSpot(zone, e.clientX).before);
     } else if (moving.kind === "note") {
