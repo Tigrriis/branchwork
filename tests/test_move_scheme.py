@@ -142,3 +142,43 @@ def test_the_edit_page_offers_your_other_plots(client, db):
     assert ">Home<" not in picker and ">Theirs<" not in picker
     assert "data-confirm=\"Moving" not in html
     assert db.session.query(Project).count() == 4
+
+
+def test_dragging_a_scheme_onto_another_plot_moves_it(client, db):
+    user = make_user()
+    login(client)
+    home, away = _plot(user, "Home"), _plot(user, "Away")
+    stay = make_branch(home, "Stay")
+    go = make_branch(home, "Go")
+    first = make_task(stay, "First")
+    second = make_task(go, "Second")
+    db.session.add(Thread(project=home, source=first, target_task=second))
+    db.session.commit()
+
+    def drop(branch, plot, **extra):
+        return client.post(f"/schemes/{branch.id}/move-to", json={"project_id": plot.id, **extra})
+
+    # A link would be cut, so the drag is told and nothing moves yet.
+    res = drop(go, away)
+    assert res.status_code == 409 and res.get_json()["needs_confirm"] and res.get_json()["cuts"] == 1
+    assert copy_in(res.get_json()["message"], "scheme.move_confirm", n=1)
+    assert go.project is home and Thread.query.count() == 1
+
+    # Confirmed, it goes, and this plot's tree comes back without it.
+    res = drop(go, away, confirm=True)
+    assert res.status_code == 200 and res.get_json()["moved"]
+    assert go.project is away and Thread.query.count() == 0
+    html = res.get_json()["html"]
+    assert f'data-branch="{stay.id}"' in html and f'data-branch="{go.id}"' not in html
+    assert copy_in(res.get_json()["message"], "scheme.moved", name="Go", plot="Away")
+    assert copy_in(res.get_json()["cut_message"], "scheme.moved_cut", n=1)
+
+    # Nothing to cut: it moves first time.
+    assert drop(stay, away).status_code == 200 and stay.project is away
+
+    # Its own plot, and a plot that is not yours, are refused.
+    res = drop(stay, away)
+    assert res.status_code == 409 and copy_in(res.get_json()["message"], "scheme.move_pick")
+    other = make_user("other@example.com")
+    theirs = make_project(other)
+    assert drop(stay, theirs).status_code == 409 and stay.project is away

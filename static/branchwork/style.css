@@ -394,6 +394,10 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cur
    scroller too, which takes the wheel off the page the moment anything in it
    reaches a pixel past the columns. */
 .tree { position: relative; display: flex; gap: 24px; align-items: stretch; overflow-x: auto; overflow-y: hidden; padding-bottom: 8px; }
+/* The canvas scrolls under a held mouse (app.js): the ground says so. */
+.tree, .col, .col__body, .tier, .tier__row { cursor: grab; }
+.tree.is-panning { user-select: none; -webkit-user-select: none; scroll-snap-type: none; scroll-behavior: auto; }
+.tree.is-panning, .tree.is-panning * { cursor: grabbing !important; }
 
 .col {
   position: relative; flex: 0 0 400px; min-height: 420px;
@@ -438,6 +442,50 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cur
 
 .tier { position: relative; isolation: isolate; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; }
 .tier + .tier { border-top: 1px solid var(--tint-edge, var(--line)); }
+/* Room above the first tier for its name to sit on the column's top edge. */
+.col__body > .tier:first-child { padding-top: 20px; }
+.col__body > .tier-note + .tier { padding-top: 22px; }
+
+/* A tier's name sits on the line above it, the way a legend sits on a
+   fieldset. The form is a thin strip straddling that line, which is what
+   the pointer finds; the field inside is invisible while the name is blank
+   and shows when the strip is hovered or the field has focus. */
+.tier-name {
+  position: absolute; z-index: 2; left: 0; right: 0; top: -12px; height: 24px; margin: 0;
+  display: flex; align-items: center; padding: 0 12px; pointer-events: auto;
+}
+.col__body > .tier:first-child > .tier-name { top: -2px; }
+.col__body > .tier-note + .tier > .tier-name { top: 0; }
+.tier-name__input {
+  height: 22px; min-width: 0; max-width: 100%; padding: 0 9px; border-radius: 999px;
+  border: 1px solid var(--tint-edge, var(--line2)); background: var(--tint-bg, var(--card));
+  color: var(--tint-fg, var(--fg)); font: inherit; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase; line-height: 20px;
+  opacity: 0; transform: translateY(2px); cursor: text;
+  transition: opacity 0.14s var(--ease), transform 0.14s var(--ease), border-color 0.15s, box-shadow 0.15s;
+}
+.tier-name__input::placeholder { color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 600; }
+.tier-name:hover .tier-name__input, .tier-name__input:focus, .tier-name--set .tier-name__input {
+  opacity: 1; transform: none;
+}
+.tier-name__input:hover { border-color: var(--tint-fg, var(--muted)); }
+.tier-name__input:focus, .tier-name__input:focus-visible {
+  outline: none; border-color: var(--tint-fg, var(--accent));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint-wm, var(--accent)) 28%, transparent);
+}
+.tier-name__input:disabled { opacity: 0.6; }
+.tier--closed .tier-name__input { border-style: dashed; }
+.tier--closed .tier-name--set .tier-name__input { color: var(--muted); }
+/* Measures the words so the field is only as wide as they are. */
+.tier-name__mirror {
+  position: absolute; top: -9999px; left: -9999px; white-space: pre; visibility: hidden;
+  font: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+}
+@media (hover: none) {
+  /* No pointer to hover with: a blank name shows as a faint field instead. */
+  .tier-name__input { opacity: 0.55; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .tier-name__input { transition: none; } }
 .tier.tier--closed { border-top: 1px dashed var(--line2); }
 .tier--closed .tier__row { opacity: 0.45; }
 .tier-note { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--muted); }
@@ -1134,6 +1182,11 @@ html[data-rail="pinned"] .rail { box-shadow: none; }
   font-size: 9px; font-weight: 800; line-height: 15px; text-align: center; box-shadow: 0 0 0 2px var(--bg-2);
 }
 .rail__none { padding: 6px 4px; white-space: nowrap; }
+/* While a scheme is being dragged the rail opens, so the plots it can be
+   dropped on are there by name, and the one under the pointer lights up. */
+body.is-dragging-scheme .rail { --rail-text: 1; width: var(--rail-open-w); box-shadow: 14px 0 40px rgba(0, 0, 0, 0.45); transition-delay: 0s; }
+body.is-dragging-scheme .rail__item[data-project]:not(.is-current) { outline: 1px dashed var(--line2); outline-offset: -1px; }
+body.is-dragging-scheme .rail__item.is-drop { outline: 2px dashed var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--fg); }
 .rail-toggle { display: none; }
 
 /* Narrow screens: no rail, a drawer opened from the top bar instead. */
@@ -1575,6 +1628,33 @@ body.is-dragging-note [data-drop-folder].is-drop { background: color-mix(in srgb
 /* The bot trap on sign-up forms: off screen rather than display:none,
    which some bots know to skip. */
 .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+/* ── Pop-up forms ─────────────────────────────────────────────────────── */
+/* A form over the page, in a <dialog>: the same card the page would show,
+   on a blurred backdrop, with a × in its corner. */
+.modal {
+  width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 48px); margin: auto; padding: 0;
+  border: 1px solid var(--line2); border-radius: var(--radius-xl); color: var(--fg);
+  background: var(--card); box-shadow: var(--shadow-lg); overflow: hidden;
+}
+.modal[open] { animation: pop-in 0.18s var(--ease); }
+.modal::backdrop { background: rgba(6, 8, 12, 0.62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.modal__content { max-height: calc(100vh - 48px); overflow-y: auto; overscroll-behavior: contain; }
+.modal__close { position: absolute; top: 14px; right: 14px; z-index: 2; width: 32px; height: 32px; font-size: 20px; }
+.modal .card { border: 0; border-radius: 0; box-shadow: none; background: transparent; padding-right: 56px; }
+.modal .card .form, .modal .card > p, .modal .card .scheme-move { margin-right: -28px; }
+.modal [data-modal-body] > .inline-form { margin: 0; padding: 0 28px 24px; }
+.modal__flashes { display: flex; flex-direction: column; gap: 8px; padding: 20px 28px 0; }
+.modal__flashes .flash { max-width: none; animation: none; }
+.modal.is-busy .modal__content { opacity: 0.6; pointer-events: none; }
+@media (max-width: 720px) {
+  .modal { width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
+  .modal .card { padding-right: 48px; }
+  .modal .card .form, .modal .card > p, .modal .card .scheme-move { margin-right: -32px; }
+  .modal [data-modal-body] > .inline-form { padding: 0 16px 18px; }
+  .modal__flashes { padding: 16px 16px 0; }
+}
+@media (prefers-reduced-motion: reduce) { .modal[open] { animation: none; } }
 
 /* The box a tier's + opens: type a machination's title, press Enter. */
 .quick-add { padding: 4px 10px 10px; animation: pop-in 0.15s var(--ease); }

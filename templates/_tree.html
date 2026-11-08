@@ -52,6 +52,14 @@
     {# --fill (0-1) pours the scheme's colour down the tier; full means
        it holds enough points to open the tier below. #}
     <div class="tier {% if not row.open %}tier--closed{% endif %}{% if row.charged %} tier--charged{% endif %}" data-tier-key="{{ branch.id }}:{{ row.tier }}" style="--fill: {{ '%.3f'|format(row.fill) }}">
+      {# The tier's name, on the line above it like a legend. Blank, there is
+         nothing to see until the pointer nears the line; then the field
+         shows, and a name typed into it is saved on Enter or on leaving. #}
+      <form class="tier-name{% if row.name %} tier-name--set{% endif %}" data-tier-name data-branch="{{ branch.id }}" data-tier="{{ row.tier }}">
+        <input class="tier-name__input" type="text" name="name" maxlength="60" autocomplete="off"
+               value="{{ row.name or '' }}" placeholder="{{ t('tree.tier_name_placeholder') }}"
+               aria-label="{{ t('tree.tier_name_aria', tier=row.tier) }}">
+      </form>
       {% if not row.open and not branch.is_locked %}
       <div class="tier-note">
         <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"></rect><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg>
@@ -69,7 +77,7 @@
              plate keeps labels level in a row that mixes the two (style.css). #}
           {% if task.points_max > 1 %}<span class="tile__plate">{{ task.points_done }}/{{ task.points_max }}</span>
           {% else %}<span class="tile__plate tile__plate--blank" aria-hidden="true"></span>{% endif %}
-          <a class="tile__label" href="{{ url_for('projects.edit_task', task_id=task.id) }}">{{ task.title }}</a>
+          <a class="tile__label" href="{{ url_for('projects.edit_task', task_id=task.id) }}" data-modal>{{ task.title }}</a>
           {% if current_user.notes_beta %}
           {% set note_count = task.note_count %}
           {% if note_count %}
@@ -124,10 +132,10 @@
         <span class="ultimate__icon">{{ icon(ult.icon, 40) }}</span>
         <span class="ultimate__tick" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
       </button>
-      <a class="ultimate__label" href="{{ url_for('ultimates.edit_ultimate', branch_id=branch.id) }}">{{ ult.title }}</a>
+      <a class="ultimate__label" href="{{ url_for('ultimates.edit_ultimate', branch_id=branch.id) }}" data-modal>{{ ult.title }}</a>
     </div>
     {% elif branch.tasks %}
-    <a class="tier-add tier-add--ultimate" href="{{ url_for('ultimates.edit_ultimate', branch_id=branch.id) }}">{{ t('tree.set_ultimate') }}</a>
+    <a class="tier-add tier-add--ultimate" href="{{ url_for('ultimates.edit_ultimate', branch_id=branch.id) }}" data-modal>{{ t('tree.set_ultimate') }}</a>
     {% endif %}
   </div>
   <div class="col__foot" draggable="true" title="{{ t('tree.drag_scheme_title') }}">
@@ -139,7 +147,7 @@
         <button class="icon-btn" name="direction" value="left" title="{{ t('tree.move_left') }}" {% if loop.first %}disabled{% endif %}>‹</button>
         <button class="icon-btn" name="direction" value="right" title="{{ t('tree.move_right') }}" {% if loop.last %}disabled{% endif %}>›</button>
       </form>
-      <a class="icon-btn" href="{{ url_for('projects.edit_branch', branch_id=branch.id) }}" title="{{ t('tree.edit_scheme_title') }}">
+      <a class="icon-btn" href="{{ url_for('projects.edit_branch', branch_id=branch.id) }}" title="{{ t('tree.edit_scheme_title') }}" data-modal>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l4-1L19 8l-3-3L5 16z"></path></svg>
       </a>
     </span>

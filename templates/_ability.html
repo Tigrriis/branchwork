@@ -16,6 +16,6 @@
     {% if not r.is_ready %}<span class="ability__count" aria-hidden="true">{{ t('routines.days_left', n=r.days_left) }}</span>{% endif %}
     {% if r.overdue_days %}<span class="ability__badge" aria-hidden="true">{{ t('routines.overdue', n=r.overdue_days) }}</span>{% endif %}
   </button>
-  <a class="ability__label" href="{{ url_for('routines.edit_routine', routine_id=r.id) }}">{{ r.title }}</a>
+  <a class="ability__label" href="{{ url_for('routines.edit_routine', routine_id=r.id) }}" data-modal>{{ r.title }}</a>
   <span class="ability__meta">{% if show_plot %}{{ r.project.name }}{% else %}{{ t('routines.every', n=r.every_days) }}{% endif %}</span>
 </form>

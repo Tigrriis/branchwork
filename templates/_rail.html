@@ -20,7 +20,7 @@
       {% for row in group.rows %}
       {% set p = row.project %}
       <a class="rail__item{% if row.current %} is-current{% endif %}" href="{{ url_for('projects.tree', project_id=p.id) }}"
-         data-rail-item data-name="{{ p.name|lower }}" title="{{ p.name }}"{% if row.current %} aria-current="page"{% endif %}>
+         data-rail-item data-project="{{ p.id }}" data-name="{{ p.name|lower }}" title="{{ p.name }}"{% if row.current %} aria-current="page"{% endif %}>
         <span class="rail__chip hue--{{ p.phase_hue }}" aria-hidden="true">
           {{ row.initials }}
           {% if p.is_due %}<span class="rail__due" title="{{ t('rail.due_title') }}"></span>{% endif %}

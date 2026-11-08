@@ -69,6 +69,7 @@
     });
     tree.innerHTML = html;
     drawThreads();
+    tree.dispatchEvent(new CustomEvent("tree-swapped"));
     var moved = [];
     Array.prototype.forEach.call(tree.querySelectorAll("[data-tier-key]"), function (el) {
       var old = before[el.dataset.tierKey];
@@ -234,7 +235,8 @@
     thread: { handle: ".tile__thread", zone: ".tile[data-task], .ultimate[data-ultimate]" },
     end: { handle: ".thread-end", zone: ".tile[data-task], .ultimate[data-ultimate]" },
     task: { handle: ".tile[data-task]", zone: ".tier__row, .tier-add[data-branch]" },
-    scheme: { handle: ".col__foot", zone: ".col[data-branch], .col--add" },
+    // A scheme also lands on another plot in the sidebar, which moves it there.
+    scheme: { handle: ".col__foot", zone: ".col[data-branch], .col--add, .rail__item[data-project]" },
     note: { handle: ".nx-note", zone: "[data-drop-folder]" }
   };
 
@@ -250,6 +252,9 @@
     // Nothing leads on from an ultimate, so the near end of a thread cannot
     // land on one.
     if (zone && drag.kind === "end" && drag.end === "from" && zone.dataset.ultimate) return null;
+    // A scheme dropped on the plot it is already in goes nowhere.
+    if (zone && drag.kind === "scheme" && zone.dataset.project &&
+        String(zone.dataset.project) === String(window.BRANCHWORK_PROJECT)) return null;
     return zone;
   }
 
@@ -289,6 +294,27 @@
     marker.style.left = Math.max(0, left - 1.5) + "px";
     marker.style.top = col.offsetTop + "px";
     marker.style.height = col.offsetHeight + "px";
+  }
+
+  // A scheme dropped on a plot in the sidebar moves there, machinations and
+  // all. Links to the rest of this plot cannot follow it, so when there are
+  // any the server says how many and the move is confirmed before it posts
+  // again.
+  function moveSchemeToPlot(branchId, projectId, confirmed) {
+    if (!branchId || !projectId) return;
+    post("/schemes/" + branchId + "/move-to", { project_id: Number(projectId), confirm: !!confirmed })
+      .then(function (res) {
+        if (res.body && res.body.needs_confirm) {
+          if (window.confirm(res.body.message)) moveSchemeToPlot(branchId, projectId, true);
+          return;
+        }
+        if (!res.ok) { flash(res.body.message || say("scheme_move_failed"), "error"); return; }
+        swapTree(res.body.html);
+        updateStats(res.body);
+        flash(res.body.message, "success");
+        if (res.body.cut_message) flash(res.body.cut_message, "info");
+      })
+      .catch(function () { flash(say("network"), "error"); });
   }
 
   function reorderScheme(branchId, beforeId) {
@@ -438,7 +464,7 @@
     e.dataTransfer.dropEffect = "move";
     if (!zone.classList.contains("is-drop")) { clearZones(); zone.classList.add("is-drop"); }
     if (drag.kind === "task") markInsert(zone, e.clientX, e.clientY);
-    if (drag.kind === "scheme") markColumn(zone, e.clientX);
+    if (drag.kind === "scheme" && !zone.dataset.project) markColumn(zone, e.clientX);
   });
 
   document.addEventListener("dragleave", function (e) {
@@ -470,6 +496,8 @@
       var spot = insertSpot(zone, e.clientX, e.clientY);
       var before = spot && !spot.after ? spot.tile.dataset.task : null;
       moveTask(moving.id, zone.dataset.branch, zone.dataset.tier, before);
+    } else if (moving.kind === "scheme" && zone.dataset.project) {
+      moveSchemeToPlot(moving.id, zone.dataset.project);
     } else if (moving.kind === "scheme") {
       reorderScheme(moving.id, columnSpot(zone, e.clientX).before);
     } else if (moving.kind === "note") {
@@ -902,6 +930,248 @@
     };
     window.addEventListener("resize", laterDraw);
     if (window.ResizeObserver) new ResizeObserver(laterDraw).observe(tree);
+  }
+
+  // ── Pop-up forms ──────────────────────────────────────────────────────
+  // A machination, routine, ultimate or scheme is edited in a dialog over
+  // the page rather than on a page of its own. The form is fetched bare
+  // (X-Requested-With: modal, see templates/modal.html), posted the same
+  // way, and the redirect a save would make comes back as JSON instead: the
+  // dialog closes, its messages show, and the plot page redraws its tree,
+  // routine bar and totals in place. A link held with a modifier key, or a
+  // fetch that fails, still opens the page.
+  var modal = null;
+  var MODAL_HEADERS = { "X-Requested-With": "modal" };
+
+  function closeModal() {
+    if (modal && modal.open) modal.close();
+    modal = null;
+  }
+
+  // The fetched markup into the dialog. Scripts arrive inert, so each is made
+  // again in place to run: the sealed notes data first, then the scripts
+  // that read it.
+  function fillModal(content, html) {
+    var doc = new DOMParser().parseFromString(html, "text/html");
+    var body = doc.querySelector("[data-modal-body]");
+    content.innerHTML = "";
+    if (!body) { content.innerHTML = html; return; }
+    content.appendChild(body);
+    if (modal && body.dataset.title) modal.setAttribute("aria-label", body.dataset.title);
+    Array.prototype.forEach.call(doc.querySelectorAll("script"), function (old) {
+      var script = document.createElement("script");
+      Array.prototype.forEach.call(old.attributes, function (a) { script.setAttribute(a.name, a.value); });
+      script.textContent = old.textContent;
+      content.appendChild(script);
+    });
+    var first = content.querySelector("[autofocus], input:not([type=hidden]), select, textarea");
+    if (first) first.focus();
+  }
+
+  function openModal(url) {
+    fetch(url, { headers: MODAL_HEADERS, credentials: "same-origin" })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (html) {
+        closeModal();
+        var dialog = document.createElement("dialog");
+        dialog.className = "modal";
+        dialog.dataset.url = url;
+        var close = document.createElement("button");
+        close.type = "button";
+        close.className = "icon-btn modal__close";
+        close.setAttribute("aria-label", say("close"));
+        close.textContent = "×";
+        var content = document.createElement("div");
+        content.className = "modal__content";
+        dialog.appendChild(close);
+        dialog.appendChild(content);
+        document.body.appendChild(dialog);
+        modal = dialog;
+        fillModal(content, html);
+        close.addEventListener("click", closeModal);
+        // A click on the backdrop, which is the dialog itself, closes it.
+        dialog.addEventListener("click", function (e) { if (e.target === dialog) closeModal(); });
+        dialog.addEventListener("close", function () { dialog.remove(); if (modal === dialog) modal = null; });
+        dialog.showModal();
+      })
+      .catch(function () { window.location.href = url; });
+  }
+
+  // After a save: the messages, then the page brought up to date. The plot
+  // page redraws in place; anywhere else, or a redirect somewhere new,
+  // follows the redirect.
+  function afterModalSave(body) {
+    (body.flashes || []).forEach(function (pair) { flash(pair[1], pair[0]); });
+    var to = new URL(body.redirect, window.location.href);
+    var here = to.pathname === window.location.pathname;
+    if (here && tree && window.BRANCHWORK_PROJECT) {
+      fetch("/plots/" + window.BRANCHWORK_PROJECT + "/refresh", { credentials: "same-origin" })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          swapTree(res.html);
+          updateStats(res);
+          var bar = document.getElementById("routines");
+          if (bar) { bar.innerHTML = res.routines; bar.hidden = !res.has_routines; }
+          var addRoutine = document.querySelector("[data-add-routine]");
+          if (addRoutine) addRoutine.hidden = res.has_routines;
+        })
+        .catch(function () { window.location.reload(); });
+    } else if (here) {
+      window.location.reload();
+    } else {
+      window.location.href = to.href;
+    }
+  }
+
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest) return;
+    var link = e.target.closest("a[href]");
+    if (!link || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (modal && modal.contains(link)) {
+      // Cancel, which points back at this page, just closes the dialog.
+      if (new URL(link.href, window.location.href).pathname === window.location.pathname) {
+        e.preventDefault();
+        closeModal();
+      }
+      return;
+    }
+    if (!link.hasAttribute("data-modal")) return;
+    e.preventDefault();
+    openModal(link.href);
+  });
+
+  document.addEventListener("submit", function (e) {
+    var form = e.target;
+    if (e.defaultPrevented || !modal || !modal.contains(form)) return;
+    e.preventDefault();
+    if (modal.classList.contains("is-busy")) return;
+    var data = new FormData(form);
+    if (e.submitter && e.submitter.name) data.append(e.submitter.name, e.submitter.value);
+    // A form with no action of its own posts back to where it came from.
+    var url = form.getAttribute("action") ? form.action : modal.dataset.url;
+    var dialog = modal;
+    dialog.classList.add("is-busy");
+    fetch(url, { method: "POST", body: data, headers: MODAL_HEADERS, credentials: "same-origin" })
+      .then(function (r) {
+        var kind = r.headers.get("content-type") || "";
+        return kind.indexOf("json") >= 0
+          ? r.json().then(function (j) { return { ok: r.ok, json: j }; })
+          : r.text().then(function (t) { return { ok: r.ok, html: t }; });
+      })
+      .then(function (res) {
+        if (res.json && res.json.redirect) { closeModal(); afterModalSave(res.json); return; }
+        if (res.json) { flash(res.json.message || say("network"), "error"); return; }
+        // The form again, with what was wrong flashed at its top.
+        fillModal(dialog.querySelector(".modal__content"), res.html);
+      })
+      .catch(function () { flash(say("network"), "error"); })
+      .finally(function () { dialog.classList.remove("is-busy"); });
+  });
+
+  // ── Panning ───────────────────────────────────────────────────────────
+  // The tree scrolls sideways under a held mouse: press on any empty part of
+  // the canvas (a column's ground, the gap between columns, the space around
+  // a row of tiles) and drag. Anything that drags, clicks or types for
+  // itself is left alone, and a pan does not start until the pointer has
+  // moved a few pixels, so a plain click on the ground stays a click. Touch
+  // screens scroll on their own.
+  if (tree) {
+    var pan = null, panned = false;
+    var PAN_LEAVES = 'a, button, input, select, textarea, label, [draggable="true"], ' +
+      '.tile, .col__foot, .thread-end, .tier-name, .quick-add, .ultimate__box, .idea';
+    tree.addEventListener("pointerdown", function (e) {
+      if (e.button !== 0 || e.pointerType === "touch" || !e.target.closest) return;
+      if (e.target.closest(PAN_LEAVES)) return;
+      pan = { id: e.pointerId, x: e.clientX, left: tree.scrollLeft, moved: false };
+    });
+    tree.addEventListener("pointermove", function (e) {
+      if (!pan || e.pointerId !== pan.id) return;
+      var dx = e.clientX - pan.x;
+      if (!pan.moved) {
+        if (Math.abs(dx) < 4) return;
+        pan.moved = true;
+        tree.classList.add("is-panning");
+        try { tree.setPointerCapture(pan.id); } catch (err) { /* no capture, no matter */ }
+        if (window.getSelection) window.getSelection().removeAllRanges();
+      }
+      tree.scrollLeft = pan.left - dx;
+    });
+    var endPan = function (e) {
+      if (!pan || (e && e.pointerId !== undefined && e.pointerId !== pan.id)) return;
+      if (pan.moved) {
+        panned = true;
+        tree.classList.remove("is-panning");
+        try { tree.releasePointerCapture(pan.id); } catch (err) { /* already gone */ }
+        setTimeout(function () { panned = false; }, 0);
+      }
+      pan = null;
+    };
+    tree.addEventListener("pointerup", endPan);
+    tree.addEventListener("pointercancel", endPan);
+    // The release at the end of a pan is not a click on whatever is under it.
+    tree.addEventListener("click", function (e) {
+      if (panned) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+  }
+
+  // ── Tier names ────────────────────────────────────────────────────────
+  // The field on the line above each tier. It is sized to its words, saves
+  // on Enter or on leaving once the name has changed, and Escape puts the
+  // old name back. The tree comes back re-rendered, as it does for points.
+  if (tree) {
+    var sizeTierName = function (input) {
+      var mirror = document.getElementById("tier-name-mirror");
+      if (!mirror) {
+        mirror = document.createElement("span");
+        mirror.id = "tier-name-mirror";
+        mirror.className = "tier-name__mirror";
+        mirror.setAttribute("aria-hidden", "true");
+        document.body.appendChild(mirror);
+      }
+      mirror.textContent = input.value || input.placeholder;
+      input.style.width = (mirror.offsetWidth + 22) + "px";
+    };
+    var sizeTierNames = function () {
+      Array.prototype.forEach.call(tree.querySelectorAll(".tier-name__input"), sizeTierName);
+    };
+    sizeTierNames();
+    tree.addEventListener("tree-swapped", sizeTierNames);
+
+    var saveTierName = function (form) {
+      var input = form.querySelector(".tier-name__input");
+      var name = input.value.trim();
+      if (name === (input.defaultValue || "").trim()) { input.value = input.defaultValue; sizeTierName(input); return; }
+      input.disabled = true;
+      post("/schemes/" + form.dataset.branch + "/tiers/" + form.dataset.tier + "/name", { name: name })
+        .then(function (res) {
+          if (!res.ok) { flash(res.body.message || say("tier_name_failed"), "error"); input.disabled = false; return; }
+          swapTree(res.body.html);
+        })
+        .catch(function () { flash(say("network"), "error"); input.disabled = false; });
+    };
+
+    tree.addEventListener("input", function (e) {
+      if (e.target.classList.contains("tier-name__input")) sizeTierName(e.target);
+    });
+    tree.addEventListener("keydown", function (e) {
+      if (!e.target.classList.contains("tier-name__input")) return;
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.target.value = e.target.defaultValue;
+        sizeTierName(e.target);
+        e.target.blur();
+      }
+    });
+    tree.addEventListener("submit", function (e) {
+      var form = e.target.closest("[data-tier-name]");
+      if (!form) return;
+      e.preventDefault();
+      form.querySelector(".tier-name__input").blur();   // blur saves, once
+    });
+    tree.addEventListener("focusout", function (e) {
+      var form = e.target.closest && e.target.closest("[data-tier-name]");
+      if (form && e.target.classList.contains("tier-name__input") && !e.target.disabled) saveTierName(form);
+    });
   }
 
   // ── Quick add ─────────────────────────────────────────────────────────

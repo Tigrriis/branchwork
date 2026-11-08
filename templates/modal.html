@@ -1,0 +1,15 @@
+{# A form shown in the pop-up rather than as a page. app.js asks for it with
+   X-Requested-With: modal, and the form templates extend this instead of
+   base.html when it does: the page's content block with its flashes, and
+   its scripts, which app.js re-runs once the markup is in the dialog. #}
+<div class="modal__body" data-modal-body data-title="{{ self.title() }}">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="modal__flashes">
+    {% for category, message in messages %}<div class="flash flash--{{ category }}">{{ message }}</div>{% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</div>
+{% block scripts %}{% endblock %}
