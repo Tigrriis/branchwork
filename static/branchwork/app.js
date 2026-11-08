@@ -932,6 +932,52 @@
     if (window.ResizeObserver) new ResizeObserver(laterDraw).observe(tree);
   }
 
+  // ── Panning ───────────────────────────────────────────────────────────
+  // The tree scrolls sideways under a held mouse: press on any empty part of
+  // the canvas (a column's ground, the gap between columns, the space around
+  // a row of tiles) and drag. Anything that drags, clicks or types for
+  // itself is left alone, and a pan does not start until the pointer has
+  // moved a few pixels, so a plain click on the ground stays a click. Touch
+  // screens scroll on their own.
+  if (tree) {
+    var pan = null, panned = false;
+    var PAN_LEAVES = 'a, button, input, select, textarea, label, [draggable="true"], ' +
+      '.tile, .col__foot, .thread-end, .tier-name, .quick-add, .ultimate__box, .idea';
+    tree.addEventListener("pointerdown", function (e) {
+      if (e.button !== 0 || e.pointerType === "touch" || !e.target.closest) return;
+      if (e.target.closest(PAN_LEAVES)) return;
+      pan = { id: e.pointerId, x: e.clientX, left: tree.scrollLeft, moved: false };
+    });
+    tree.addEventListener("pointermove", function (e) {
+      if (!pan || e.pointerId !== pan.id) return;
+      var dx = e.clientX - pan.x;
+      if (!pan.moved) {
+        if (Math.abs(dx) < 4) return;
+        pan.moved = true;
+        tree.classList.add("is-panning");
+        try { tree.setPointerCapture(pan.id); } catch (err) { /* no capture, no matter */ }
+        if (window.getSelection) window.getSelection().removeAllRanges();
+      }
+      tree.scrollLeft = pan.left - dx;
+    });
+    var endPan = function (e) {
+      if (!pan || (e && e.pointerId !== undefined && e.pointerId !== pan.id)) return;
+      if (pan.moved) {
+        panned = true;
+        tree.classList.remove("is-panning");
+        try { tree.releasePointerCapture(pan.id); } catch (err) { /* already gone */ }
+        setTimeout(function () { panned = false; }, 0);
+      }
+      pan = null;
+    };
+    tree.addEventListener("pointerup", endPan);
+    tree.addEventListener("pointercancel", endPan);
+    // The release at the end of a pan is not a click on whatever is under it.
+    tree.addEventListener("click", function (e) {
+      if (panned) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+  }
+
   // ── Tier names ────────────────────────────────────────────────────────
   // The field on the line above each tier. It is sized to its words, saves
   // on Enter or on leaving once the name has changed, and Escape puts the

@@ -394,6 +394,10 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cur
    scroller too, which takes the wheel off the page the moment anything in it
    reaches a pixel past the columns. */
 .tree { position: relative; display: flex; gap: 24px; align-items: stretch; overflow-x: auto; overflow-y: hidden; padding-bottom: 8px; }
+/* The canvas scrolls under a held mouse (app.js): the ground says so. */
+.tree, .col, .col__body, .tier, .tier__row { cursor: grab; }
+.tree.is-panning { user-select: none; -webkit-user-select: none; scroll-snap-type: none; scroll-behavior: auto; }
+.tree.is-panning, .tree.is-panning * { cursor: grabbing !important; }
 
 .col {
   position: relative; flex: 0 0 400px; min-height: 420px;
